@@ -1,0 +1,11 @@
+
+
+docs/*
+old-code
+gql-naming-fn.js
+packages/*/dist
+packages/gql/src/defs/gql.ts
+*.config.js
+*.config.ts
+*.test.js
+*.test.ts
