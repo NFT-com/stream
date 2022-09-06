@@ -1,0 +1,24 @@
+# system files
+.idea
+.DS_Store
+Thumbs.db
+.vscode
+
+# compiled / dependencies
+node_modules
+dist
+tsconfig.tsbuildinfo
+.env
+packages/*/.env
+.eslintcache
+infra/package-lock.json
+docs/*
+packages/gql/coverage/*
+
+# logs
+log-debug
+*.log
+
+# others
+packages/gql/src/defs/gql.ts
+*.zip
