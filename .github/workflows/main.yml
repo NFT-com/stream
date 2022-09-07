@@ -6,6 +6,13 @@ jobs:
     runs-on: ubuntu-20.04
     environment: nftcom_stream_dev
     steps:
+     - uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+          token: ${{secrets.CROSSREPO_PAT}}
+          repository: NFT-com/NFT-backend
+          ref: main
+          path: NFT-backend
       - uses: actions/checkout@v2
       - uses: ./.github/actions/deploy-env
         name: Deploy env
