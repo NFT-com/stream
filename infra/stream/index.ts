@@ -12,7 +12,7 @@ const pulumiProgram = async (): Promise<Record<string, any> | void> => {
   createEcsService(config, sharedInfraOutput)
 }
 
-export const createStreamCluster = (
+export const createStreamECSCluster = (
   preview?: boolean,
 ): Promise<pulumi.automation.OutputMap> => {
   const stackName = `${process.env.STAGE}.stream.${process.env.AWS_REGION}`
