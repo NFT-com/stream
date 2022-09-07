@@ -4,7 +4,7 @@ jobs:
   deploy-dev:
     if: ${{ startsWith(github.ref_name, 'feat') || startsWith(github.ref_name, 'fix') }}
     runs-on: ubuntu-latest
-    environment: nftcom_search_dev
+    environment: nftcom_stream_dev
     steps:
       - uses: actions/checkout@v3
         with:
