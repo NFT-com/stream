@@ -1,61 +1,24 @@
-name: NFT.com github actions
+name: NFT.com Indexer github actions
 on: [push]
 jobs:
   deploy-dev:
     if: ${{ startsWith(github.ref_name, 'feat') || startsWith(github.ref_name, 'fix') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     environment: nftcom_stream_dev
     steps:
-      - uses: actions/checkout@v3
-        with:
-          persist-credentials: false
-          token: ${{secrets.CROSSREPO_PAT}}
-          repository: NFT-com/NFT-backend
-          ref: main
-          path: NFT-backend
-      - uses: actions/checkout@v3
-        with:
-          path: stream
+      - uses: actions/checkout@v2
       - uses: ./.github/actions/deploy-env
         name: Deploy env
         with:
           secrets: ${{ toJSON(secrets) }}
           stage: dev
-  deploy-staging:
-    if: ${{ github.ref_name == 'main' }}
-    runs-on: ubuntu-latest
-    environment: nftcom_stream_staging
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          persist-credentials: false
-          token: ${{secrets.CROSSREPO_PAT}}
-          repository: NFT-com/NFT-backend
-          ref: main
-          path: NFT-backend
-      - uses: actions/checkout@v3
-        with:
-          path: stream
-      - uses: ./stream/.github/actions/deploy-env
-        with:
-          secrets: ${{ toJSON(secrets) }}
-          stage: staging
   deploy-prod:
-    if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'rel') }}
-    runs-on: ubuntu-latest
+    if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
+    runs-on: ubuntu-20.04
     environment: nftcom_stream_prod
     steps:
-      - uses: actions/checkout@v3
-        with:
-          persist-credentials: false
-          token: ${{secrets.CROSSREPO_PAT}}
-          repository: NFT-com/NFT-backend
-          ref: main
-          path: NFT-backend
-      - uses: actions/checkout@v3
-        with:
-          path: stream
-      - uses: ./stream/.github/actions/deploy-env
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/deploy-env
         with:
           secrets: ${{ toJSON(secrets) }}
           stage: prod
