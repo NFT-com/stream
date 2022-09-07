@@ -2,17 +2,21 @@ import * as upath from 'upath'
 
 import * as pulumi from '@pulumi/pulumi'
 
-import { deployInfra, getSharedInfraOutput } from '../helper'
+import { deployInfra } from '../helper'
 import { createEcsService } from './ecs'
 
+const getSharedStackOutputs = async (): Promise<any> => {
+  const sharedStack = new pulumi.StackReference(`${process.env.STAGE}.shared.${process.env.AWS_REGION}`)
+  return sharedStack.outputs
+}
 
 const pulumiProgram = async (): Promise<Record<string, any> | void> => {
   const config = new pulumi.Config()
-  const sharedInfraOutput = getSharedInfraOutput()
-  createEcsService(config, sharedInfraOutput)
+  const sharedStackOutputs = await getSharedStackOutputs()
+  createEcsService(config, sharedStackOutputs)
 }
 
-export const createStreamECSCluster = (
+export const createStreamCluster = (
   preview?: boolean,
 ): Promise<pulumi.automation.OutputMap> => {
   const stackName = `${process.env.STAGE}.stream.${process.env.AWS_REGION}`

@@ -268,7 +268,7 @@ export const createEcsService = (
     name: getResourceName('stream'),
     networkConfiguration: {
       assignPublicIp: true,
-      securityGroups: [infraOutput.webSGId],
+      securityGroups: [infraOutput.webEcsSGId],
       subnets: infraOutput.publicSubnets,
     },
     taskDefinition: taskDefinition.arn,

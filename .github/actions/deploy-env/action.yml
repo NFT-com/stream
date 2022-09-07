@@ -20,51 +20,33 @@ runs:
         aws-access-key-id: ${{ fromJSON(inputs.secrets).AWS_ACCESS_KEY_ID }}
         aws-region: ${{ fromJSON(inputs.secrets).AWS_REGION }}
         aws-secret-access-key: ${{ fromJSON(inputs.secrets).AWS_SECRET_ACCESS_KEY }}
-    - name: Login to AWS ECR
-      id: login_ecr
-      uses: aws-actions/amazon-ecr-login@v1
-    - name: Install Pulumi CLI
+    - name: Install pulumi
       uses: pulumi/setup-pulumi@v2
     - name: Login to Pulumi backend
+      working-directory: stream/infra
       shell: bash
       run: pulumi login s3://nftcom-pulumi-state
-    - name: Install Stream Infra Deps
-      working-directory: infra
+    - name: Install Shared Deps
+      working-directory: NFT-backend/infra
       shell: bash
-      run: npm install
-    - name: Deploy Stream Shared Infra
-      working-directory: infra
+      run:  npm ci
+    - name: Install Infra Deps
+      working-directory: stream/infra
       shell: bash
+      run:  npm install
+    - uses: dorny/paths-filter@v2
+      id: filter
+      with:
+        working-directory: stream
+        filters: |
+          stream:
+            - 'infra/**'
+    - name: Deploy Stream Infra
+      if: ${{ inputs.stage == 'prod' || steps.filter.outputs.stream == 'true' }}
+      shell: bash
+      working-directory: stream/infra
       env:
         STAGE: ${{ inputs.stage }}
         PULUMI_CONFIG_PASSPHRASE: ""
         AWS_ACCOUNT_ID: ${{ fromJSON(inputs.secrets).AWS_ACCOUNT_ID }}
-        DB_PASSWORD: ${{ fromJSON(inputs.secrets).DB_PASSWORD }}
-      run: npm run deploy:shared
-    - name: Build and Push Stream Docker Image(s)
-      shell: bash
-      env:
-        REPO: ${{ steps.login_ecr.outputs.registry }}/${{ inputs.stage }}-stream
-      run: |
-        export DOCKER_BUILDKIT=1
-        docker pull ${{ env.REPO }}:deps || true
-        docker pull ${{ env.REPO }}:build || true
-        docker build . -f stream.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target deps --cache-from ${{ env.REPO }}:deps -t ${{ env.REPO }}:deps
-        docker build . -f stream.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target build --cache-from ${{ env.REPO }}:deps --cache-from ${{ env.REPO }}:build -t ${{ env.REPO }}:build
-        docker build . -f stream.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target release --cache-from ${{ env.REPO }}:deps --cache-from ${{ env.REPO }}:build -t ${{ env.REPO }}:latest -t ${{ env.REPO }}:${{ github.sha }}
-        docker push ${{ env.REPO }}:deps
-        docker push ${{ env.REPO }}:build
-        docker push ${{ env.REPO }}:latest
-        docker push ${{ env.REPO }}:${{ github.sha }}
-    - name: Deploy Stream ECS Service (Cluster and Task Definitions)
-      shell: bash
-      working-directory: infra
-      env:
-        STAGE: ${{ inputs.stage }}
-        PULUMI_CONFIG_PASSPHRASE: ""
-        AWS_ACCOUNT_ID: ${{ fromJSON(inputs.secrets).AWS_ACCOUNT_ID }}
-        AWS_ACCESS_KEY_ID: ${{ fromJSON(inputs.secrets).AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ fromJSON(inputs.secrets).AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: ${{ fromJSON(inputs.secrets).AWS_REGION }}
-        ECR_REGISTRY: ${{ fromJSON(inputs.secrets).ECR_REGISTRY }}
       run: npm run deploy:stream
