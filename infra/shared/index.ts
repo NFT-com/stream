@@ -7,7 +7,7 @@ import * as pulumi from '@pulumi/pulumi';
 const pulumiProgram = async (): Promise<Record<string, any> | void> => {
   const config = new pulumi.Config()
   const stage = getStage()
-  const sharedStack = new pulumi.StackReference(`${stage}.indexer.shared.us-east-1`);
+  const sharedStack = new pulumi.StackReference(`${stage}.shared.us-east-1`);
   const vpc = sharedStack.getOutput('vpcId') 
   const subnets =  sharedStack.getOutput('publicSubnetIds') 
   const vpcVal: string = await pulumiOutToValue(vpc) 
