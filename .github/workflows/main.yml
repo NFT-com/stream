@@ -14,7 +14,9 @@ jobs:
           ref: main
           path: NFT-backend
       - uses: actions/checkout@v3
-      - uses: ./.github/actions/deploy-env
+        with:
+          path: stream
+      - uses: ./stream/.github/actions/deploy-env
         name: Deploy env
         with:
           secrets: ${{ toJSON(secrets) }}
@@ -34,7 +36,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           path: stream
-      - uses: .github/actions/deploy-env
+      - uses: ./stream/.github/actions/deploy-env
         with:
           secrets: ${{ toJSON(secrets) }}
           stage: staging
