@@ -1,9 +1,5 @@
-encryptionsalt: v1:REzyrEoBTgo=:v1:H8QE9bTBOxErakR4:BWMZ1E3ZeYCVEPGF1D10YfVdjJXg3A==
+encryptionsalt: v1:seiBCgNYpEo=:v1:rRFCYAYybgfb79hd:c8GUJZgI6AuB3VV9yHxu/CbhaskDCA==
 config:
-  nftcom:availabilityZones: us-east-1a,us-east-1b,us-east-1c
-  nftcom:ebInstance: t3.small
-  nftcom:ebAutoScaleMin: 1
-  nftcom:ebAutoScaleMax: 2
   nftcom:ecsAutoScaleMin: 2
   nftcom:ecsAutoScaleMax: 3
   nftcom:ecsTaskCpu: 512 

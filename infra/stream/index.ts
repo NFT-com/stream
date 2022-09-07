@@ -2,11 +2,15 @@ import * as upath from 'upath'
 
 import * as pulumi from '@pulumi/pulumi'
 
-import { deployInfra } from '../helper'
+import { deployInfra, pulumiOutToValue } from '../helper'
 import { createEcsService } from './ecs'
 
 const getSharedStackOutputs = async (): Promise<any> => {
   const sharedStack = new pulumi.StackReference(`${process.env.STAGE}.shared.${process.env.AWS_REGION}`)
+  const vpc = sharedStack.getOutput('vpcId') 
+  const subnets =  sharedStack.getOutput('publicSubnetIds') 
+  const vpcVal: string = await pulumiOutToValue(vpc) 
+  const subnetVal: string[] = await pulumiOutToValue(subnets)
   return sharedStack.outputs
 }
 
