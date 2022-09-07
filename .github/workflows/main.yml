@@ -3,17 +3,19 @@ on: [push]
 jobs:
   deploy-dev:
     if: ${{ startsWith(github.ref_name, 'feat') || startsWith(github.ref_name, 'fix') }}
-    runs-on: ubuntu-20.04
-    environment: nftcom_stream_dev
+    runs-on: ubuntu-latest
+    environment: nftcom_search_dev
     steps:
-     - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
           persist-credentials: false
           token: ${{secrets.CROSSREPO_PAT}}
           repository: NFT-com/NFT-backend
           ref: main
           path: NFT-backend
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+        with:
+          path: search
       - uses: ./.github/actions/deploy-env
         name: Deploy env
         with:
