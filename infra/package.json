@@ -2,6 +2,7 @@
   "name": "nftcom-infra",
   "scripts": {
     "build:stream:env": "ts-node index.ts stream:env",
+    "deploy:shared": "ts-node index.ts deploy:shared",
     "deploy:stream": "ts-node index.ts deploy:stream"
   },
   "dependencies": {
