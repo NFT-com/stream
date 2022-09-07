@@ -1,4 +1,4 @@
-import { db, _logger, fp } from '@nftcom/shared'
+import { db, _logger, fp } from 'nftcom-backend/shared'
 import { dbConfig } from './config'
 //import { startAndListen } from './jobs/jobs'
 import { onChainProvider } from './on-chain'

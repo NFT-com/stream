@@ -13,7 +13,7 @@
     },
     "dependencies": {
         "@babel/runtime": "^7.18.3",
-        "@nftcom/shared": "file:../../../NFT-backend/packages/shared",
+        "nftcom-backend": "file:../../../NFT-backend/packages",
         "@opensea/stream-js": "^0.0.20",
         "axios": "^0.27.2",
         "axios-retry": "^3.3.1",

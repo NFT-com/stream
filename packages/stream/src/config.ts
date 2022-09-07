@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { helper } from "@nftcom/shared"
+import { helper } from "nftcom-backend/shared"
 
 export const dbConfig = {
     host: process.env.DB_HOST || 'localhost',

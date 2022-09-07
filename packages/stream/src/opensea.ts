@@ -1,6 +1,6 @@
 import { OpenSeaStreamClient } from '@opensea/stream-js'
 import { WebSocket } from 'ws'
-import { helper, _logger } from '@nftcom/shared'
+import { helper, _logger } from 'nftcom-backend/shared'
 import axios, { AxiosResponse, AxiosInstance, AxiosError } from 'axios'
 import axiosRetry, { IAxiosRetryConfig } from 'axios-retry'
 import { cache, CacheKeys }from './cache'
