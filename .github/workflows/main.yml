@@ -14,8 +14,6 @@ jobs:
           ref: main
           path: NFT-backend
       - uses: actions/checkout@v3
-        with:
-          path: stream
       - uses: ./.github/actions/deploy-env
         name: Deploy env
         with:
