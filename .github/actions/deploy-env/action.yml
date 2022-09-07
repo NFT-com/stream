@@ -44,7 +44,7 @@ runs:
     - name: Build and Push Stream Docker Image(s)
       shell: bash
       env:
-        REPO: ${{ steps.login_ecr.outputs.registry }}/${{ inputs.stage }}-gql
+        REPO: ${{ steps.login_ecr.outputs.registry }}/${{ inputs.stage }}-stream
       run: |
         export DOCKER_BUILDKIT=1
         docker pull ${{ env.REPO }}:deps || true
