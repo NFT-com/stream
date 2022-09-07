@@ -183,49 +183,54 @@ const initializeStreamsForAllSlugs = () => {
     ], 
     async (event: BaseStreamMessage<unknown>) => {
         const eventType: EventType = event.event_type as EventType
-        if (allowedEvents.includes(eventType)) {
-            const eventPayload: OSEventPayload = event.payload as OSEventPayload
-            const chain: Chain = eventPayload.item.chain
-            if (chain.name === OSChainTypes.ETHEREUM) {
-                const nftId: string = eventPayload.item.nftId
-                if (nftId) {
-                    const chainId: string = process.env.CHAIN_ID || '4'
-                    const [ network, contract, token ] = nftId.split('/')
-                    if (contract && token) {
-                        const nft: entity.NFT = await repositories.nft.findOne({
-                            where: {
-                                contract: helper.checkSum(contract),
-                                tokenId: helper.bigNumberToHex(token),
-                                chainId
-                            }
-                        })
-
-                        if (nft) {
-                            const orderHash: string = eventPayload.order_hash
-                            if (orderHash) {
-                                const order: entity.TxOrder = await repositories.txOrder.findOne({
-                                    relations: ['activity'],
-                                    where: {
-                                        id: orderHash
+        try {
+            if (allowedEvents.includes(eventType)) {
+                const eventPayload: OSEventPayload = event.payload as OSEventPayload
+                const chain: Chain = eventPayload.item.chain
+                if (chain.name === OSChainTypes.ETHEREUM) {
+                    const nftId: string = eventPayload.item.nftId
+                    if (nftId) {
+                        const chainId: string = process.env.CHAIN_ID || '4'
+                        const [ network, contract, token ] = nftId.split('/')
+                        if (contract && token) {
+                            const nft: entity.NFT = await repositories.nft.findOne({
+                                where: {
+                                    contract: helper.checkSum(contract),
+                                    tokenId: helper.bigNumberToHex(token),
+                                    chainId
+                                }
+                            })
+    
+                            if (nft) {
+                                const orderHash: string = eventPayload.order_hash
+                                if (orderHash) {
+                                    const order: entity.TxOrder = await repositories.txOrder.findOne({
+                                        relations: ['activity'],
+                                        where: {
+                                            id: orderHash
+                                        }
+                                    })
+    
+                                    if (!order) {
+                                        const newOrder: Partial<entity.TxOrder> = await orderEntityBuilder(
+                                            eventType,
+                                            eventPayload,
+                                            chainId
+                                        )
+    
+                                        await repositories.txOrder.save(newOrder)
                                     }
-                                })
-
-                                if (!order) {
-                                    const newOrder: Partial<entity.TxOrder> = await orderEntityBuilder(
-                                        eventType,
-                                        eventPayload,
-                                        chainId
-                                    )
-
-                                    await repositories.txOrder.save(newOrder)
                                 }
                             }
                         }
+                        
                     }
-                    
                 }
             }
+        } catch (err) {
+            logger.error('Err:', err)
         }
+        
     })
 }
 
