@@ -1,5 +1,5 @@
 {
-    "name": "@nftcom/streams",
+    "name": "@nftcom/stream",
     "version": "1.0.0",
     "description": "Stream utilities",
     "main": "dist/index",
