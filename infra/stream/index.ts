@@ -19,7 +19,7 @@ const pulumiProgram = async (): Promise<Record<string, any> | void> => {
 export const createStreamCluster = (
   preview?: boolean,
 ): Promise<pulumi.automation.OutputMap> => {
-  const stackName = `${process.env.STAGE}.stream.${process.env.AWS_REGION}`
+  const stackName = `${process.env.STAGE}.st.${process.env.AWS_REGION}`
   const workDir = upath.joinSafe(__dirname, 'stack')
   return deployInfra(stackName, workDir, pulumiProgram, preview)
 }
