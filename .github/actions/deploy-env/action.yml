@@ -44,7 +44,7 @@ runs:
     - name: Deploy Stream Infra
       if: ${{ inputs.stage == 'prod' || steps.filter.outputs.stream == 'true' }}
       shell: bash
-      working-directory: infra
+      working-directory: stream/infra
       env:
         STAGE: ${{ inputs.stage }}
         PULUMI_CONFIG_PASSPHRASE: ""
