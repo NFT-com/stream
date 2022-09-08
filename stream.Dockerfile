@@ -2,10 +2,11 @@ FROM node:16-alpine as deps
 
 WORKDIR /app
 
-COPY package.json .
-COPY .npmrc .
-COPY tsconfig.json .
-COPY packages/stream/package.json ./packages/stream/package.json
+COPY stream/package.json .
+COPY stream/.npmrc .
+COPY stream/tsconfig.json .
+COPY stream/packages/stream/package.json ./stream/packages/stream/package.json
+COPY NFT-backend/packages/shared/package.json ./NFT-backend/packages/shared/package.json
 
 # add tools for native dependencies (node-gpy)
 RUN apk add --no-cache --virtual .gyp python3 make g++ \
@@ -15,14 +16,15 @@ RUN apk add --no-cache --virtual .gyp python3 make g++ \
     && npm install \
     && apk del .gyp
 
-COPY packages/stream ./packages/stream
+COPY stream/packages/stream ./stream/packages/stream
+COPY NFT-backend/packages/shared ./NFT-backend/packages/shared
 
 FROM deps as build
 
-FROM 016437323894.dkr.ecr.us-east-1.amazonaws.com/prod-gql:deps as nft-backend
-COPY --from=nft-backend /app/packages/shared /app/packages/shared
+WORKDIR /app/NFT-backend/packages/shared
+RUN npm run build
 
-WORKDIR /app/packages/stream
+WORKDIR /app/stream/packages/stream
 RUN npm run build
 
 
@@ -33,11 +35,15 @@ WORKDIR /app
 
 COPY --from=deps /app/prod_node_modules ./node_modules
 
-COPY --from=build /app/packages/stream/package.json /app/packages/stream/package.json
-COPY --from=build /app/packages/stream/dist /app/packages/stream/dist
-COPY --from=build /app/packages/stream/.env /app/packages/stream/.env
+FROM /app/NFT-backend/packages/shared as nft-backend-build
+COPY --from=nft-backend-build /app/NFT-backend/packages/shared/package.json /app/NFT-backend/packages/shared/package.json
+COPY --from=nft-backend-build /app/NFT-backend/packages/shared/dist /app/NFT-backend/packages/shared/dist
 
-WORKDIR /app/packages/stream
+COPY --from=build /app/stream/packages/stream/package.json /app/packages/stream/package.json
+COPY --from=build /app/stream/packages/stream/dist /app/packages/stream/dist
+COPY --from=build /app/stream/packages/stream/.env /app/packages/stream/.env
+
+WORKDIR /app/stream/packages/stream
 
 EXPOSE 8080
 
