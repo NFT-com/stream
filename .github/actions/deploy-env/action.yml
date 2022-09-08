@@ -23,7 +23,7 @@ runs:
     - name: Install pulumi
       uses: pulumi/setup-pulumi@v2
     - name: Login to Pulumi backend
-      working-directory: infra
+      working-directory: stream/infra
       shell: bash
       run: pulumi login s3://nftcom-pulumi-state
     - name: Install Shared Deps
@@ -31,7 +31,7 @@ runs:
       shell: bash
       run:  npm ci
     - name: Install Infra Deps
-      working-directory: infra
+      working-directory: stream/infra
       shell: bash
       run:  npm install
     - uses: dorny/paths-filter@v2
