@@ -4,8 +4,8 @@ WORKDIR /app
 
 COPY stream/package.json .
 COPY stream/package.json ./stream
-COPY stream/.npmrc . ./stream
-COPY stream/.npmrc .
+COPY stream/.npmrc . 
+COPY stream/.npmrc ./stream
 COPY stream/tsconfig.json .
 COPY stream/tsconfig.json ./stream/tsconfig.json
 COPY NFT-backend/tsconfig.json ./NFT-backend/tsconfig.json
