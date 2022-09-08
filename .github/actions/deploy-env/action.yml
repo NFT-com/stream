@@ -29,10 +29,6 @@ runs:
       working-directory: stream/infra
       shell: bash
       run: pulumi login s3://nftcom-pulumi-state
-    - name: Install Shared Deps
-      working-directory: NFT-backend/infra
-      shell: bash
-      run:  npm ci
     - name: Install Infra Deps
       working-directory: stream/infra
       shell: bash
@@ -65,75 +61,6 @@ runs:
         OPENSEA_API_B_KEY: ${{ fromJSON(inputs.secrets).OPENSEA_API_KEY }}
         LOOKSRARE_API_KEY: ${{ fromJSON(inputs.secrets).LOOKSRARE_API_KEY }}
       run: npm run build:stream:env
-    - name: Deploy GQL Infra
-      working-directory: NFT-backend/infra
-      shell: bash
-      env:
-        STAGE: ${{ inputs.stage }}
-        PULUMI_CONFIG_PASSPHRASE: ""
-        AWS_ACCOUNT_ID: ${{ fromJSON(inputs.secrets).AWS_ACCOUNT_ID }}
-        DB_PASSWORD: ${{ fromJSON(inputs.secrets).DB_PASSWORD }}
-      run: npm run deploy:shared
-    - name: Build GQL Env File
-      shell: bash
-      working-directory: NFT-backend/infra
-      env:
-        STAGE: ${{ inputs.stage }}
-        DB_PASSWORD: ${{ fromJSON(inputs.secrets).DB_PASSWORD }}
-        CHAIN_ID: ${{ fromJSON(inputs.secrets).CHAIN_ID }}
-        AUTH_MESSAGE: ${{ fromJSON(inputs.secrets).AUTH_MESSAGE }}
-        SG_API_KEY: ${{ fromJSON(inputs.secrets).SG_API_KEY }}
-        ETH_GAS_STATION_API_KEY: ${{ fromJSON(inputs.secrets).ETH_GAS_STATION_API_KEY }}
-        TEAM_AUTH_TOKEN: ${{ fromJSON(inputs.secrets).TEAM_AUTH_TOKEN }}
-        MNEMONIC: ${{ fromJSON(inputs.secrets).MNEMONIC }}
-        MNEMONIC_RINKEBY: ${{ fromJSON(inputs.secrets).MNEMONIC_RINKEBY }}
-        HCS_TOPIC_ID: ${{ fromJSON(inputs.secrets).HCS_TOPIC_ID }}
-        HCS_ACCOUNT_ID: ${{ fromJSON(inputs.secrets).HCS_ACCOUNT_ID }}
-        HCS_PRIVATE_KEY: ${{ fromJSON(inputs.secrets).HCS_PRIVATE_KEY }}
-        ZMOK_API_URL: ${{ fromJSON(inputs.secrets).ZMOK_API_URL }}
-        UBIQUITY_API_KEY: ${{ fromJSON(inputs.secrets).UBIQUITY_API_KEY }}
-        INFURA_API_KEY: ${{ fromJSON(inputs.secrets).INFURA_API_KEY }}
-        ALCHEMY_API_KEY: ${{ fromJSON(inputs.secrets).ALCHEMY_API_KEY }}
-        ALCHEMY_API_URL: ${{ fromJSON(inputs.secrets).ALCHEMY_API_URL }}
-        ALCHEMY_API_URL_RINKEBY: ${{ fromJSON(inputs.secrets).ALCHEMY_API_URL_RINKEBY }}
-        ALCHEMY_API_URL_GOERLI: ${{ fromJSON(inputs.secrets).ALCHEMY_API_URL_GOERLI }}
-        SENTRY_DSN: ${{ fromJSON(inputs.secrets).SENTRY_DSN }}
-        PUBLIC_SALE_KEY: ${{ fromJSON(inputs.secrets).PUBLIC_SALE_KEY }}
-        SERVER_CONFIG: ${{ fromJSON(inputs.secrets).SERVER_CONFIG }}
-        SHARED_MINT_SECRET: ${{ fromJSON(inputs.secrets).SHARED_MINT_SECRET }}
-        SUPPORTED_NETWORKS: ${{ fromJSON(inputs.secrets).SUPPORTED_NETWORKS }}
-        TYPESENSE_HOST: ${{ fromJSON(inputs.secrets).TYPESENSE_HOST }}
-        TYPESENSE_API_KEY: ${{ fromJSON(inputs.secrets).TYPESENSE_API_KEY }}
-        MINTED_PROFILE_EVENTS_MAX_BLOCKS: ${{ fromJSON(inputs.secrets).MINTED_PROFILE_EVENTS_MAX_BLOCKS }}
-        PROFILE_NFTS_EXPIRE_DURATION: ${{ fromJSON(inputs.secrets).PROFILE_NFTS_EXPIRE_DURATION }}
-        BULL_MAX_REPEAT_COUNT: ${{ fromJSON(inputs.secrets).BULL_MAX_REPEAT_COUNT }}
-        OPENSEA_API_KEY: ${{ fromJSON(inputs.secrets).OPENSEA_API_KEY }}
-        LOOKSRARE_API_KEY: ${{ fromJSON(inputs.secrets).LOOKSRARE_API_KEY }}
-        PROFILE_SCORE_EXPIRE_DURATION: ${{ fromJSON(inputs.secrets).PROFILE_SCORE_EXPIRE_DURATION }}
-        NFT_EXTERNAL_ORDER_REFRESH_DURATION: ${{ fromJSON(inputs.secrets).NFT_EXTERNAL_ORDER_REFRESH_DURATION }}
-        TEST_DB_HOST: ${{ fromJSON(inputs.secrets).TEST_DB_HOST }}
-        TEST_DB_DATABASE: ${{ fromJSON(inputs.secrets).TEST_DB_DATABASE }}
-        TEST_DB_USERNAME: ${{ fromJSON(inputs.secrets).TEST_DB_USERNAME }}
-        TEST_DB_PORT: ${{ fromJSON(inputs.secrets).TEST_DB_PORT }}
-        TEST_DB_PASSWORD: ${{ fromJSON(inputs.secrets).TEST_DB_PASSWORD }}
-        TEST_DB_USE_SSL: ${{ fromJSON(inputs.secrets).TEST_DB_USE_SSL }}
-        ACTIVITY_ENDPOINTS_ENABLED: ${{ fromJSON(inputs.secrets).ACTIVITY_ENDPOINTS_ENABLED}}
-        NFTPORT_KEY: ${{ fromJSON(inputs.secrets).NFTPORT_KEY}}
-      run: npm run build:gql:env
-    - name: Build and Push Gql Shared Image
-      shell: bash
-      working-directory: NFT-backend
-      run: |
-        export DOCKER_BUILDKIT=1
-        docker pull shared:deps || true
-        docker pull shared:build || true
-        docker build . -f gql.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target deps --cache-from shared:deps -t shared:deps
-        docker build . -f gql.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target build --cache-from shared:deps --cache-from shared:build -t shared:build
-        docker build . -f gql.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target release --cache-from shared:deps --cache-from shared:build -t shared:latest -t shared:${{ github.sha }}
-        docker push shared:deps
-        docker push shared:build
-        docker push shared:latest
-        docker push shared:${{ github.sha }}
     - name: Build and Push Stream Image
       shell: bash
       working-directory: stream

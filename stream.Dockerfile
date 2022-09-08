@@ -18,7 +18,9 @@ RUN apk add --no-cache --virtual .gyp python3 make g++ \
 COPY packages/stream ./packages/stream
 
 FROM deps as build
-FROM shared:deps
+
+FROM 016437323894.dkr.ecr.us-east-1.amazonaws.com/prod-gql:deps as nft-backend
+COPY --from=nft-backend /app/packages/shared /app/packages/shared
 
 WORKDIR /app/packages/stream
 RUN npm run build
