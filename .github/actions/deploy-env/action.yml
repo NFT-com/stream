@@ -77,7 +77,6 @@ runs:
         docker push ${{ env.REPO }}:latest
         docker push ${{ env.REPO }}:${{ github.sha }}
     - name: Deploy Stream Infra
-      if: ${{ inputs.stage == 'prod' || steps.filter.outputs.stream == 'true' }}
       shell: bash
       working-directory: stream/infra
       env:
