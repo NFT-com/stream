@@ -1,5 +1,5 @@
 import { BaseStreamMessage, EventType } from '@opensea/stream-js'
-import { db, defs, entity, helper, _logger } from '@nftcom/shared'
+import { db, defs, entity, helper, _logger } from 'nftcom-backend/shared'
 import { client, retrieveSlugsForContracts } from './opensea'
 import { cache, CacheKeys }from './cache'
 import { Chain, DistinctContract, OSChainTypes, OSEventPayload, OSListingEventPayload, OSOfferEventPayload } from './interfaces'
