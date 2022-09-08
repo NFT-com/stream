@@ -9,7 +9,7 @@
         "clean": "rimraf dist tsconfig.tsbuildinfo",
         "compile": "tsc && tsc-alias",
         "dev": "doppler run -- concurrently -k -r \"nodemon\"",
-        "start": "node -r source-map-support/register ./dist/index"
+        "start": "node ./dist/index"
     },
     "dependencies": {
         "@babel/runtime": "^7.18.3",
