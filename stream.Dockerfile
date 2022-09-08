@@ -51,7 +51,7 @@ COPY --from=build /app/stream/packages/stream/package.json /app/stream/packages/
 COPY --from=build /app/stream/packages/stream/dist /app/stream/packages/stream/dist
 COPY --from=build /app/stream/packages/stream/.env /app/stream/packages/stream/.env
 
-COPY stream/package.json ./stream/package.json
+COPY app/package.json /app/stream/package.json
 
 WORKDIR /app/stream/packages/stream
 
