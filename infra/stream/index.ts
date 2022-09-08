@@ -46,7 +46,7 @@ export const updateStreamEnvFile = (): void => {
   parsedFile['DB_USE_SSL'] = 'true'
   parsedFile['REDIS_HOST'] = infraOutput.redisHost
   parsedFile['REDIS_PORT'] = parsedFile['DB_REDIS'] = process.env.REDIS_PORT || ''
-  parsedFile['OPENSEA_API_B_KEY'] = process.env.OPENSEA_B_API_KEY || parsedFile['OPENSEA_API_B_KEY']
+  parsedFile['OPENSEA_B_API_KEY'] = process.env.OPENSEA_B_API_KEY || parsedFile['OPENSEA_B_API_KEY']
   parsedFile['LOOKSRARE_API_KEY'] = process.env.LOOKSRARE_API_KEY || parsedFile['LOOKSRARE_API_KEY']
 
   console.log(JSON.stringify(parsedFile))
