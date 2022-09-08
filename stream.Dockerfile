@@ -24,13 +24,14 @@ COPY NFT-backend/packages/shared ./NFT-backend/packages/shared
 FROM deps as build
 
 WORKDIR /app/NFT-backend/packages/shared
+RUN npm install
 RUN npm run build
 
 WORKDIR /app/stream/packages/stream
 RUN npm run build
 
 WORKDIR /app/NFT-backend/packages/shared
-RUN npm install
+
 
 
 FROM node:16-alpine as release
