@@ -1,15 +1,15 @@
 import { OpenSeaStreamClient } from '@opensea/stream-js'
 import { WebSocket } from 'ws'
-import { helper, _logger } from '@nftcom/shared'
+import { helper, _logger } from 'nftcom-backend/shared'
 import axios, { AxiosResponse, AxiosInstance, AxiosError } from 'axios'
 import axiosRetry, { IAxiosRetryConfig } from 'axios-retry'
 import { cache, CacheKeys }from './cache'
 import { delay } from './utils'
 import { Slug } from './interfaces'
+import { OPENSEA_API_KEY } from './config'
 
 const logger = _logger.Factory(_logger.Context.Opensea)
 
-const OPENSEA_API_KEY = process.env.OPENSEA_B_API_KEY || ''
 const V1_OPENSEA_API_TESTNET_BASE_URL = 'https://testnets-api.opensea.io/api/v1'
 const V1_OPENSEA_API_BASE_URL = 'https://api.opensea.io/api/v1'
 const DELAY_AFTER_BATCH_RUN = 4
@@ -23,6 +23,16 @@ export const client = new OpenSeaStreamClient({
         transport: WebSocket
     }
 });
+
+
+export const connectClient = () => {
+  logger.log('---Connecting to client----')
+  try {
+    client.connect()
+  } catch (err) {
+    logger.error('client connection error:', JSON.stringify(err))
+  }
+}
 
 
 export const getOpenseaInterceptor = (

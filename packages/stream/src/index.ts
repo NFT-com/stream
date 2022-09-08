@@ -1,4 +1,4 @@
-import { db, _logger, fp } from '@nftcom/shared'
+import { db, _logger, fp } from 'nftcom-backend/shared'
 import { dbConfig } from './config'
 //import { startAndListen } from './jobs/jobs'
 import { onChainProvider } from './on-chain'
@@ -9,8 +9,7 @@ const logger = _logger.Factory(_logger.Context.General, _logger.Context.Misc)
 
 // error handler
 const handleError = (err: Error): void => {
-
-    logger.error(err)
+    logger.error('App Error', err)
     throw err
 }
 

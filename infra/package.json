@@ -1,0 +1,32 @@
+{
+  "name": "nftcom-infra",
+  "scripts": {
+    "build:gql:env": "ts-node index.ts gql:env",
+    "build:stream:env": "ts-node index.ts stream:env",
+    "deploy:shared": "ts-node index.ts deploy:shared",
+    "deploy:stream": "ts-node index.ts deploy:stream"
+  },
+  "dependencies": {
+    "@actions/core": "^1.6.0",
+    "@pulumi/aws": "^4.28.0",
+    "@pulumi/awsx": "^0.32.0",
+    "@pulumi/pulumi": "^3.0.0",
+    "archiver": "^5.3.0",
+    "envfile": "^6.17.0",
+    "js-yaml": "^4.1.0",
+    "lodash": "^4.17.21",
+    "upath": "^2.0.1"
+  },
+  "devDependencies": {
+    "@types/archiver": "^5.1.1",
+    "@types/js-yaml": "^4.0.5",
+    "@types/lodash": "^4.14.177",
+    "@types/node": "^14",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.5.2"
+  },
+  "engines": {
+    "node": ">=16",
+    "npm": ">=7"
+  }
+}

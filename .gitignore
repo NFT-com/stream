@@ -13,12 +13,12 @@ packages/*/.env
 .eslintcache
 infra/package-lock.json
 docs/*
-packages/gql/coverage/*
+packages/stream/coverage/*
 
 # logs
 log-debug
 *.log
 
 # others
-packages/gql/src/defs/gql.ts
+packages/stream/src/defs/stream.ts
 *.zip

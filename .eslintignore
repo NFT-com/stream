@@ -2,9 +2,9 @@
 
 docs/*
 old-code
-gql-naming-fn.js
+stream-naming-fn.js
 packages/*/dist
-packages/gql/src/defs/gql.ts
+packages/stream/src/defs/stream.ts
 *.config.js
 *.config.ts
 *.test.js

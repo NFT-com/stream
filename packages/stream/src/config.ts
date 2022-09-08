@@ -1,4 +1,5 @@
-import { helper } from "@nftcom/shared"
+import 'dotenv/config'
+import { helper } from "nftcom-backend/shared"
 
 export const dbConfig = {
     host: process.env.DB_HOST || 'localhost',
@@ -14,5 +15,9 @@ export const dbConfig = {
 export const redisConfig = {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT) || 6379,
-  }
+}
+
+export const OPENSEA_API_KEY = process.env.OPENSEA_B_API_KEY || ''
+
+
   

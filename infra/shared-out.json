@@ -1,0 +1,1 @@
+{"dbHost":"dev-main.cluster-clmsk3iud7e0.us-east-1.rds.amazonaws.com","redisHost":"dev-main.ndrkex.0001.use1.cache.amazonaws.com","streamECRRepo":"dev-st","publicSubnets":["subnet-040ff4d602e11aaaa","subnet-07cd2e0de4fa963d9","subnet-05840aae4c820581b"],"vpcId":"vpc-0ece7558a4ee8e424","webSGId":"sg-0e283f2d8aa9055d5"}
