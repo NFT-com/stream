@@ -3,7 +3,6 @@ FROM node:16-alpine as deps
 WORKDIR /app
 
 COPY stream/package.json .
-COPY stream/package.json ./stream/package.json
 COPY stream/.npmrc . 
 COPY stream/.npmrc ./stream/.npmrc
 COPY stream/tsconfig.json .
