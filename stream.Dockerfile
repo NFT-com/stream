@@ -20,6 +20,7 @@ RUN apk add --no-cache --virtual .gyp python3 make g++ \
 COPY stream/packages/stream ./stream/packages/stream
 COPY NFT-backend/packages/shared ./NFT-backend/packages/shared
 
+
 FROM deps as build
 
 WORKDIR /app/NFT-backend/packages/shared
@@ -28,13 +29,17 @@ RUN npm run build
 WORKDIR /app/stream/packages/stream
 RUN npm run build
 
+WORKDIR /app/NFT-backend/packages/shared
+RUN npm install
+
 
 FROM node:16-alpine as release
 
 WORKDIR /app
 
 
-COPY --from=deps /app/prod_node_modules ./node_modules
+COPY --from=deps /app/prod_node_modules ./stream/node_modules
+COPY --from=deps /app/NFT-backend/packages/shared/node_modules ./NFT-backend/packages/shared/node_modules
 
 COPY --from=build /app/NFT-backend/packages/shared/package.json /app/NFT-backend/packages/shared/package.json
 COPY --from=build /app/NFT-backend/packages/shared/dist /app/NFT-backend/packages/shared/dist
