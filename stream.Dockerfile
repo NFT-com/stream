@@ -35,9 +35,8 @@ WORKDIR /app
 
 COPY --from=deps /app/prod_node_modules ./node_modules
 
-FROM /app/NFT-backend/packages/shared as nft-backend-build
-COPY --from=nft-backend-build /app/NFT-backend/packages/shared/package.json /app/NFT-backend/packages/shared/package.json
-COPY --from=nft-backend-build /app/NFT-backend/packages/shared/dist /app/NFT-backend/packages/shared/dist
+COPY --from=build /app/NFT-backend/packages/shared/package.json /app/NFT-backend/packages/shared/package.json
+COPY --from=build /app/NFT-backend/packages/shared/dist /app/NFT-backend/packages/shared/dist
 
 COPY --from=build /app/stream/packages/stream/package.json /app/packages/stream/package.json
 COPY --from=build /app/stream/packages/stream/dist /app/packages/stream/dist
