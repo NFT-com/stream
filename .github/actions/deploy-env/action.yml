@@ -86,4 +86,9 @@ runs:
         AWS_ACCOUNT_ID: ${{ fromJSON(inputs.secrets).AWS_ACCOUNT_ID }}
         ECR_REGISTRY: ${{ steps.login_ecr.outputs.registry }}
         GIT_SHA: ${{ github.sha }}
+        DB_PASSWORD: ${{ fromJSON(inputs.secrets).DB_PASSWORD }}
+        DB_PORT: ${{ fromJSON(inputs.secrets).DB_PORT }}
+        REDIS_PORT: ${{ fromJSON(inputs.secrets).REDIS_PORT }}
+        OPENSEA_API_KEY: ${{ fromJSON(inputs.secrets).OPENSEA_API_KEY }}
+        LOOKSRARE_API_KEY: ${{ fromJSON(inputs.secrets).LOOKSRARE_API_KEY }}
       run: npm run deploy:stream
