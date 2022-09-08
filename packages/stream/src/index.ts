@@ -48,11 +48,11 @@ const stopServer = async (): Promise<void> => {
         await server.close()
     }
 }
-startServer()
+
 const bootstrap = (): Promise<void> => {
     verifyConfiguration()
     return db.connect(dbConfig)
-     // .then(startServer)
+      .then(startServer)
       .then(onChainProvider)
       .then(client.connect)
       .then(initiateStreaming)
