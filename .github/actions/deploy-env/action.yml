@@ -67,7 +67,7 @@ runs:
       run: npm run build:stream:env
     - name: Build GQL Env File
       shell: bash
-      working-directory: NFT-backend/infra
+      working-directory: stream/infra
       env:
         STAGE: ${{ inputs.stage }}
         DB_PASSWORD: ${{ fromJSON(inputs.secrets).DB_PASSWORD }}
