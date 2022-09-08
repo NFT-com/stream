@@ -58,7 +58,7 @@ runs:
         AWS_ACCOUNT_ID: ${{ fromJSON(inputs.secrets).AWS_ACCOUNT_ID }}
         DB_PASSWORD: ${{ fromJSON(inputs.secrets).DB_PASSWORD }}
         CHAIN_ID: ${{ fromJSON(inputs.secrets).CHAIN_ID }}
-        OPENSEA_API_B_KEY: ${{ fromJSON(inputs.secrets).OPENSEA_API_KEY }}
+        OPENSEA_B_API_KEY: ${{ fromJSON(inputs.secrets).OPENSEA_B_API_KEY }}
         LOOKSRARE_API_KEY: ${{ fromJSON(inputs.secrets).LOOKSRARE_API_KEY }}
       run: npm run build:stream:env
     - name: Build and Push Stream Image
