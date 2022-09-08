@@ -47,9 +47,11 @@ COPY --from=deps /app/prod_node_modules ./stream/node_modules
 COPY --from=build /app/NFT-backend/packages/shared/package.json /app/NFT-backend/packages/shared/package.json
 COPY --from=build /app/NFT-backend/packages/shared/dist /app/NFT-backend/packages/shared/dist
 
-COPY --from=build /app/stream/packages/stream/package.json /app/packages/stream/package.json
-COPY --from=build /app/stream/packages/stream/dist /app/packages/stream/dist
-COPY --from=build /app/stream/packages/stream/.env /app/packages/stream/.env
+COPY --from=build /app/stream/packages/stream/package.json /app/stream/packages/stream/package.json
+COPY --from=build /app/stream/packages/stream/dist /app/stream/packages/stream/dist
+COPY --from=build /app/stream/packages/stream/.env /app/stream/packages/stream/.env
+
+COPY stream/package.json ./stream/package.json
 
 WORKDIR /app/stream/packages/stream
 
