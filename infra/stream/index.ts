@@ -36,7 +36,7 @@ export const updateStreamEnvFile = (): void => {
   const stackConfig = ymlDoc.config as { [key: string]: string }
 
   console.log('Update server environment file...')
-  const env = getEnv('st', '.env.example')
+  const env = getEnv('stream', '.env.example')
   let { parsedFile } = env
   parsedFile = omit(parsedFile, 'PORT', 'DB_PORT', 'REDIS_PORT')
   parsedFile['NODE_ENV'] = stackConfig['nftcom:nodeEnv']
