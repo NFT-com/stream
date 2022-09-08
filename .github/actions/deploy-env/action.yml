@@ -72,9 +72,9 @@ runs:
         export DOCKER_BUILDKIT=1
         docker pull shared:deps || true
         docker pull shared:build || true
-        docker build . -f stream.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target deps --cache-from shared:deps -t shared:deps
-        docker build . -f stream.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target build --cache-from shared:deps --cache-from shared:build -t shared:build
-        docker build . -f stream.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target release --cache-from shared:deps --cache-from shared:build -t shared:latest -t shared:${{ github.sha }}
+        docker build . -f gql.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target deps --cache-from shared:deps -t shared:deps
+        docker build . -f gql.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target build --cache-from shared:deps --cache-from shared:build -t shared:build
+        docker build . -f gql.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target release --cache-from shared:deps --cache-from shared:build -t shared:latest -t shared:${{ github.sha }}
         docker push shared:deps
         docker push shared:build
         docker push shared:latest
