@@ -50,31 +50,6 @@ runs:
         AWS_ACCOUNT_ID: ${{ fromJSON(inputs.secrets).AWS_ACCOUNT_ID }}
         DB_PASSWORD: ${{ fromJSON(inputs.secrets).DB_PASSWORD }}
       run: npm run deploy:shared
-    - name: Build Stream Env File
-      shell: bash
-      working-directory: stream/infra
-      env:
-        STAGE: ${{ inputs.stage }}
-        DB_PASSWORD: ${{ fromJSON(inputs.secrets).DB_PASSWORD }}
-        CHAIN_ID: ${{ fromJSON(inputs.secrets).CHAIN_ID }}
-        OPENSEA_API_B_KEY: ${{ fromJSON(inputs.secrets).OPENSEA_API_KEY }}
-        LOOKSRARE_API_KEY: ${{ fromJSON(inputs.secrets).LOOKSRARE_API_KEY }}
-      run: npm run build:stream:env
-    - name: Build and Push Stream Image
-      shell: bash
-      env:
-        REPO: ${{ steps.login_ecr.outputs.registry }}/${{ inputs.stage }}-stream
-      run: |
-        export DOCKER_BUILDKIT=1
-        docker pull ${{ env.REPO }}:deps || true
-        docker pull ${{ env.REPO }}:build || true
-        docker build . -f stream.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target deps --cache-from ${{ env.REPO }}:deps -t ${{ env.REPO }}:deps
-        docker build . -f stream.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target build --cache-from ${{ env.REPO }}:deps --cache-from ${{ env.REPO }}:build -t ${{ env.REPO }}:build
-        docker build . -f stream.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target release --cache-from ${{ env.REPO }}:deps --cache-from ${{ env.REPO }}:build -t ${{ env.REPO }}:latest -t ${{ env.REPO }}:${{ github.sha }}
-        docker push ${{ env.REPO }}:deps
-        docker push ${{ env.REPO }}:build
-        docker push ${{ env.REPO }}:latest
-        docker push ${{ env.REPO }}:${{ github.sha }}
     - name: Deploy Stream Infra
       if: ${{ inputs.stage == 'prod' || steps.filter.outputs.stream == 'true' }}
       shell: bash
@@ -83,4 +58,5 @@ runs:
         STAGE: ${{ inputs.stage }}
         PULUMI_CONFIG_PASSPHRASE: ""
         AWS_ACCOUNT_ID: ${{ fromJSON(inputs.secrets).AWS_ACCOUNT_ID }}
+        ECR_REGISTRY: ${{ steps.login_ecr.outputs.registry }}
       run: npm run deploy:stream
