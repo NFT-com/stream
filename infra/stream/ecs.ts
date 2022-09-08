@@ -54,7 +54,7 @@ const createEcsTargetGroup = (
     healthCheck: {
       interval: 15,
       matcher: '200-399',
-      path: '/.well-known/apollo/server-health',
+      path: '/health',
       timeout: 5,
       unhealthyThreshold: 5,
     },
