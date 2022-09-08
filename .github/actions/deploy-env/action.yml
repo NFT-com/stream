@@ -60,7 +60,7 @@ runs:
         OPENSEA_API_B_KEY: ${{ fromJSON(inputs.secrets).OPENSEA_API_KEY }}
         LOOKSRARE_API_KEY: ${{ fromJSON(inputs.secrets).LOOKSRARE_API_KEY }}
       run: npm run build:stream:env
-    - name: Build and Push GQL Image
+    - name: Build and Push Stream Image
       shell: bash
       env:
         REPO: ${{ steps.login_ecr.outputs.registry }}/${{ inputs.stage }}-stream

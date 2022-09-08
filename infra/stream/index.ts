@@ -30,13 +30,13 @@ export const updateStreamEnvFile = (): void => {
   const infraOutput = getSharedInfraOutput()
 
   console.log('Read stack yaml file...')
-  const ymlFileName = `Pulumi.${process.env.STAGE}.gql.${process.env.AWS_REGION}.yaml`
+  const ymlFileName = `Pulumi.${process.env.STAGE}.st.${process.env.AWS_REGION}.yaml`
   const ymlFile = upath.joinSafe(__dirname, 'stack', ymlFileName)
   const ymlDoc = jyml.load(fs.readFileSync(ymlFile).toString()) as { [key: string]: any }
   const stackConfig = ymlDoc.config as { [key: string]: string }
 
   console.log('Update server environment file...')
-  const env = getEnv('gql', '.env.example')
+  const env = getEnv('st', '.env.example')
   let { parsedFile } = env
   parsedFile = omit(parsedFile, 'PORT', 'DB_PORT', 'REDIS_PORT')
   parsedFile['NODE_ENV'] = stackConfig['nftcom:nodeEnv']
