@@ -37,6 +37,7 @@ jobs:
         with:
           path: stream
       - uses: ./stream/.github/actions/deploy-env
+        name: Deploy Staging Env
         with:
           secrets: ${{ toJSON(secrets) }}
           stage: staging
@@ -56,6 +57,7 @@ jobs:
         with:
           path: stream
       - uses: ./stream/.github/actions/deploy-env
+        name: Deploy Prod Env
         with:
           secrets: ${{ toJSON(secrets) }}
           stage: prod
