@@ -18,9 +18,11 @@ RUN apk add --no-cache --virtual .gyp python3 make g++ \
 COPY packages/stream ./packages/stream
 
 FROM deps as build
+FROM shared:deps
 
 WORKDIR /app/packages/stream
 RUN npm run build
+
 
 FROM node:16-alpine as release
 
