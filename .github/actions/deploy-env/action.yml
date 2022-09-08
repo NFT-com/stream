@@ -44,7 +44,7 @@ runs:
         filters: |
           stream:
             - 'infra/**'
-    - name: Deploy Strean Shared Infra
+    - name: Deploy Stream Shared Infra
       working-directory: stream/infra
       shell: bash
       env:
@@ -65,9 +65,18 @@ runs:
         OPENSEA_API_B_KEY: ${{ fromJSON(inputs.secrets).OPENSEA_API_KEY }}
         LOOKSRARE_API_KEY: ${{ fromJSON(inputs.secrets).LOOKSRARE_API_KEY }}
       run: npm run build:stream:env
+    - name: Deploy GQL Infra
+      working-directory: NFT-backend/infra
+      shell: bash
+      env:
+        STAGE: ${{ inputs.stage }}
+        PULUMI_CONFIG_PASSPHRASE: ""
+        AWS_ACCOUNT_ID: ${{ fromJSON(inputs.secrets).AWS_ACCOUNT_ID }}
+        DB_PASSWORD: ${{ fromJSON(inputs.secrets).DB_PASSWORD }}
+      run: npm run deploy:shared
     - name: Build GQL Env File
       shell: bash
-      working-directory: stream/infra
+      working-directory: NFT-backend/infra
       env:
         STAGE: ${{ inputs.stage }}
         DB_PASSWORD: ${{ fromJSON(inputs.secrets).DB_PASSWORD }}
