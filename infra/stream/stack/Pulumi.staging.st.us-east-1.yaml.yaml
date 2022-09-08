@@ -1,7 +1,0 @@
-encryptionsalt: v1:r0FgrUDTodc=:v1:5nEkMHxVAv9c6yfg:RUu+N1tWxdsiVKXC8jPgm3736HRB0A==
-config:
-  nftcom:ecsAutoScaleMin: 2
-  nftcom:ecsAutoScaleMax: 3
-  nftcom:ecsTaskCpu: 512
-  nftcom:ecsTaskMemory: 1024
-  nftcom:nodeEnv: development

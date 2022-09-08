@@ -13,27 +13,29 @@
     },
     "dependencies": {
         "@babel/runtime": "^7.18.3",
-        "nftcom-backend": "file:../../../NFT-backend/packages",
         "@opensea/stream-js": "^0.0.20",
         "axios": "^0.27.2",
         "axios-retry": "^3.3.1",
         "bull": "^4.2.0",
         "dotenv": "^10.0.0",
         "ethers": "^5.6.9",
+        "express": "^4.18.1",
         "ioredis": "^5.2.3",
+        "kill-port": "^1.6.1",
+        "nftcom-backend": "file:../../../NFT-backend/packages",
         "source-map-support": "^0.5.21",
         "ws": "^8.8.1"
     },
     "devDependencies": {
-        "@types/node": "^18.6.1",
         "@types/bull": "^3.15.7",
+        "@types/node": "^18.6.1",
         "concurrently": "^6.3.0",
         "nodemon": "^2.0.14",
         "rimraf": "^3.0.2",
         "ts-node": "^10.4.0",
         "tsc-alias": "^1.4.1",
-        "tslib": "^2.4.0",
         "tsconfig-paths": "^3.11.0",
+        "tslib": "^2.4.0",
         "typescript": "^4.4.4"
     }
 }
