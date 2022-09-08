@@ -41,8 +41,10 @@ FROM node:16-alpine as release
 
 WORKDIR /app
 
-
-COPY --from=deps /app/prod_node_modules ./stream/node_modules
+COPY --from=deps /app/prod_node_modules ./node_modules
+COPY --from=deps /app/prod_node_modules /app/stream/node_modules
+COPY --from=build /app/NFT-backend/packages/shared/node_modules /app/NFT-backend/packages/shared/node_modules
+COPY --from=build /app/stream/packages/stream/node_modules /app/stream/packages/stream/node_modules
 
 COPY --from=build /app/NFT-backend/packages/shared/package.json /app/NFT-backend/packages/shared/package.json
 COPY --from=build /app/NFT-backend/packages/shared/dist /app/NFT-backend/packages/shared/dist
