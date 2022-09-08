@@ -41,6 +41,15 @@ runs:
         filters: |
           stream:
             - 'infra/**'
+    - name: Deploy Strean Shared Infra
+      working-directory: stream/infra
+      shell: bash
+      env:
+        STAGE: ${{ inputs.stage }}
+        PULUMI_CONFIG_PASSPHRASE: ""
+        AWS_ACCOUNT_ID: ${{ fromJSON(inputs.secrets).AWS_ACCOUNT_ID }}
+        DB_PASSWORD: ${{ fromJSON(inputs.secrets).DB_PASSWORD }}
+      run: npm run deploy:shared
     - name: Deploy Stream Infra
       if: ${{ inputs.stage == 'prod' || steps.filter.outputs.stream == 'true' }}
       shell: bash

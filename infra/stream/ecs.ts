@@ -181,7 +181,7 @@ const createEcsTaskDefinition = (
               'awslogs-create-group': 'True',
               'awslogs-group': `/ecs/${resourceName}`,
               'awslogs-region': 'us-east-1',
-              'awslogs-st-prefix': 'st',
+              'awslogs-stream-prefix': 'st',
             },
           },
           memoryReservation: config.requireNumber('ecsTaskMemory'),
@@ -268,7 +268,7 @@ export const createEcsService = (
     name: getResourceName('st'),
     networkConfiguration: {
       assignPublicIp: true,
-      securityGroups: [infraOutput.webEcsSGId],
+      securityGroups: [infraOutput.webSGId],
       subnets: infraOutput.publicSubnets,
     },
     taskDefinition: taskDefinition.arn,

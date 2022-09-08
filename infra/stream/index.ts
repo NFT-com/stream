@@ -2,17 +2,14 @@ import * as upath from 'upath'
 
 import * as pulumi from '@pulumi/pulumi'
 
-import { deployInfra } from '../helper'
+import { deployInfra, getSharedInfraOutput } from '../helper'
 import { createEcsService } from './ecs'
 
-const getSharedStackOutputs = async (): Promise<any> => {
-  const sharedStack = new pulumi.StackReference(`${process.env.STAGE}.shared.${process.env.AWS_REGION}`)
-  return sharedStack.outputs
-}
 
 const pulumiProgram = async (): Promise<Record<string, any> | void> => {
   const config = new pulumi.Config()
-  const sharedStackOutputs = await getSharedStackOutputs()
+  const sharedStackOutputs = getSharedInfraOutput()
+  console.log('shared', sharedStackOutputs)
   createEcsService(config, sharedStackOutputs)
 }
 
