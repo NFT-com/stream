@@ -67,8 +67,9 @@ runs:
       run: npm run build:stream:env
     - name: Build and Push Stream Image
       shell: bash
+      working-directory: stream
       env:
-        REPO: ${{ steps.login_ecr.outputs.registry }}/${{ inputs.stage }}-stream
+        REPO: ${{ steps.login_ecr.outputs.registry }}/${{ inputs.stage }}-st
       run: |
         export DOCKER_BUILDKIT=1
         docker pull ${{ env.REPO }}:deps || true
