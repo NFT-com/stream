@@ -35,14 +35,14 @@
       "baseUrl": ".",
     },
     "paths": {
-      "@nftcom/stream/*": [
-        "packages/stream/src/*"
+      "nftcom-backend": [
+        "../NFT-backend/packages/*"
       ]
     },
   "references": [
     {
-      "path": "packages/stream"
-    },
+      "path": "../NFT-backend/packages/*"
+    }
   ],
     "exclude": [
       "node_modules",
