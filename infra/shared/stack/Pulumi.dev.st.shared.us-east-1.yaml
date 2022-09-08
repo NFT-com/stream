@@ -1,4 +1,4 @@
-encryptionsalt: v1:+ZEj8hO7e4E=:v1:Gm59VFHno4YhDtpZ:BMGkFtMQTO6PDTPfj3KG5+0JodMprQ==
+encryptionsalt: v1:JKsmtUWOS48=:v1:m4AzNaaiagH3ulWG:boKjKHrTpV9RJT15UScgbllkMRit+Q==
 config:
   aws:region: us-east-1
   nftcom:availabilityZones: us-east-1a,us-east-1b,us-east-1c

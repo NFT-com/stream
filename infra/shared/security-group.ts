@@ -45,7 +45,7 @@ export const createSecurityGroups = (
   config: pulumi.Config, 
   vpc: string
   ): SGOutput => {
-  const resourceName = getResourceName('stream-sg')
+  const resourceName = getResourceName('st-sg')
   const web = new awsEC2.SecurityGroup(resourceName, {
     description: 'Allow traffic from/to stream api',
     name: resourceName,

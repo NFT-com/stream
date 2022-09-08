@@ -15,7 +15,6 @@ const pulumiProgram = async (): Promise<Record<string, any> | void> => {
 
   const sgs = createSecurityGroups(config, vpcVal) //hardcode test
   const { stream } = createRepositories()
-
   return {
     streamECRRepo: stream.name,
     publicSubnetIds: subnetVal,
@@ -27,7 +26,7 @@ const pulumiProgram = async (): Promise<Record<string, any> | void> => {
 export const createSharedInfra = (
   preview?: boolean,
 ): Promise<pulumi.automation.OutputMap> => {
-  const stackName = `${process.env.STAGE}.stream.shared.${process.env.AWS_REGION}`
+  const stackName = `${process.env.STAGE}.st.shared.${process.env.AWS_REGION}`
   const workDir = upath.joinSafe(__dirname, 'stack')
   return deployInfra(stackName, workDir, pulumiProgram, preview)
 }

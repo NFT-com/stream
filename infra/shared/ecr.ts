@@ -7,8 +7,8 @@ export type RepositoryOut = {
 }
 
 export const createStreamRepository = (): aws.ecr.Repository => {
-  return new aws.ecr.Repository('ecr_stream', {
-    name: getResourceName('stream'),
+  return new aws.ecr.Repository('ecr_st', {
+    name: getResourceName('st'),
     imageScanningConfiguration: {
       scanOnPush: true,
     },
