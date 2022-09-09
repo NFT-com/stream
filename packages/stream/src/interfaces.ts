@@ -30,7 +30,7 @@ export interface Metadata {
 export interface Item {
     chain: Chain
     metadata: any
-    nftId: string
+    nft_id: string
     permalink: string
 }
 
