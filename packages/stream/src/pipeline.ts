@@ -132,7 +132,7 @@ export const mapContractsToSlugs = async (contracts: DistinctContract[]): Promis
   
       orderHash = seaportEventPayload.order_hash
       walletAddress = helper.checkSum(seaportEventPayload.maker.address)
-      nftIdSplit = seaportEventPayload.item.nftId.split('/')
+      nftIdSplit = seaportEventPayload.item.nft_id.split('/')
       checksumContract = helper.checkSum(nftIdSplit?.[1])
       nftIds = [ `${nftIdSplit?.[0]}/${checksumContract}/${helper.bigNumberToHex(nftIdSplit?.[2])}`]
       timestampFromSource = seaportEventPayload.event_timestamp
@@ -188,8 +188,11 @@ const initializeStreamsForAllSlugs = () => {
                 const eventPayload: OSEventPayload = event.payload as OSEventPayload
                 const chain: Chain = eventPayload.item.chain
                 if (chain.name === OSChainTypes.ETHEREUM) {
-                    const nftId: string = eventPayload.item.nftId
-                    if (nftId) {
+                    const nftId: string = eventPayload.item.nft_id
+                    
+                 
+                    logger.log('nftId', nftId)
+                    if (nftId) {     
                         const chainId: string = process.env.CHAIN_ID || '4'
                         const [ network, contract, token ] = nftId.split('/')
                         if (contract && token) {
@@ -200,9 +203,11 @@ const initializeStreamsForAllSlugs = () => {
                                     chainId
                                 }
                             })
-    
+                            
                             if (nft) {
+                                logger.log('nft exists', nft)
                                 const orderHash: string = eventPayload.order_hash
+                                logger.log('orderHash', orderHash)
                                 if (orderHash) {
                                     const order: entity.TxOrder = await repositories.txOrder.findOne({
                                         relations: ['activity'],
@@ -210,7 +215,9 @@ const initializeStreamsForAllSlugs = () => {
                                             id: orderHash
                                         }
                                     })
-    
+                                    
+                                    logger.log('order', order);
+                                    
                                     if (!order) {
                                         const newOrder: Partial<entity.TxOrder> = await orderEntityBuilder(
                                             eventType,
@@ -219,11 +226,17 @@ const initializeStreamsForAllSlugs = () => {
                                         )
     
                                         await repositories.txOrder.save(newOrder)
+                                        logger.log('order for', nftId, 'saved successfully')
+                                        logger.log('order hash', orderHash)
                                     }
                                 }
                             }
                         }
                         
+                    }  else { 
+                        logger.log('nftId undefined', nftId)
+                        logger.log('event type', eventType)
+                        logger.log('event payload')
                     }
                 }
             }
