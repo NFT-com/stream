@@ -1,5 +1,4 @@
 import { _logger,db, defs, entity, helper } from 'nftcom-backend/shared'
-import { bigNumberToHex } from 'nftcom-backend/shared/src/helper/misc'
 
 import { BaseStreamMessage, EventType } from '@opensea/stream-js'
 
@@ -232,7 +231,7 @@ const initializeStreamsForAllSlugs = (): void => {
                         logger.log(`order with orderHash: ${orderHash} for ${nftId} is saved successfully`)
                                             
                         // force refresh to store protocol data
-                        const nftCacheId = `${helper.checkSum(contract)}:${bigNumberToHex(token)}:force`
+                        const nftCacheId = `${helper.checkSum(contract)}:${helper.bigNumberToHex(token)}:force`
                         cache.zadd(`${CacheKeys.REFRESH_NFT_ORDERS_EXT}_${chainId}`, 'INCR', 1, nftCacheId)
                       } catch (err) {
                         logger.log('Save order', JSON.stringify(err))
