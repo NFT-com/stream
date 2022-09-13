@@ -1,15 +1,17 @@
 import Redis from 'ioredis'
+
 import { redisConfig } from './config'
 
 let redis: Redis
-const DEFAULT_TTL_MINS = 1 // 1hr
+// const DEFAULT_TTL_MINS = 1 // 1hr
 
 export enum CacheKeys {
- SLUG = 'collection-slug',
- REGISTERED = 'registered-slug',
- DEREGISTER = 'deregister-slug'
+  REFRESH_NFT_ORDERS_EXT = 'refresh_nft_orders_ext',
+  REFRESHED_NFT_ORDERS_EXT = 'refreshed_nft_orders_ext',
+  SLUG = 'collection-slug',
+  REGISTERED = 'registered-slug',
+  DEREGISTER = 'deregister-slug'
 }
-
 
 const createCacheConnection = (): void => {
   redis = new Redis({
