@@ -1,20 +1,22 @@
 import * as upath from 'upath'
-import { deployInfra, pulumiOutToValue, getStage } from '../helper'
+
+import * as pulumi from '@pulumi/pulumi'
+
+import { deployInfra, getStage,pulumiOutToValue } from '../helper'
 import { createRepositories } from './ecr'
 import { createSecurityGroups } from './security-group'
-import * as pulumi from '@pulumi/pulumi';
 
 const pulumiProgram = async (): Promise<Record<string, any> | void> => {
   const config = new pulumi.Config()
   const stage = getStage()
-  const sharedStack = new pulumi.StackReference(`${stage}.shared.us-east-1`);
+  const sharedStack = new pulumi.StackReference(`${stage}.shared.us-east-1`)
   const dbHost = sharedStack.getOutput('dbHost')
   const redisHost = sharedStack.getOutput('redisHost')
-  const vpc = sharedStack.getOutput('vpcId') 
-  const subnets =  sharedStack.getOutput('publicSubnetIds') 
+  const vpc = sharedStack.getOutput('vpcId')
+  const subnets =  sharedStack.getOutput('publicSubnetIds')
   const dbHostVal: string = await pulumiOutToValue(dbHost)
   const redisHostVal: string = await pulumiOutToValue(redisHost)
-  const vpcVal: string = await pulumiOutToValue(vpc) 
+  const vpcVal: string = await pulumiOutToValue(vpc)
   const subnetVal: string[] = await pulumiOutToValue(subnets)
 
   const sgs = createSecurityGroups(config, vpcVal) //hardcode test

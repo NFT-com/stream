@@ -1,8 +1,8 @@
 import Bull from 'bull'
 import { _logger } from 'nftcom-backend/shared'
+
 import { redisConfig } from '../config'
 import { deregisterStreamHandler, registerStreamHandler } from './handler'
-
 
 const BULL_MAX_REPEAT_COUNT = parseInt(process.env.BULL_MAX_REPEAT_COUNT) || 250
 const logger = _logger.Factory(_logger.Context.Bull)
@@ -29,18 +29,17 @@ let didPublish: boolean
 
 const createQueues = (): Promise<void> => {
   return new Promise((resolve) => {
-  
     queues.set(QUEUE_TYPES.REGISTER_OS_STREAMS, new Bull(
       QUEUE_TYPES.REGISTER_OS_STREAMS, {
         prefix: queuePrefix,
         redis,
-    }))
+      }))
 
     queues.set(QUEUE_TYPES.DEREGISTER_OS_STREAMS, new Bull(
       QUEUE_TYPES.DEREGISTER_OS_STREAMS, {
         prefix: queuePrefix,
         redis,
-    }))
+      }))
 
     resolve()
   })
@@ -101,17 +100,17 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             repeat: { every: 10 * 60000 },
             jobId: 'register_os_streams',
           })
-        case QUEUE_TYPES.DEREGISTER_OS_STREAMS:
+      case QUEUE_TYPES.DEREGISTER_OS_STREAMS:
         return queues.get(QUEUE_TYPES.DEREGISTER_OS_STREAMS)
-            .add({ DEREGISTER_OS_STREAMS: QUEUE_TYPES.DEREGISTER_OS_STREAMS }, {
+          .add({ DEREGISTER_OS_STREAMS: QUEUE_TYPES.DEREGISTER_OS_STREAMS }, {
             removeOnComplete: true,
             removeOnFail: true,
             // repeat every  2 minutes
             repeat: { every: 10 * 60000 },
             jobId: 'deregister_os_streams',
-            })
+          })
       default:
-          return Promise.resolve()
+        return Promise.resolve()
       }
     })).then(() => undefined)
   }

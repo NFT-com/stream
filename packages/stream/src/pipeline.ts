@@ -191,7 +191,6 @@ const initializeStreamsForAllSlugs = (): void => {
             if (nftId) {
               const chainId: string = process.env.CHAIN_ID || '4'
               const [network, contract, token] = nftId.split('/')
-              logger.log('network', network)
               if (contract && token) {
                 try {
                   nft = await repositories.nft.findOne({
@@ -206,7 +205,7 @@ const initializeStreamsForAllSlugs = (): void => {
                 }
                     
                 if (nft) {
-                  logger.log('nftId', nft.id)
+                  logger.log('nftId', nft.id, network)
                   const orderHash: string = eventPayload.order_hash
                   let order: entity.TxOrder
                   if (orderHash) {
