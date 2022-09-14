@@ -1,8 +1,10 @@
 import * as console from 'console'
+import * as fs from 'fs'
 import * as process from 'process'
 import * as upath from 'upath'
-import * as fs from 'fs'
+
 import * as pulumi from '@pulumi/pulumi'
+
 import { SharedInfraOutput, sharedOutputFileName } from './defs'
 import { createSharedInfra } from './shared'
 import { createStreamCluster, updateStreamEnvFile } from './stream'

@@ -5,11 +5,11 @@ import * as jyml from 'js-yaml'
 import { omit } from 'lodash'
 import * as process from 'process'
 import * as upath from 'upath'
+
 import * as pulumi from '@pulumi/pulumi'
 
 import { deployInfra, getEnv, getSharedInfraOutput } from '../helper'
 import { createEcsService } from './ecs'
-
 
 const pulumiProgram = async (): Promise<Record<string, any> | void> => {
   const config = new pulumi.Config()

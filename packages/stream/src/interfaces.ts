@@ -1,90 +1,85 @@
-import { EventType } from "@opensea/stream-js";
+import { EventType } from '@opensea/stream-js'
 
 export interface DistinctContract {
-    nft_contract: string
+  nft_contract: string
 }
 
 export interface Slug {
-    contract: string
-    slug: string
-}
-
-export interface OSEvent {
-    event_type: EventType
-    sent_at: Date
-    payload: OSEventPayload
+  contract: string
+  slug: string
 }
 
 export interface Collection {
-    slug: string
+  slug: string
 }
 
 export interface Chain {
-    name: string
+  name: string
 }
-
-export interface Metadata {
-
-}
-
 export interface Item {
-    chain: Chain
-    metadata: any
-    nft_id: string
-    permalink: string
+  chain: Chain
+  metadata: any
+  nft_id: string
+  permalink: string
 }
 
 export interface Maker {
-    address: string
+  address: string
 }
 
 export interface Taker {
-    address: string
+  address: string
 }
 
-export interface PaymentToken { 
-    address: string
-    decimals: number
-    eth_price: string
-    name: string
-    symbol: string
-    usd_price: string
+export interface PaymentToken {
+  address: string
+  decimals: number
+  eth_price: string
+  name: string
+  symbol: string
+  usd_price: string
+}
+
+export interface OSListingEventPayload {
+  event_timestamp: string
+  collection: Collection
+  item: Item
+  base_price: string
+  expiration_date: string
+  is_private: boolean
+  listing_date: string
+  listing_type: string
+  maker: Maker
+  order_hash: string
+  payment_token: PaymentToken
+  quantity: number
+  taker: Taker | null
+}
+
+export interface OSOfferEventPayload {
+  event_timestamp: string
+  collection: Collection
+  item: Item
+  base_price: string
+  created_date: string
+  expiration_date: string
+  maker: Maker
+  order_hash: string
+  payment_token: PaymentToken
+  quantity: number
+  taker: Taker | null
 }
 
 export type OSEventPayload = OSListingEventPayload | OSOfferEventPayload
 
-export interface OSListingEventPayload {
-    event_timestamp: Date
-    collection: Collection
-    item: Item
-    base_price: string
-    expiration_date: Date
-    is_private: Boolean
-    listing_date: Date
-    listing_type: string
-    maker: Maker
-    order_hash: string
-    payment_token: PaymentToken
-    quantity: number
-    taker: Taker | null
-}
-
-export interface OSOfferEventPayload {
-    event_timestamp: Date
-    collection: Collection
-    item: Item
-    base_price: string
-    created_date: Date
-    expiration_date: Date
-    maker: Maker
-    order_hash: string
-    payment_token: PaymentToken
-    quantity: number
-    taker: Taker | null
+export interface OSEvent {
+  event_type: EventType
+  sent_at: string
+  payload: OSEventPayload
 }
 
 export enum OSChainTypes {
-    ETHEREUM = 'ethereum',
-    POLYGON = 'polygon',
-    SOLANA = 'solana'
+  ETHEREUM = 'ethereum',
+  POLYGON = 'polygon',
+  SOLANA = 'solana'
 }
