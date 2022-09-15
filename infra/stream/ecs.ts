@@ -52,7 +52,7 @@ const createEcsTargetGroup = (
 ): aws.lb.TargetGroup => {
   return new aws.lb.TargetGroup('tg_st_ecs', {
     healthCheck: {
-      interval: 30,
+      interval: 60,
       matcher: '200-399',
       path: '/health',
       timeout: 30,
