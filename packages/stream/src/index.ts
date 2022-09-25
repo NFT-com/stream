@@ -3,6 +3,7 @@ import kill from 'kill-port'
 import { _logger, db, fp } from 'nftcom-backend/shared'
 
 import { dbConfig } from './config'
+import { QUEUE_TYPES, queues, startAndListen, stopAndDisconnect } from './jobs/jobs'
 //import { startAndListen } from './jobs/jobs'
 import { onChainProvider } from './on-chain'
 import { client } from './opensea'
@@ -26,6 +27,60 @@ app.get('/health', async (_req, res) => {
     res.status(503).send()
   }
 })
+
+// health check
+app.get('/health', async (_req, res) => {
+  const healthcheck = {
+    uptime: process.uptime(),
+    message: 'OK',
+    timestamp: Date.now(),
+  }
+  try {
+    res.send(healthcheck)
+  } catch (error) {
+    healthcheck.message = error
+    res.status(503).send()
+  }
+})
+
+// sync external orders
+app.get('/syncOS', async (_req, res) => {
+  try {
+    queues.get(QUEUE_TYPES.SYNC_CONTRACTS)
+      .add({
+        SYNC_CONTRACTS: QUEUE_TYPES.SYNC_CONTRACTS,
+        chainId: process.env.CHAIN_ID,
+      }, {
+        removeOnComplete: true,
+        removeOnFail: true,
+        jobId: 'fetch_os_orders',
+      })
+    res.status(200).send({ message: 'Stated Sync!' })
+  } catch (error) {
+    console.log('err', error)
+    res.status(400).send(error)
+  }
+})
+
+// sync external orders
+app.get('/syncLR', async (_req, res) => {
+  try {
+    queues.get(QUEUE_TYPES.SYNC_CONTRACTS)
+      .add({
+        SYNC_CONTRACTS: QUEUE_TYPES.SYNC_CONTRACTS,
+        chainId: process.env.CHAIN_ID,
+      }, {
+        removeOnComplete: true,
+        removeOnFail: true,
+        jobId: 'fetch_lr_orders',
+      })
+    res.status(200).send({ message: 'Stated Sync!' })
+  } catch (error) {
+    console.log('err', error)
+    res.status(400).send(error)
+  }
+})
+
 // error handler
 const handleError = (err: Error): void => {
   logger.error('App Error', err)
@@ -53,11 +108,11 @@ const stopServer = async (): Promise<void> => {
 const bootstrap = (): Promise<void> => {
   verifyConfiguration()
   return db.connect(dbConfig)
+    .then(startAndListen)
     .then(startServer)
     .then(onChainProvider)
     .then(client.connect)
     .then(initiateStreaming)
-  //.then(startAndListen)
     .then(fp.pause(500))
 }
 
@@ -76,7 +131,8 @@ const gracefulShutdown = (): Promise<void> => {
   return stopServer()
     .then(killPort)
     .then(db.disconnect)
-  // .then(job.stopAndDisconnect)
+    .then(stopAndDisconnect)
+    .then(client.disconnect)
     .then(fp.pause(500))
     .finally(() => {
       logExit()
