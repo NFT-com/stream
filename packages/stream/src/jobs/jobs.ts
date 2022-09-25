@@ -3,6 +3,7 @@ import { _logger } from 'nftcom-backend/shared'
 
 import { redisConfig } from '../config'
 import { deregisterStreamHandler, registerStreamHandler } from './handler'
+import { nftExternalOrders } from './syncHandler'
 
 const BULL_MAX_REPEAT_COUNT = parseInt(process.env.BULL_MAX_REPEAT_COUNT) || 250
 const logger = _logger.Factory(_logger.Context.Bull)
@@ -13,17 +14,19 @@ export const redis = {
 }
 const queuePrefix = 'stream-queue'
 
-enum QUEUE_TYPES {
+export enum QUEUE_TYPES {
   SYNC_CONTRACTS = 'SYNC_CONTRACTS',
   REGISTER_OS_STREAMS = 'REGISTER_OS_STREAMS',
   DEREGISTER_OS_STREAMS = 'DEREGISTER_OS_STREAMS',
 }
 
-const queues = new Map<string, Bull.Queue>()
+export const queues = new Map<string, Bull.Queue>()
 
 // nft cron subqueue
-// const subqueuePrefix = 'nft-cron'
-// const subqueueName = 'nft-batch-processor'
+const subqueuePrefix = 'nft-cron'
+const subqueueName = 'nft-batch-processor'
+
+export let nftCronSubqueue: Bull.Queue = null
 
 let didPublish: boolean
 
@@ -34,6 +37,19 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
       }))
+
+    // sync external orders
+    queues.set(QUEUE_TYPES.SYNC_CONTRACTS, new Bull(
+      QUEUE_TYPES.SYNC_CONTRACTS, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
+    //cron subqueue
+    nftCronSubqueue = new Bull(subqueueName, {
+      redis: redis,
+      prefix: subqueuePrefix,
+    })
 
     queues.set(QUEUE_TYPES.DEREGISTER_OS_STREAMS, new Bull(
       QUEUE_TYPES.DEREGISTER_OS_STREAMS, {
@@ -91,24 +107,24 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
     const chainIds = [...queues.keys()]
     return Promise.all(chainIds.map((chainId) => {
       switch (chainId) {
-      case QUEUE_TYPES.REGISTER_OS_STREAMS:
-        return queues.get(QUEUE_TYPES.REGISTER_OS_STREAMS)
-          .add({ REGISTER_OS_STREAMS: QUEUE_TYPES.REGISTER_OS_STREAMS }, {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every  2 minutes
-            repeat: { every: 10 * 60000 },
-            jobId: 'register_os_streams',
-          })
-      case QUEUE_TYPES.DEREGISTER_OS_STREAMS:
-        return queues.get(QUEUE_TYPES.DEREGISTER_OS_STREAMS)
-          .add({ DEREGISTER_OS_STREAMS: QUEUE_TYPES.DEREGISTER_OS_STREAMS }, {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every  2 minutes
-            repeat: { every: 10 * 60000 },
-            jobId: 'deregister_os_streams',
-          })
+      // case QUEUE_TYPES.REGISTER_OS_STREAMS:
+      //   return queues.get(QUEUE_TYPES.REGISTER_OS_STREAMS)
+      //     .add({ REGISTER_OS_STREAMS: QUEUE_TYPES.REGISTER_OS_STREAMS }, {
+      //       removeOnComplete: true,
+      //       removeOnFail: true,
+      //       // repeat every  2 minutes
+      //       repeat: { every: 10 * 60000 },
+      //       jobId: 'register_os_streams',
+      //     })
+      // case QUEUE_TYPES.DEREGISTER_OS_STREAMS:
+      //   return queues.get(QUEUE_TYPES.DEREGISTER_OS_STREAMS)
+      //     .add({ DEREGISTER_OS_STREAMS: QUEUE_TYPES.DEREGISTER_OS_STREAMS }, {
+      //       removeOnComplete: true,
+      //       removeOnFail: true,
+      //       // repeat every  2 minutes
+      //       repeat: { every: 10 * 60000 },
+      //       jobId: 'deregister_os_streams',
+      //     })
       default:
         return Promise.resolve()
       }
@@ -121,6 +137,9 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
 const listenToJobs = async (): Promise<void> => {
   for (const queue of queues.values()) {
     switch (queue.name) {
+    case QUEUE_TYPES.SYNC_CONTRACTS:
+      queue.process(nftExternalOrders)
+      break
     case QUEUE_TYPES.REGISTER_OS_STREAMS:
       queue.process(registerStreamHandler)
       break
@@ -149,6 +168,10 @@ export const startAndListen = (): Promise<void> => {
 
 export const stopAndDisconnect = (): Promise<any> => {
   const values = [...queues.values()]
+  // close cron sub-queue
+  if (nftCronSubqueue) {
+    values.push(nftCronSubqueue)
+  }
   return Promise.all(values.map((queue) => {
     return queue.close()
   }))
