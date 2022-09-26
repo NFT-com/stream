@@ -74,7 +74,7 @@ export const nftExternalOrders = async (job: Job): Promise<void> => {
     }
     const chainId: string =  job.data?.chainId || process.env.CHAIN_ID
     const nftCount: number = await repositories.nft.count({ chainId, deletedAt: null })
-    logger.log('nft external order count', nftCount)
+    logger.log('nft external order count', String(nftCount))
     const limit: number = MAX_PROCESS_BATCH_SIZE
     let offset = 0
     // sub-queue assignmemt
