@@ -1,6 +1,7 @@
 import axios, { AxiosError,AxiosInstance, AxiosResponse } from 'axios'
 import axiosRetry, { IAxiosRetryConfig } from 'axios-retry'
-import { _logger,defs, entity, helper } from 'nftcom-backend/shared'
+import { BigNumber } from 'ethers'
+import { _logger, db, defs, entity, helper } from 'nftcom-backend/shared'
 import { WebSocket } from 'ws'
 
 import { OpenSeaStreamClient } from '@opensea/stream-js'
@@ -12,6 +13,7 @@ import { orderEntityBuilder } from './orderBuilder'
 import { delay } from './utils'
 
 const logger = _logger.Factory(_logger.Context.Opensea)
+const repositories = db.newRepositories()
 
 const V1_OPENSEA_API_TESTNET_BASE_URL = 'https://testnets-api.opensea.io/api/v1'
 const V1_OPENSEA_API_BASE_URL = 'https://api.opensea.io/api/v1'
@@ -330,8 +332,7 @@ const retrieveListingsInBatches = async (
   listingQueryParams: string[],
   chainId: string,
   batchSize: number,
-): Promise<any[]> => {
-  const listings: any[] = []
+): Promise<void> => {
   let batch: string[], queryUrl: string
   const listingBaseUrl: string =  TESTNET_CHAIN_IDS.includes(chainId) ?
     V1_OPENSEA_API_TESTNET_BASE_URL
@@ -367,21 +368,32 @@ const retrieveListingsInBatches = async (
           const contract: string = asset?.asset_contract?.address
           const seaportOrders: SeaportOrder[] | null =  asset?.seaport_sell_orders
           logger.log('seaport order', seaportOrders)
+          let orderHash: string, activityId: string
           // seaport orders - always returns cheapest order
           if (seaportOrders && Object.keys(seaportOrders?.[0]).length) {
-            listings.push(
-              orderEntityBuilder(
-                defs.ProtocolType.Seaport,
-                defs.ActivityType.Listing,
-                seaportOrders?.[0],
-                chainId,
-                contract,
-              ),
+            const listing = await  orderEntityBuilder(
+              defs.ProtocolType.Seaport,
+              defs.ActivityType.Listing,
+              seaportOrders?.[0],
+              chainId,
+              contract,
             )
+            const savedListing: entity.TxOrder = await repositories.txOrder.save(listing)
+            orderHash = seaportOrders?.[0]?.order_hash
+            activityId = savedListing?.activity?.id
+            const tokenId: string =  BigNumber.from(
+              seaportOrders?.[0]?.protocol_data?.parameters?.offer?.[0].identifierOrCriteria,
+            ).toHexString()
+
+            logger.log(`Saved OS listing with hash: ${orderHash} for contract: ${contract} and tokenId: ${tokenId}`)
+       
+            const cacheKey = `contract-${contract}:tokenId-${tokenId}:orderHash-${orderHash}:activity-${activityId}`
+            await cache.sadd(CacheKeys.SYNCED_OS, cacheKey)
           }
         }
       }
     }
+
     listingQueryParams = [...listingQueryParams.slice(size)]
     delayCounter++
     if (delayCounter === DELAY_AFTER_BATCH_RUN) {
@@ -389,8 +401,6 @@ const retrieveListingsInBatches = async (
       delayCounter = 0
     }
   }
-        
-  return await Promise.all(listings)
 }
 
 /**
@@ -403,10 +413,8 @@ const retrieveOffersInBatches = async (
   offerQueryParams: Map<string, string[]>,
   chainId: string,
   batchSize: number,
-): Promise<any[]> => {
+): Promise<void> => {
   let batch: string[], queryUrl: string
-  const offers: any[] = []
-
   const offerBaseUrl: string =  TESTNET_CHAIN_IDS.includes(chainId) ?
     OPENSEA_API_TESTNET_BASE_URL
     : OPENSEA_API_BASE_URL
@@ -444,21 +452,29 @@ const retrieveOffersInBatches = async (
           const response: AxiosResponse = await offerInterceptor(
             `/orders/${chainId === '1' ? 'ethereum': 'rinkeby'}/seaport/offers?${queryUrl}&limit=${batchSize}&order_direction=desc&order_by=eth_price`,
           )
-      
+          let orderHash: string, activityId: string
           if (response?.data?.orders?.length) {
             seaportOffers = response?.data?.orders
             logger.log('seaport offers', seaportOffers)
-            offers.push(
-              orderEntityBuilder(
-                defs.ProtocolType.Seaport,
-                defs.ActivityType.Bid,
-                seaportOffers?.[0],
-                chainId,
-                contract,
-              ),
+            
+            const offer = await orderEntityBuilder(
+              defs.ProtocolType.Seaport,
+              defs.ActivityType.Bid,
+              seaportOffers?.[0],
+              chainId,
+              contract,
             )
+            const savedOffer: entity.TxOrder = await repositories.txOrder.save(offer)
+            activityId = savedOffer?.activity?.id
+            orderHash = seaportOffers?.[0]?.order_hash
+            const tokenId: string =  BigNumber.from(
+              seaportOffers?.[0]?.protocol_data?.parameters?.offer?.[0].identifierOrCriteria,
+            ).toHexString()
+            logger.log(`Saved OS offer with hash: ${orderHash} for contract: ${contract} and tokenId: ${tokenId}`)
+             
+            const cacheKey = `contract-${contract}:tokenId-${tokenId}:orderHash-${orderHash}:activity-${activityId}`
+            await cache.sadd(CacheKeys.SYNCED_OS, cacheKey)
           }
-        
           tokens = [...tokens.slice(size)]
           delayCounter++
           // add delay
@@ -470,7 +486,6 @@ const retrieveOffersInBatches = async (
       }
     }
   }
-  return await Promise.all(offers)
 }
 
 /**
@@ -484,12 +499,7 @@ export const retrieveMultipleOrdersOpensea = async (
   openseaMultiOrderRequest: Array<OpenseaOrderRequest>,
   chainId: string,
   includeOffers: boolean,
-): Promise<OpenseaExternalOrder> => {
-  const responseAggregator: OpenseaExternalOrder = {
-    listings: [],
-    offers: [],
-  }
-
+): Promise<void> => {
   try {
     if (openseaMultiOrderRequest?.length) {
       const listingQueryParams: Array<string> = []
@@ -515,7 +525,7 @@ export const retrieveMultipleOrdersOpensea = async (
 
       // listings 
       if (listingQueryParams.length) {
-        responseAggregator.listings = await retrieveListingsInBatches(
+        await retrieveListingsInBatches(
           listingQueryParams,
           chainId,
           OPENSEA_LISTING_BATCH_SIZE,
@@ -524,7 +534,7 @@ export const retrieveMultipleOrdersOpensea = async (
 
       // offers
       if (includeOffers && offerQueryParams.size) {
-        responseAggregator.offers = await retrieveOffersInBatches(
+        await retrieveOffersInBatches(
           offerQueryParams,
           chainId,
           OPENSEA_LISTING_BATCH_SIZE,
@@ -535,6 +545,5 @@ export const retrieveMultipleOrdersOpensea = async (
     logger.error(`Error in retrieveMultipleOrdersOpensea: ${err}`)
     // Sentry.captureMessage(`Error in retrieveOrdersOpensea: ${err}`)
   }
-  return responseAggregator
 }
 
