@@ -1,8 +1,8 @@
 import Bull, { Job } from 'bull'
 import { _logger, db, defs,entity, helper } from 'nftcom-backend/shared'
 
-import { LooksrareExternalOrder, retrieveMultipleOrdersLooksrare } from '../looksrare'
-import { OpenseaExternalOrder, OpenseaOrderRequest, retrieveMultipleOrdersOpensea } from '../opensea'
+import { retrieveMultipleOrdersLooksrare } from '../looksrare'
+import { OpenseaOrderRequest, retrieveMultipleOrdersOpensea } from '../opensea'
 import { nftCronSubqueue } from './jobs'
 
 const repositories = db.newRepositories()
@@ -41,40 +41,13 @@ const nftExternalOrderBatchProcessor = async (job: Job): Promise<void> => {
       }))
 
       const persistActivity = []
-      let openseaResponse: OpenseaExternalOrder
-      let looksrareResponse: LooksrareExternalOrder
 
       switch (exchange) {
       case defs.ExchangeType.OpenSea:
-        openseaResponse = await retrieveMultipleOrdersOpensea(nftRequest, chainId, false)
-        console.log('res', openseaResponse)
-
-        // listings
-        if (openseaResponse.listings.length) {
-          persistActivity.push(repositories.txOrder.saveMany(openseaResponse.listings,
-            { chunk: MAX_PROCESS_BATCH_SIZE }))
-        }
-
-        // offers
-        if (openseaResponse.offers.length) {
-          persistActivity.push(repositories.txOrder.saveMany(openseaResponse.offers,
-            { chunk: MAX_PROCESS_BATCH_SIZE }))
-        }
+        await retrieveMultipleOrdersOpensea(nftRequest, chainId, false)
         break
       case defs.ExchangeType.LooksRare:
-        looksrareResponse = await retrieveMultipleOrdersLooksrare(nftRequest, chainId, false)
-
-        // listings
-        if (looksrareResponse.listings.length) {
-          persistActivity.push(repositories.txOrder.saveMany(looksrareResponse.listings,
-            { chunk: MAX_PROCESS_BATCH_SIZE }))
-        }
-
-        // offers
-        if (looksrareResponse.offers.length) {
-          persistActivity.push(repositories.txOrder.saveMany(looksrareResponse.offers,
-            { chunk: MAX_PROCESS_BATCH_SIZE }))
-        }
+        await retrieveMultipleOrdersLooksrare(nftRequest, chainId, false)
         break
       }
 
@@ -100,9 +73,8 @@ export const nftExternalOrders = async (job: Job): Promise<void> => {
       nftCronSubqueue.obliterate({ force: true })
     }
     const chainId: string =  job.data?.chainId || process.env.CHAIN_ID
-    console.log('chainId', chainId)
     const nftCount: number = await repositories.nft.count({ chainId, deletedAt: null })
-    console.log('nft external order count', nftCount)
+    logger.log('nft external order count', nftCount)
     const limit: number = MAX_PROCESS_BATCH_SIZE
     let offset = 0
     // sub-queue assignmemt
@@ -130,7 +102,6 @@ export const nftExternalOrders = async (job: Job): Promise<void> => {
 
     logger.debug('updated external orders for nfts')
   } catch (err) {
-    console.log('err', err)
     logger.error(`Error in nftExternalOrders Job: ${err}`)
   }
 }

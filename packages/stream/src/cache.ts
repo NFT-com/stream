@@ -10,7 +10,9 @@ export enum CacheKeys {
   REFRESHED_NFT_ORDERS_EXT = 'refreshed_nft_orders_ext',
   SLUG = 'collection-slug',
   REGISTERED = 'registered-slug',
-  DEREGISTER = 'deregister-slug'
+  DEREGISTER = 'deregister-slug',
+  SYNCED_OS = 'synced_os',
+  SYNCED_LR = 'synced_lr'
 }
 
 const createCacheConnection = (): void => {
