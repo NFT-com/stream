@@ -73,8 +73,9 @@ export const nftExternalOrders = async (job: Job): Promise<void> => {
       nftCronSubqueue.obliterate({ force: true })
     }
     const chainId: string =  job.data?.chainId || process.env.CHAIN_ID
+    logger.log(`chainId: ${chainId}`)
     const nftCount: number = await repositories.nft.count({ chainId, deletedAt: null })
-    logger.log('nft external order count', String(nftCount))
+    logger.log(`nft external order count: ${nftCount}`)
     const limit: number = MAX_PROCESS_BATCH_SIZE
     let offset = 0
     // sub-queue assignmemt
@@ -102,6 +103,7 @@ export const nftExternalOrders = async (job: Job): Promise<void> => {
 
     logger.debug('updated external orders for nfts')
   } catch (err) {
+    console.log('err', err)
     logger.error(`Error in nftExternalOrders Job: ${err}`)
   }
 }
