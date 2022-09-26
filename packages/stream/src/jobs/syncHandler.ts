@@ -8,7 +8,8 @@ import { nftCronSubqueue } from './jobs'
 const repositories = db.newRepositories()
 const logger = _logger.Factory(_logger.Context.Bull)
 
-const MAX_PROCESS_BATCH_SIZE = 1500
+const MAX_PROCESS_BATCH_SIZE_OS = 1500
+const MAX_PROCESS_BATCH_SIZE_LR = 15000
 
 const subQueueBaseOptions: Bull.JobOptions = {
   attempts: 3,
@@ -76,12 +77,13 @@ export const nftExternalOrders = async (job: Job): Promise<void> => {
     logger.log(`chainId: ${chainId}`)
     const nftCount: number = await repositories.nft.count({ chainId, deletedAt: null })
     logger.log(`nft external order count: ${nftCount}`)
-    const limit: number = MAX_PROCESS_BATCH_SIZE
+    const maxBatchSize: number = job.id === 'fetch_os_orders' ? MAX_PROCESS_BATCH_SIZE_OS : MAX_PROCESS_BATCH_SIZE_LR
+    const limit: number = maxBatchSize
     let offset = 0
     // sub-queue assignmemt
 
     // sub-queue job additions
-    for (let i=0; i < nftCount; i+=MAX_PROCESS_BATCH_SIZE) {
+    for (let i=0; i < nftCount; i+=maxBatchSize) {
       offset = i
       if (job.id === 'fetch_os_orders') {
         // opensea
