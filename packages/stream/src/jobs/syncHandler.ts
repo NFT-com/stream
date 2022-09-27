@@ -9,7 +9,7 @@ const repositories = db.newRepositories()
 const logger = _logger.Factory(_logger.Context.Bull)
 
 const MAX_PROCESS_BATCH_SIZE_OS = 1500
-const MAX_PROCESS_BATCH_SIZE_LR = 15000
+const MAX_PROCESS_BATCH_SIZE_LR = 1500
 
 const subQueueBaseOptions: Bull.JobOptions = {
   attempts: 3,
