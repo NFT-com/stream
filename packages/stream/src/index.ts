@@ -1,9 +1,10 @@
+import Bull from 'bull'
 import express from 'express'
 import kill from 'kill-port'
 import { _logger, db, fp } from 'nftcom-backend/shared'
 
 import { dbConfig } from './config'
-import { QUEUE_TYPES, queues, startAndListen, stopAndDisconnect } from './jobs/jobs'
+import { nftCronSubqueue,QUEUE_TYPES, queues, startAndListen, stopAndDisconnect } from './jobs/jobs'
 //import { startAndListen } from './jobs/jobs'
 import { onChainProvider } from './on-chain'
 import { client } from './opensea'
@@ -75,6 +76,31 @@ app.get('/syncLR', async (_req, res) => {
         jobId: 'fetch_lr_orders',
       })
     res.status(200).send({ message: 'Stated Sync!' })
+  } catch (error) {
+    console.log('err', error)
+    res.status(400).send(error)
+  }
+})
+
+// force stop external orders sync
+app.get('/stopSync', async (_req, res) => {
+  try {
+    const existingSubQueueJobs: Bull.Job[] = await nftCronSubqueue.getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting'])
+    // clear existing sub queue jobs
+    if (existingSubQueueJobs.flat().length) {
+      nftCronSubqueue.obliterate({ force: true })
+    }
+
+    const existingQueueJobs: Bull.Job[] = await queues.get(QUEUE_TYPES.SYNC_CONTRACTS).getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting'])
+    // clear existing queue jobs
+    if (existingQueueJobs.flat().length) {
+      queues.get(QUEUE_TYPES.SYNC_CONTRACTS).obliterate({ force: true })
+    }
+
+    await Promise.all([
+      nftCronSubqueue.close(),
+    ])
+    res.status(200).send({ message: 'Sync Stopped!' })
   } catch (error) {
     console.log('err', error)
     res.status(400).send(error)
