@@ -174,7 +174,7 @@ const initializeStreamsForAllSlugs = (): void => {
     [
       EventType.ITEM_LISTED,
       EventType.ITEM_RECEIVED_OFFER,
-      EventType.ITEM_RECEIVED_BID,
+      // EventType.ITEM_RECEIVED_BID,
     ],
     async (event: BaseStreamMessage<unknown>) => {
       const eventType: EventType = event.event_type as EventType
@@ -231,7 +231,7 @@ const initializeStreamsForAllSlugs = (): void => {
                         logger.log(`order with orderHash: ${orderHash} for ${nftId} is saved successfully`)
                                             
                         // force refresh to store protocol data
-                        const nftCacheId = `${helper.checkSum(contract)}:${helper.bigNumberToHex(token)}:force`
+                        const nftCacheId = `${helper.checkSum(contract)}:${helper.bigNumberToHex(token)}`
                         cache.zadd(`${CacheKeys.REFRESH_NFT_ORDERS_EXT}_${chainId}`, 'INCR', 1, nftCacheId)
                       } catch (err) {
                         logger.log('Save order', JSON.stringify(err))
