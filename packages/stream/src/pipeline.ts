@@ -230,8 +230,8 @@ const initializeStreamsForAllSlugs = (): void => {
                         await repositories.txOrder.save(newOrder)
                         logger.log(`order with orderHash: ${orderHash} for ${nftId} is saved successfully`)
                                             
-                        // refresh to store protocol data
-                        const nftCacheId = `${helper.checkSum(contract)}:${helper.bigNumberToHex(token)}`
+                        // force refresh to store protocol data
+                        const nftCacheId = `${helper.checkSum(contract)}:${helper.bigNumberToHex(token)}:force`
                         cache.zadd(`${CacheKeys.REFRESH_NFT_ORDERS_EXT}_${chainId}`, 'INCR', 1, nftCacheId)
                       } catch (err) {
                         logger.log('Save order', JSON.stringify(err))
