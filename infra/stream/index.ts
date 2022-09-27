@@ -40,7 +40,7 @@ export const updateStreamEnvFile = (): void => {
   let { parsedFile } = env
   parsedFile = omit(parsedFile, 'PORT', 'DB_PORT', 'REDIS_PORT')
   parsedFile['NODE_ENV'] = stackConfig['nftcom:nodeEnv']
-  parsedFile['DB_HOST'] = infraOutput.dbHost
+  parsedFile['DB_HOST'] = process.env.DB_HOST || ''
   parsedFile['DB_PASSWORD'] = process.env.DB_PASSWORD || ''
   parsedFile['DB_PORT'] = process.env.DB_PORT || ''
   parsedFile['DB_USE_SSL'] = 'true'
