@@ -5,6 +5,7 @@ import { _logger, db, fp } from 'nftcom-backend/shared'
 
 import { dbConfig } from './config'
 import { nftCronSubqueue,QUEUE_TYPES, queues, startAndListen, stopAndDisconnect } from './jobs/jobs'
+import { authMiddleWare } from './middleware/auth'
 //import { startAndListen } from './jobs/jobs'
 import { onChainProvider } from './on-chain'
 import { client } from './opensea'
@@ -29,23 +30,8 @@ app.get('/health', async (_req, res) => {
   }
 })
 
-// health check
-app.get('/health', async (_req, res) => {
-  const healthcheck = {
-    uptime: process.uptime(),
-    message: 'OK',
-    timestamp: Date.now(),
-  }
-  try {
-    res.send(healthcheck)
-  } catch (error) {
-    healthcheck.message = error
-    res.status(503).send()
-  }
-})
-
-// sync external orders
-app.get('/syncOS', async (_req, res) => {
+// sync external orders - authenticated
+app.get('/syncOS', authMiddleWare, async (_req, res) => {
   try {
     queues.get(QUEUE_TYPES.SYNC_CONTRACTS)
       .add({
@@ -63,8 +49,8 @@ app.get('/syncOS', async (_req, res) => {
   }
 })
 
-// sync external orders
-app.get('/syncLR', async (_req, res) => {
+// sync external orders - authenticated
+app.get('/syncLR', authMiddleWare, async (_req, res) => {
   try {
     queues.get(QUEUE_TYPES.SYNC_CONTRACTS)
       .add({
@@ -82,8 +68,8 @@ app.get('/syncLR', async (_req, res) => {
   }
 })
 
-// force stop external orders sync
-app.get('/stopSync', async (_req, res) => {
+// force stop external orders sync -authenticated
+app.get('/stopSync', authMiddleWare, async (_req, res) => {
   try {
     const existingSubQueueJobs: Bull.Job[] = await nftCronSubqueue.getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting'])
     // clear existing sub queue jobs
@@ -96,10 +82,7 @@ app.get('/stopSync', async (_req, res) => {
     if (existingQueueJobs.flat().length) {
       queues.get(QUEUE_TYPES.SYNC_CONTRACTS).obliterate({ force: true })
     }
-
-    await Promise.all([
-      nftCronSubqueue.close(),
-    ])
+  
     res.status(200).send({ message: 'Sync Stopped!' })
   } catch (error) {
     console.log('err', error)
