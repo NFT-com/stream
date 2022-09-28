@@ -63,6 +63,7 @@ runs:
         OPENSEA_B_API_KEY: ${{ fromJSON(inputs.secrets).OPENSEA_B_API_KEY }}
         LOOKSRARE_API_KEY: ${{ fromJSON(inputs.secrets).LOOKSRARE_API_KEY }}
         AUTH_ALLOWED_LIST: ${{ fromJSON(inputs.secrets).AUTH_ALLOWED_LIST }}
+        AUTH_MESSAGE: ${{ fromJSON(inputs.secrets).AUTH_MESSAGE }}
       run: npm run build:stream:env
     - name: Build and Push Stream Image
       shell: bash
@@ -95,4 +96,5 @@ runs:
         OPENSEA_B_API_KEY: ${{ fromJSON(inputs.secrets).OPENSEA_B_API_KEY }}
         LOOKSRARE_API_KEY: ${{ fromJSON(inputs.secrets).LOOKSRARE_API_KEY }}
         AUTH_ALLOWED_LIST: ${{ fromJSON(inputs.secrets).AUTH_ALLOWED_LIST }}
+        AUTH_MESSAGE: ${{ fromJSON(inputs.secrets).AUTH_MESSAGE }}
       run: npm run deploy:stream

@@ -49,6 +49,7 @@ export const updateStreamEnvFile = (): void => {
   parsedFile['OPENSEA_B_API_KEY'] = process.env.OPENSEA_B_API_KEY || parsedFile['OPENSEA_B_API_KEY']
   parsedFile['LOOKSRARE_API_KEY'] = process.env.LOOKSRARE_API_KEY || parsedFile['LOOKSRARE_API_KEY']
   parsedFile['AUTH_ALLOWED_LIST'] = process.env.AUTH_ALLOWED_LIST || parsedFile['AUTH_ALLOWED_LIST']
+  parsedFile['AUTH_MESSAGE'] = process.env.AUTH_MESSAGE || parsedFile['AUTH_MESSAGE']
   parsedFile['CHAIN_ID'] = process.env.CHAIN_ID || parsedFile['CHAIN_ID']
 
   console.log(JSON.stringify(parsedFile))

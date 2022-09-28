@@ -20,7 +20,8 @@ export const authMiddleWare =  (_req, res, next): any => {
     ))
   }
   const address = getAddressFromSignature(authSignature)
-  if(!authAllowedList.includes(address)) {
+  const allowedList: string [] = authAllowedList ? authAllowedList.split(',') : []
+  if(!allowedList.includes(address)) {
     return res.status(403).send(buildError(
       AuthErrorType.Forbidden,
       'Not allowed to perform this operation!',
