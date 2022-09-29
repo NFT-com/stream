@@ -1,18 +1,19 @@
 import Bull from 'bull'
 import express from 'express'
 import kill from 'kill-port'
-import { _logger, db, fp } from 'nftcom-backend/shared'
+
+import { _logger, db, fp } from '@nftcom/shared'
 
 import { dbConfig } from './config'
 import { nftCronSubqueue,QUEUE_TYPES, queues, startAndListen, stopAndDisconnect } from './jobs/jobs'
 import { authMiddleWare } from './middleware/auth'
 //import { startAndListen } from './jobs/jobs'
-import { onChainProvider } from './on-chain'
+import { startProvider, stopProvider } from './on-chain'
 import { client } from './opensea'
 import { initiateStreaming } from './pipeline'
 
 const logger = _logger.Factory(_logger.Context.General, _logger.Context.Misc)
-
+const chainId: string = process.env.chainId || '5'
 const app = express()
 
 // health check
@@ -119,9 +120,9 @@ const bootstrap = (): Promise<void> => {
   return db.connect(dbConfig)
     .then(startAndListen)
     .then(startServer)
-    .then(onChainProvider)
     .then(client.connect)
     .then(initiateStreaming)
+    .then(() => startProvider(chainId))
     .then(fp.pause(500))
 }
 
@@ -142,6 +143,7 @@ const gracefulShutdown = (): Promise<void> => {
     .then(db.disconnect)
     .then(stopAndDisconnect)
     .then(client.disconnect)
+    .then(stopProvider)
     .then(fp.pause(500))
     .finally(() => {
       logExit()

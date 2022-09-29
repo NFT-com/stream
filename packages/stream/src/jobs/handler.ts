@@ -1,5 +1,6 @@
 import  { Job } from 'bull'
-import { _logger } from 'nftcom-backend/shared'
+
+import { _logger } from '@nftcom/shared'
 
 import { cache, CacheKeys } from '../cache'
 import { DistinctContract } from '../interfaces'

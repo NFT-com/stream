@@ -33,20 +33,25 @@
       // "noImplicitReturns": true,             /* Report error when not all code paths in function return a value. */
       // "noFallthroughCasesInSwitch": true,    /* Report errors for fallthrough cases in switch statement. */
       "baseUrl": ".",
+      "paths": {
+        "@nftcom/shared/*": [
+          "../NFT-backend/packages/shared/src/*"
+        ],
+        "@nftcom/gql/*": [
+          "../NFT-backend/packages/gql/src/*"
+        ]
+      }
     },
-    "paths": {
-      "nftcom-backend": [
-        "../NFT-backend/packages/*"
-      ]
-    },
-  "references": [
-    {
-      "path": "../NFT-backend/packages/*"
-    }
-  ],
+    "references": [
+      {
+        "path": "../NFT-backend/packages/shared"
+      },
+      {
+        "path": "../NFT-backend/packages/gql"
+      }
+    ],
     "exclude": [
       "node_modules",
       "dist",
-      "script"
     ]
   }

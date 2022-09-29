@@ -1,11 +1,12 @@
 import axios, { AxiosError,AxiosInstance, AxiosResponse } from 'axios'
 import axiosRetry, { IAxiosRetryConfig } from 'axios-retry'
 import { BigNumber } from 'ethers'
-import { _logger, db, defs, entity } from 'nftcom-backend/shared'
+
+import { _logger, db, defs, entity } from '@nftcom/shared'
 
 import { cache, CacheKeys } from './cache'
-import { orderEntityBuilder } from './orderBuilder'
 import { delay } from './utils'
+import { orderEntityBuilder } from './utils/orderBuilder'
 
 const LOOKSRARE_API_BASE_URL = 'https://api.looksrare.org/api/v1'
 const LOOKSRARE_API_TESTNET_BASE_URL = 'https://api-rinkeby.looksrare.org/api/v1'

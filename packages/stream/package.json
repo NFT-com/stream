@@ -12,8 +12,11 @@
         "start": "node ./dist/index"
     },
     "dependencies": {
+        "@alch/alchemy-web3": "^1.4.6",
         "@babel/runtime": "^7.18.3",
         "@opensea/stream-js": "^0.0.20",
+        "@nftcom/shared": "file:../../../NFT-backend/packages/shared",
+        "@nftcom/gql": "file:../../../NFT-backend/packages/gql",
         "axios": "^0.27.2",
         "axios-retry": "^3.3.1",
         "bull": "^4.2.0",
@@ -22,8 +25,8 @@
         "express": "^4.18.1",
         "ioredis": "^5.2.3",
         "kill-port": "^1.6.1",
-        "nftcom-backend": "file:../../../NFT-backend/packages",
         "source-map-support": "^0.5.21",
+        "typeorm": "0.2.41",
         "ws": "^8.8.1"
     },
     "devDependencies": {

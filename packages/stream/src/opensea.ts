@@ -1,16 +1,16 @@
 import axios, { AxiosError,AxiosInstance, AxiosResponse } from 'axios'
 import axiosRetry, { IAxiosRetryConfig } from 'axios-retry'
 import { BigNumber } from 'ethers'
-import { _logger, db, defs, entity, helper } from 'nftcom-backend/shared'
 import { WebSocket } from 'ws'
 
+import { _logger, db, defs, entity, helper } from '@nftcom/shared'
 import { OpenSeaStreamClient } from '@opensea/stream-js'
 
 import { cache, CacheKeys }from './cache'
 import { OPENSEA_API_KEY } from './config'
 import { Slug } from './interfaces'
-import { orderEntityBuilder } from './orderBuilder'
 import { delay } from './utils'
+import { orderEntityBuilder } from './utils/orderBuilder'
 
 const logger = _logger.Factory(_logger.Context.Opensea)
 const repositories = db.newRepositories()

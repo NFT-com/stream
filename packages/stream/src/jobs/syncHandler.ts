@@ -1,5 +1,6 @@
 import Bull, { Job } from 'bull'
-import { _logger, db, defs,entity, helper } from 'nftcom-backend/shared'
+
+import { _logger, db, defs,entity, helper } from '@nftcom/shared'
 
 import { retrieveMultipleOrdersLooksrare } from '../looksrare'
 import { OpenseaOrderRequest, retrieveMultipleOrdersOpensea } from '../opensea'
