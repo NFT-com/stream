@@ -52,6 +52,7 @@ const keepAlive = ({
   let keepAliveInterval: NodeJS.Timeout | null = null
 
   provider._websocket.on('open', () => {
+    logger.log(`---------> 🎬 websocket started on chainId: ${Number(chainId)}`)
     keepAliveInterval = setInterval(() => {
       provider._websocket.ping()
 
@@ -667,12 +668,11 @@ let provider: ethers.providers.WebSocketProvider
 export const startProvider = (
   chainId: providers.Networkish = 1, //mainnet default
 ): Promise<void> => {
-  logger.debug(`---------> 🎬 starting websocket on chainId: ${Number(chainId)}`)
   if (!process.env.DISABLE_WEBSOCKET) {
-    logger.debug(`---------> 🎬 starting websocket on chainId: ${Number(chainId)}`)
+    logger.log(`---------> 🎬 starting websocket on chainId: ${Number(chainId)}`)
     try {
       provider = ethers.providers.AlchemyProvider.getWebSocketProvider(
-        1,
+        Number(chainId),
         process.env.ALCHEMY_API_KEY,
       )
       keepAlive({
