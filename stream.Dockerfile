@@ -8,6 +8,7 @@ COPY stream/.npmrc ./stream/.npmrc
 COPY stream/tsconfig.json .
 COPY stream/tsconfig.json ./stream/tsconfig.json
 COPY NFT-backend/tsconfig.json ./NFT-backend/tsconfig.json
+COPY NFT-backend/packages/shared/tsconfig.json ./NFT-backend/packages/shared/tsconfig.json
 COPY NFT-backend/packages/gql/tsconfig.json ./NFT-backend/packages/gql/tsconfig.json
 COPY stream/packages/stream/package.json ./stream/packages/stream/package.json
 COPY NFT-backend/packages/shared/package.json ./NFT-backend/packages/shared/package.json
@@ -25,6 +26,8 @@ COPY stream/packages/stream ./stream/packages/stream
 COPY NFT-backend/packages/shared ./NFT-backend/packages/shared
 COPY NFT-backend/packages/gql ./NFT-backend/packages/gql
 
+WORKDIR /app/NFT-backend/
+RUN npm install
 
 FROM deps as build
 
@@ -45,14 +48,14 @@ FROM node:16-alpine as release
 
 WORKDIR /app
 
-COPY --from=deps /app/prod_node_modules ./node_modules
-COPY --from=deps /app/prod_node_modules /app/stream/node_modules
 COPY --from=build /app/NFT-backend/packages/shared/node_modules /app/NFT-backend/packages/shared/node_modules
-COPY --from=build /app/NFT-backend/packages/gql/node_modules /app/NFT-backend/packages/gql/node_modules
-COPY --from=build /app/stream/packages/stream/node_modules /app/stream/packages/stream/node_modules
-
 COPY --from=build /app/NFT-backend/packages/shared/package.json /app/NFT-backend/packages/shared/package.json
 COPY --from=build /app/NFT-backend/packages/shared/dist /app/NFT-backend/packages/shared/dist
+
+COPY --from=deps /app/prod_node_modules ./node_modules
+COPY --from=deps /app/prod_node_modules /app/stream/node_modules
+COPY --from=build /app/NFT-backend/packages/gql/node_modules /app/NFT-backend/packages/gql/node_modules
+COPY --from=build /app/stream/packages/stream/node_modules /app/stream/packages/stream/node_modules
 
 COPY --from=build /app/NFT-backend/packages/gql/package.json /app/NFT-backend/packages/gql/package.json
 COPY --from=build /app/NFT-backend/packages/gql/dist /app/NFT-backend/packages/gql/dist

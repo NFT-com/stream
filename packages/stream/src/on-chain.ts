@@ -1,6 +1,8 @@
 import { BigNumber, ethers, providers, utils } from 'ethers'
 import { In, LessThan } from 'typeorm'
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore:next-line
 import {  getUserWalletFromNFT, updateNFTOwnershipAndMetadata } from '@nftcom/gql/service/nft.service'
 import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared/'
 
