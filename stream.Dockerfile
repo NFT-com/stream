@@ -13,6 +13,7 @@ COPY NFT-backend/tsconfig.json ./NFT-backend/
 COPY NFT-backend/packages/shared/package*.json ./NFT-backend/packages/shared/
 COPY NFT-backend/packages/gql/package*.json ./NFT-backend/packages/gql/
 
+
 # add tools for native dependencies (node-gpy)
 RUN apk add --no-cache --virtual .gyp python3 make g++ \
     && npm set progress=false \
@@ -51,6 +52,11 @@ COPY --from=deps /app/NFT-backend/prod_node_modules /app/NFT-backend/node_module
 
 COPY --from=build /app/NFT-backend/packages/shared/package.json /app/NFT-backend/packages/shared/package.json
 COPY --from=build /app/NFT-backend/packages/shared/dist /app/NFT-backend/packages/shared/dist
+
+COPY --from=deps /app/prod_node_modules ./node_modules
+COPY --from=deps /app/prod_node_modules /app/stream/node_modules
+COPY --from=build /app/NFT-backend/packages/gql/node_modules /app/NFT-backend/packages/gql/node_modules
+COPY --from=build /app/stream/packages/stream/node_modules /app/stream/packages/stream/node_modules
 
 COPY --from=build /app/NFT-backend/packages/gql/package.json /app/NFT-backend/packages/gql/package.json
 COPY --from=build /app/NFT-backend/packages/gql/dist /app/NFT-backend/packages/gql/dist
