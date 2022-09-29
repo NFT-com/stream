@@ -34,19 +34,8 @@
       // "noFallthroughCasesInSwitch": true,    /* Report errors for fallthrough cases in switch statement. */
       "baseUrl": ".",
     },
-    "paths": {
-    "nftcom-backend": [
-        "../NFT-backend/packages/*"
-      ]
-    },
-    "references": [
-      {
-        "path": "../NFT-backend/packages/*"
-      }
-    ],
     "exclude": [
       "node_modules",
-      "dist",
-      "script"
+      "dist"
     ]
   }

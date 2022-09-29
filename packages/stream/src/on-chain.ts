@@ -1,7 +1,7 @@
 import { BigNumber, ethers, providers, utils } from 'ethers'
 import { In, LessThan } from 'typeorm'
 
-import {  getUserWalletFromNFT, updateNFTOwnershipAndMetadata } from '@nftcom/gql/service/nft.service'
+import {  nftService } from '@nftcom/gql/service'
 import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared/'
 
 import { cancelEntityBuilder,txEntityBuilder } from './utils/orderBuilder'
@@ -371,10 +371,10 @@ const keepAlive = ({
               },
             }
 
-            const wallet = await getUserWalletFromNFT(checksumContract, tokenId, chainId.toString())
+            const wallet = await nftService.getUserWalletFromNFT(checksumContract, tokenId, chainId.toString())
 
             if (wallet) {
-              await updateNFTOwnershipAndMetadata(obj, wallet.userId, wallet.id, chainId.toString())
+              await nftService.updateNFTOwnershipAndMetadata(obj, wallet.userId, wallet.id, chainId.toString())
             }
 
             logger.log(`
@@ -439,10 +439,10 @@ const keepAlive = ({
               },
             }
 
-            const wallet = await getUserWalletFromNFT(checksumContract, tokenId, chainId.toString())
+            const wallet = await nftService.getUserWalletFromNFT(checksumContract, tokenId, chainId.toString())
 
             if (wallet) {
-              await updateNFTOwnershipAndMetadata(obj, wallet.userId, wallet.id, chainId.toString())
+              await nftService.updateNFTOwnershipAndMetadata(obj, wallet.userId, wallet.id, chainId.toString())
             }
 
             logger.log(`
@@ -626,9 +626,9 @@ const keepAlive = ({
               },
             }
     
-            const wallet = await getUserWalletFromNFT(contract, tokenId, chainId.toString())
+            const wallet = await nftService.getUserWalletFromNFT(contract, tokenId, chainId.toString())
             if (wallet) {
-              await updateNFTOwnershipAndMetadata(obj, wallet.userId, wallet.id, chainId.toString())
+              await nftService.updateNFTOwnershipAndMetadata(obj, wallet.userId, wallet.id, chainId.toString())
             }
             logger.log(`
             Evt Saved: ${OSSeaportEventName.OrderFulfilled} for orderHash ${orderHash},

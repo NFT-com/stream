@@ -22,7 +22,7 @@ RUN apk add --no-cache --virtual .gyp python3 make g++ \
     && npm install \
     && cd /app/NFT-backend \
     && npm ci --omit=dev \
-    && cp -R node_modules prod_node_modules_gql \
+    && cp -R node_modules prod_node_modules \
     && npm ci \
     && apk del .gyp
 
@@ -46,8 +46,8 @@ FROM node:16-alpine as release
 
 WORKDIR /app
 
-COPY --from=deps /app/prod_node_modules /app/stream/node_modules
-COPY --from=deps /app/prod_node_modules_gql /app/NFT-backend//node_modules
+COPY --from=deps /app/stream/prod_node_modules /app/stream/node_modules
+COPY --from=deps /app/NFT-backend/prod_node_modules /app/NFT-backend/node_modules
 
 COPY --from=build /app/NFT-backend/packages/shared/package.json /app/NFT-backend/packages/shared/package.json
 COPY --from=build /app/NFT-backend/packages/shared/dist /app/NFT-backend/packages/shared/dist
