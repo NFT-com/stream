@@ -21,23 +21,25 @@ WORKDIR /app/stream/
 # add tools for native dependencies (node-gpy)
 RUN apk add --no-cache --virtual .gyp python3 make g++ \
     && npm set progress=false \
+    && cd /app/stream \
     && npm install --omit=dev \
     && cp -R node_modules prod_node_modules \
     && npm install \
+    && cd /app/NFT-backend \
+    && npm ci --omit=dev \
+    && cp -R node_modules prod_node_modules \
+    && npm ci \
     && apk del .gyp
 
 FROM deps as build
 
 WORKDIR /app/NFT-backend/packages/shared
-RUN npm install
 RUN npm run build
 
 WORKDIR /app/NFT-backend/packages/gql
-RUN npm install
 RUN npm run build
 
 WORKDIR /app/stream/packages/stream
-RUN npm install
 RUN npm run build
 
 
