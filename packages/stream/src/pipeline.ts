@@ -1,5 +1,4 @@
-import { _logger,db, defs, entity, helper } from 'nftcom-backend/shared'
-
+import { _logger,db, defs, entity, helper } from '@nftcom/shared'
 import { BaseStreamMessage, EventType } from '@opensea/stream-js'
 
 import { cache, CacheKeys }from './cache'

@@ -3,8 +3,24 @@
   "compilerOptions": {
     "composite": true,
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDirs": ["./src"],
+    "paths": {
+      "@nftcom/shared/*": [
+        "../../../NFT-backend/packages/shared/src/*"
+      ],
+      "@nftcom/gql/*": [
+        "../../../NFT-backend/packages/gql/src/*"
+      ]
+    }
   },
+    "references": [
+      {
+        "path": "../../../NFT-backend/packages/shared"
+      },
+      {
+        "path": "../../../NFT-backend/packages/gql"
+      }
+    ],
   "include": [
     "src/**/*.ts",
     "src/*.ts"

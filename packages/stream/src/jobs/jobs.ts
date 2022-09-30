@@ -1,5 +1,6 @@
 import Bull from 'bull'
-import { _logger } from 'nftcom-backend/shared'
+
+import { _logger } from '@nftcom/shared'
 
 import { redisConfig } from '../config'
 import { deregisterStreamHandler, registerStreamHandler } from './handler'

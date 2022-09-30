@@ -1,10 +1,14 @@
 import { BigNumber } from 'ethers'
-import { db, defs, entity, helper } from 'nftcom-backend/shared'
 
-import { LooksRareOrder } from './looksrare'
-import { SeaportOffer, SeaportOrder } from './opensea'
+import { db, defs, entity, helper } from '@nftcom/shared'
+
+import { SeaportConsideration,TxLooksrareProtocolData, TxSeaportProtocolData } from '../interfaces'
+import { LooksRareOrder } from '../looksrare'
+import { SeaportOffer, SeaportOrder } from '../opensea'
 
 type Order = SeaportOrder | LooksRareOrder
+
+type TxProtocolData = TxSeaportProtocolData | TxLooksrareProtocolData
 
 const repositories = db.newRepositories()
 
@@ -181,5 +185,153 @@ export const orderEntityBuilder = async (
     chainId,
     protocol,
     ...orderEntity,
+  }
+}
+
+/**
+ * txSeaportProcotolDataParser 
+ * @param protocolData
+ */
+
+export const txSeaportProcotolDataParser = (protocolData: any): TxSeaportProtocolData => {
+  const { offer, consideration } = protocolData
+  const txOffer: SeaportOffer[] = offer.map((offerItem: any) => {
+    const [itemType, token, identifierOrCriteria, amount] = offerItem
+    return {
+      itemType,
+      token: helper.checkSum(token),
+      identifierOrCriteria: helper.bigNumberToNumber(identifierOrCriteria),
+      startAmount: helper.bigNumberToNumber(amount),
+      endAmount: helper.bigNumberToNumber(amount),
+    }
+  })
+
+  const txConsideration: SeaportConsideration[] = consideration.map((considerationItem: any) => {
+    const [itemType, token, identifierOrCriteria, amount, recipient] = considerationItem
+    return {
+      itemType,
+      token: helper.checkSum(token),
+      identifierOrCriteria: helper.bigNumberToNumber(identifierOrCriteria),
+      startAmount: helper.bigNumberToNumber(amount),
+      endAmount: helper.bigNumberToNumber(amount),
+      recipient: helper.checkSum(recipient),
+    }
+  })
+
+  return  { offer: txOffer, consideration: txConsideration }
+}
+
+/**
+ * transactionEntityBuilder 
+ * @param txType
+ * @param txHash
+ * @param chainId
+ * @param contract
+ * @param tokenId
+ */
+
+export const txEntityBuilder = async (
+  txType: defs.ActivityType,
+  txHash: string,
+  blockNumber: string,
+  chainId: string,
+  contract: string,
+  tokenId: string,
+  maker: string,
+  taker: string,
+  exchange: defs.ExchangeType,
+  protocol: defs.ProtocolType,
+  protocolData: any,
+  eventType: string,
+):  Promise<Partial<entity.TxTransaction>> => {
+  const checksumContract: string = helper.checkSum(contract)
+  const tokenIdHex: string = helper.bigNumberToHex(tokenId)
+  const nftIds: string[] = [`ethereum/${checksumContract}/${tokenIdHex}`]
+  const timestampFromSource: number = (new Date().getTime())/1000
+  const expirationFromSource = null
+
+  const activity: entity.TxActivity = await activityBuilder(
+    txType,
+    txHash,
+    maker,
+    chainId,
+    nftIds,
+    checksumContract,
+    timestampFromSource,
+    expirationFromSource,
+  )
+
+  let txProtocolData: TxProtocolData = protocolData
+
+  if (protocol === defs.ProtocolType.Seaport) {
+    txProtocolData =  txSeaportProcotolDataParser(protocolData)
+  }
+  return {
+    id: txHash,
+    activity,
+    exchange,
+    transactionType: txType,
+    protocol,
+    protocolData: txProtocolData,
+    transactionHash: txHash,
+    blockNumber,
+    nftContractAddress: checksumContract,
+    nftContractTokenId: tokenIdHex,
+    eventType,
+    maker: helper.checkSum(maker),
+    taker: helper.checkSum(taker),
+    chainId,
+  }
+}
+
+/**
+ * cancelEntityBuilder 
+ * @param txType
+ * @param txHash
+ * @param chainId
+ * @param contract
+ * @param nftIds
+ * @param maker
+ * @param exchange
+ * @param orderType
+ * @param orderHash
+ */
+
+export const cancelEntityBuilder = async (
+  txType: defs.ActivityType,
+  txHash: string,
+  blockNumber: string,
+  chainId: string,
+  contract: string,
+  nftIds: string[],
+  maker: string,
+  exchange: defs.ExchangeType,
+  orderType: defs.CancelActivityType,
+  orderHash: string,
+):  Promise<Partial<entity.TxCancel>> => {
+  const checksumContract: string = helper.checkSum(contract)
+  const timestampFromSource: number = (new Date().getTime())/1000
+  const expirationFromSource = null
+
+  const activity: entity.TxActivity = await activityBuilder(
+    txType,
+    txHash,
+    maker,
+    chainId,
+    nftIds,
+    checksumContract,
+    timestampFromSource,
+    expirationFromSource,
+  )
+
+  return {
+    id: txHash,
+    activity,
+    exchange,
+    foreignType: orderType,
+    foreignKeyId: orderHash,
+    transactionHash: txHash,
+    blockNumber,
+    chainId,
   }
 }

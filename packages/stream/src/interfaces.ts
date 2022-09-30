@@ -83,3 +83,30 @@ export enum OSChainTypes {
   POLYGON = 'polygon',
   SOLANA = 'solana'
 }
+
+// Seaport Interfaces
+export interface SeaportOffer {
+  itemType: number
+  token: string
+  identifierOrCriteria: string
+  startAmount: string
+  endAmount: string
+  
+}
+
+export interface SeaportConsideration extends SeaportOffer {
+  recipient: string
+}
+
+export interface TxSeaportProtocolData {
+  offer: SeaportOffer[]
+  consideration: SeaportConsideration[]
+}
+
+export interface TxLooksrareProtocolData {
+  taker: string
+  maker: string
+  strategy: string
+  currency: string
+  collection: string
+}
