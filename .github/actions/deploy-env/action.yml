@@ -107,6 +107,7 @@ runs:
         IPFS_WEB_GATEWAY: ${{ fromJSON(inputs.secrets).IPFS_WEB_GATEWAY }}
         DEFAULT_TTL_MINS: ${{ fromJSON(inputs.secrets).DEFAULT_TTL_MINS }}
         AUTH_ALLOWED_LIST: ${{ fromJSON(inputs.secrets).AUTH_ALLOWED_LIST }}
+        CONFIRM_EMAIL_URL: "tbd"
       run: npm run build:stream:env
     - name: Build and Push Stream Image
       shell: bash
@@ -182,4 +183,5 @@ runs:
         IPFS_WEB_GATEWAY: ${{ fromJSON(inputs.secrets).IPFS_WEB_GATEWAY }}
         DEFAULT_TTL_MINS: ${{ fromJSON(inputs.secrets).DEFAULT_TTL_MINS }}
         AUTH_ALLOWED_LIST: ${{ fromJSON(inputs.secrets).AUTH_ALLOWED_LIST }}
+        CONFIRM_EMAIL_URL: "tbd"
       run: npm run deploy:stream
