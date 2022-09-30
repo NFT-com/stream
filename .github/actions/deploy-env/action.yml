@@ -62,6 +62,7 @@ runs:
         CHAIN_ID: ${{ fromJSON(inputs.secrets).CHAIN_ID }}
         AUTH_MESSAGE: ${{ fromJSON(inputs.secrets).AUTH_MESSAGE }}
         SG_API_KEY: ${{ fromJSON(inputs.secrets).SG_API_KEY }}
+        CONFIRM_EMAIL_URL: "tbd"
         ETH_GAS_STATION_API_KEY: ${{ fromJSON(inputs.secrets).ETH_GAS_STATION_API_KEY }}
         TEAM_AUTH_TOKEN: ${{ fromJSON(inputs.secrets).TEAM_AUTH_TOKEN }}
         MNEMONIC: ${{ fromJSON(inputs.secrets).MNEMONIC }}
@@ -107,7 +108,6 @@ runs:
         IPFS_WEB_GATEWAY: ${{ fromJSON(inputs.secrets).IPFS_WEB_GATEWAY }}
         DEFAULT_TTL_MINS: ${{ fromJSON(inputs.secrets).DEFAULT_TTL_MINS }}
         AUTH_ALLOWED_LIST: ${{ fromJSON(inputs.secrets).AUTH_ALLOWED_LIST }}
-        CONFIRM_EMAIL_URL: "tbd"
       run: npm run build:stream:env
     - name: Build and Push Stream Image
       shell: bash
@@ -138,6 +138,7 @@ runs:
         CHAIN_ID: ${{ fromJSON(inputs.secrets).CHAIN_ID }}
         AUTH_MESSAGE: ${{ fromJSON(inputs.secrets).AUTH_MESSAGE }}
         SG_API_KEY: ${{ fromJSON(inputs.secrets).SG_API_KEY }}
+        CONFIRM_EMAIL_URL: "tbd"
         ETH_GAS_STATION_API_KEY: ${{ fromJSON(inputs.secrets).ETH_GAS_STATION_API_KEY }}
         TEAM_AUTH_TOKEN: ${{ fromJSON(inputs.secrets).TEAM_AUTH_TOKEN }}
         MNEMONIC: ${{ fromJSON(inputs.secrets).MNEMONIC }}
@@ -183,5 +184,4 @@ runs:
         IPFS_WEB_GATEWAY: ${{ fromJSON(inputs.secrets).IPFS_WEB_GATEWAY }}
         DEFAULT_TTL_MINS: ${{ fromJSON(inputs.secrets).DEFAULT_TTL_MINS }}
         AUTH_ALLOWED_LIST: ${{ fromJSON(inputs.secrets).AUTH_ALLOWED_LIST }}
-        CONFIRM_EMAIL_URL: "tbd"
       run: npm run deploy:stream
