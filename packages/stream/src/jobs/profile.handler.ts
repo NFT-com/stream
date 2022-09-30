@@ -111,7 +111,7 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
               // 3. Once we update NFTs for profile, we cache it to UPDATED_NFTS_PROFILE with expire date
               const now: Date = new Date()
               now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
-              const ttl = now.getMilliseconds()
+              const ttl = now.getTime()
               await cache.zadd(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, ttl, profile.id)
               await cache.zrem(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, [profile.id])
               await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
