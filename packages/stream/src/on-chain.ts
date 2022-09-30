@@ -667,7 +667,6 @@ const keepAlive = ({
     onDisconnect(err)
   })
 
-  // health check
   provider._websocket.on('pong', () => {
     if (pingTimeout) clearInterval(pingTimeout)
   })
