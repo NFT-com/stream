@@ -166,6 +166,7 @@ const createEcsTaskDefinition = (
 ): aws.ecs.TaskDefinition => {
   const ecrImage = `${process.env.ECR_REGISTRY}/${stECRRepo}:${process.env.GIT_SHA || 'latest'}`
   const role = createEcsTaskRole()
+  console.log(role)
   const resourceName = getResourceName('st')
 
   return new aws.ecs.TaskDefinition(
