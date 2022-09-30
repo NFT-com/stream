@@ -32,24 +32,8 @@
       // "noUnusedParameters": true,            /* Report errors on unused parameters. */
       // "noImplicitReturns": true,             /* Report error when not all code paths in function return a value. */
       // "noFallthroughCasesInSwitch": true,    /* Report errors for fallthrough cases in switch statement. */
-      "baseUrl": ".",
-      "paths": {
-        "@nftcom/shared/*": [
-          "../NFT-backend/packages/shared/src/*"
-        ],
-        "@nftcom/gql/*": [
-          "../NFT-backend/packages/gql/src/*"
-        ]
-      }
+      "baseUrl": "."
     },
-    "references": [
-      {
-        "path": "../NFT-backend/packages/shared"
-      },
-      {
-        "path": "../NFT-backend/packages/gql"
-      }
-    ],
     "exclude": [
       "node_modules",
       "dist",
