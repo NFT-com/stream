@@ -55,6 +55,8 @@ runs:
       working-directory: stream/infra
       env:
         STAGE: ${{ inputs.stage }}
+        PULUMI_CONFIG_PASSPHRASE: ""
+        AWS_ACCOUNT_ID: ${{ fromJSON(inputs.secrets).AWS_ACCOUNT_ID }}
         DB_HOST: ${{ fromJSON(inputs.secrets).DB_HOST }}
         DB_PASSWORD: ${{ fromJSON(inputs.secrets).DB_PASSWORD }}
         CHAIN_ID: ${{ fromJSON(inputs.secrets).CHAIN_ID }}
@@ -127,6 +129,7 @@ runs:
       env:
         STAGE: ${{ inputs.stage }}
         PULUMI_CONFIG_PASSPHRASE: ""
+        AWS_ACCOUNT_ID: ${{ fromJSON(inputs.secrets).AWS_ACCOUNT_ID }}
         DB_HOST: ${{ fromJSON(inputs.secrets).DB_HOST }}
         DB_PASSWORD: ${{ fromJSON(inputs.secrets).DB_PASSWORD }}
         CHAIN_ID: ${{ fromJSON(inputs.secrets).CHAIN_ID }}
