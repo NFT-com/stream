@@ -13,7 +13,7 @@ import { client } from './opensea'
 import { initiateStreaming } from './pipeline'
 
 const logger = _logger.Factory(_logger.Context.General, _logger.Context.Misc)
-const chainId: string = process.env.chainId || '5'
+const chainId: string = process.env.CHAIN_ID || '5'
 const app = express()
 
 // health check
@@ -83,7 +83,7 @@ app.get('/stopSync', authMiddleWare, async (_req, res) => {
     if (existingQueueJobs.flat().length) {
       queues.get(QUEUE_TYPES.SYNC_CONTRACTS).obliterate({ force: true })
     }
-  
+
     res.status(200).send({ message: 'Sync Stopped!' })
   } catch (error) {
     console.log('err', error)
@@ -132,11 +132,11 @@ const killPort = (): Promise<unknown> => {
     .then(fp.pause(500))
     .catch((err: any) => logger.error(err))
 }
-  
+
 const logExit = (): void => {
   logger.info('Exited!')
 }
-  
+
 const gracefulShutdown = (): Promise<void> => {
   return stopServer()
     .then(killPort)
@@ -150,7 +150,7 @@ const gracefulShutdown = (): Promise<void> => {
       process.exit()
     })
 }
-  
+
 process.on('SIGINT', gracefulShutdown)
 process.on('SIGTERM', gracefulShutdown)
 
