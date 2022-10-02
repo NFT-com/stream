@@ -4,6 +4,7 @@ import { _logger } from '@nftcom/shared'
 
 import { redisConfig } from '../config'
 import { deregisterStreamHandler, registerStreamHandler } from './handler'
+import { updateNFTsForProfilesHandler } from './profile.handler'
 import { nftExternalOrders } from './syncHandler'
 
 const BULL_MAX_REPEAT_COUNT = parseInt(process.env.BULL_MAX_REPEAT_COUNT) || 250
@@ -19,6 +20,7 @@ export enum QUEUE_TYPES {
   SYNC_CONTRACTS = 'SYNC_CONTRACTS',
   REGISTER_OS_STREAMS = 'REGISTER_OS_STREAMS',
   DEREGISTER_OS_STREAMS = 'DEREGISTER_OS_STREAMS',
+  UPDATE_PROFILES_NFTS_STREAMS = 'UPDATE_PROFILES_NFTS_STREAMS'
 }
 
 export const queues = new Map<string, Bull.Queue>()
@@ -54,6 +56,12 @@ const createQueues = (): Promise<void> => {
 
     queues.set(QUEUE_TYPES.DEREGISTER_OS_STREAMS, new Bull(
       QUEUE_TYPES.DEREGISTER_OS_STREAMS, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
+    queues.set(QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS, new Bull(
+      QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS, {
         prefix: queuePrefix,
         redis,
       }))
@@ -108,6 +116,19 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
     const chainIds = [...queues.keys()]
     return Promise.all(chainIds.map((chainId) => {
       switch (chainId) {
+      case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
+        return queues.get(QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS)
+          .add({
+            UPDATE_PROFILES_NFTS_STREAMS: QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS,
+            chainId: process.env.CHAIN_ID,
+          },
+          {
+            removeOnComplete: true,
+            removeOnFail: true,
+            // repeat every  5 minutes
+            repeat: { every: 5 * 60000 },
+            jobId: 'update_profiles_nfts_streams',
+          })
       // case QUEUE_TYPES.REGISTER_OS_STREAMS:
       //   return queues.get(QUEUE_TYPES.REGISTER_OS_STREAMS)
       //     .add({ REGISTER_OS_STREAMS: QUEUE_TYPES.REGISTER_OS_STREAMS }, {
@@ -146,6 +167,9 @@ const listenToJobs = async (): Promise<void> => {
       break
     case QUEUE_TYPES.DEREGISTER_OS_STREAMS:
       queue.process(deregisterStreamHandler)
+      break
+    case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
+      queue.process(updateNFTsForProfilesHandler)
       break
     default:
       break
