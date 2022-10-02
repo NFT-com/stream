@@ -17,5 +17,5 @@ export const redisConfig = {
   port: parseInt(process.env.REDIS_PORT) || 6379,
 }
 
-export const OPENSEA_API_KEY = process.env.OPENSEA_B_API_KEY || ''
+export const OPENSEA_API_KEY = process.env.OPENSEA_ORDERS_API_KEY || ''
   

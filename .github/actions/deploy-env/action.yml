@@ -60,11 +60,54 @@ runs:
         DB_HOST: ${{ fromJSON(inputs.secrets).DB_HOST }}
         DB_PASSWORD: ${{ fromJSON(inputs.secrets).DB_PASSWORD }}
         CHAIN_ID: ${{ fromJSON(inputs.secrets).CHAIN_ID }}
-        OPENSEA_B_API_KEY: ${{ fromJSON(inputs.secrets).OPENSEA_B_API_KEY }}
-        LOOKSRARE_API_KEY: ${{ fromJSON(inputs.secrets).LOOKSRARE_API_KEY }}
-        ALCHEMY_API_KEY: ${{ fromJSON(inputs.secrets).ALCHEMY_API_KEY }}
-        AUTH_ALLOWED_LIST: ${{ fromJSON(inputs.secrets).AUTH_ALLOWED_LIST }}
         AUTH_MESSAGE: ${{ fromJSON(inputs.secrets).AUTH_MESSAGE }}
+        SG_API_KEY: ${{ fromJSON(inputs.secrets).SG_API_KEY }}
+        CONFIRM_EMAIL_URL: "tbd"
+        ETH_GAS_STATION_API_KEY: ${{ fromJSON(inputs.secrets).ETH_GAS_STATION_API_KEY }}
+        TEAM_AUTH_TOKEN: ${{ fromJSON(inputs.secrets).TEAM_AUTH_TOKEN }}
+        MNEMONIC: ${{ fromJSON(inputs.secrets).MNEMONIC }}
+        MNEMONIC_RINKEBY: ${{ fromJSON(inputs.secrets).MNEMONIC_RINKEBY }}
+        HCS_TOPIC_ID: ${{ fromJSON(inputs.secrets).HCS_TOPIC_ID }}
+        HCS_ACCOUNT_ID: ${{ fromJSON(inputs.secrets).HCS_ACCOUNT_ID }}
+        HCS_PRIVATE_KEY: ${{ fromJSON(inputs.secrets).HCS_PRIVATE_KEY }}
+        ZMOK_API_URL: ${{ fromJSON(inputs.secrets).ZMOK_API_URL }}
+        UBIQUITY_API_KEY: ${{ fromJSON(inputs.secrets).UBIQUITY_API_KEY }}
+        INFURA_API_KEY: ${{ fromJSON(inputs.secrets).INFURA_API_KEY }}
+        ALCHEMY_API_KEY: ${{ fromJSON(inputs.secrets).ALCHEMY_API_KEY }}
+        ALCHEMY_API_KEY_PREVIEWLINK: ${{ fromJSON(inputs.secrets).ALCHEMY_API_KEY_PREVIEWLINK }}
+        ALCHEMY_API_KEY_PREVIEWLINK_GOERLI: ${{ fromJSON(inputs.secrets).ALCHEMY_API_KEY_PREVIEWLINK_GOERLI }}
+        ALCHEMY_API_URL: ${{ fromJSON(inputs.secrets).ALCHEMY_API_URL }}
+        ALCHEMY_API_URL_RINKEBY: ${{ fromJSON(inputs.secrets).ALCHEMY_API_URL_RINKEBY }}
+        ALCHEMY_API_URL_GOERLI: ${{ fromJSON(inputs.secrets).ALCHEMY_API_URL_GOERLI }}
+        ASSET_BUCKET: ${{ fromJSON(inputs.secrets).ASSET_BUCKET }}
+        ASSET_BUCKET_ROLE: ${{ fromJSON(inputs.secrets).ASSET_BUCKET_ROLE }}
+        SENTRY_DSN: ${{ fromJSON(inputs.secrets).SENTRY_DSN }}
+        PUBLIC_SALE_KEY: ${{ fromJSON(inputs.secrets).PUBLIC_SALE_KEY }}
+        SERVER_CONFIG: ${{ fromJSON(inputs.secrets).SERVER_CONFIG }}
+        SHARED_MINT_SECRET: ${{ fromJSON(inputs.secrets).SHARED_MINT_SECRET }}
+        SUPPORTED_NETWORKS: ${{ fromJSON(inputs.secrets).SUPPORTED_NETWORKS }}
+        TYPESENSE_HOST: ${{ fromJSON(inputs.secrets).TYPESENSE_HOST }}
+        TYPESENSE_API_KEY: ${{ fromJSON(inputs.secrets).TYPESENSE_API_KEY }}
+        MINTED_PROFILE_EVENTS_MAX_BLOCKS: ${{ fromJSON(inputs.secrets).MINTED_PROFILE_EVENTS_MAX_BLOCKS }}
+        PROFILE_NFTS_EXPIRE_DURATION: ${{ fromJSON(inputs.secrets).PROFILE_NFTS_EXPIRE_DURATION }}
+        BULL_MAX_REPEAT_COUNT: ${{ fromJSON(inputs.secrets).BULL_MAX_REPEAT_COUNT }}
+        OPENSEA_API_KEY: ${{ fromJSON(inputs.secrets).OPENSEA_API_KEY }}
+        OPENSEA_ORDERS_API_KEY: ${{ fromJSON(inputs.secrets).OPENSEA_ORDERS_API_KEY }}
+        LOOKSRARE_API_KEY: ${{ fromJSON(inputs.secrets).LOOKSRARE_API_KEY }}
+        PROFILE_SCORE_EXPIRE_DURATION: ${{ fromJSON(inputs.secrets).PROFILE_SCORE_EXPIRE_DURATION }}
+        NFT_EXTERNAL_ORDER_REFRESH_DURATION: ${{ fromJSON(inputs.secrets).NFT_EXTERNAL_ORDER_REFRESH_DURATION }}
+        TEST_DB_HOST: ${{ fromJSON(inputs.secrets).TEST_DB_HOST }}
+        TEST_DB_DATABASE: ${{ fromJSON(inputs.secrets).TEST_DB_DATABASE }}
+        TEST_DB_USERNAME: ${{ fromJSON(inputs.secrets).TEST_DB_USERNAME }}
+        TEST_DB_PORT: ${{ fromJSON(inputs.secrets).TEST_DB_PORT }}
+        TEST_DB_PASSWORD: ${{ fromJSON(inputs.secrets).TEST_DB_PASSWORD }}
+        TEST_DB_USE_SSL: ${{ fromJSON(inputs.secrets).TEST_DB_USE_SSL }}
+        ACTIVITY_ENDPOINTS_ENABLED: ${{ fromJSON(inputs.secrets).ACTIVITY_ENDPOINTS_ENABLED}}
+        NFTPORT_KEY: ${{ fromJSON(inputs.secrets).NFTPORT_KEY}}
+        REFRESH_NFT_DURATION: ${{ fromJSON(inputs.secrets).REFRESH_NFT_DURATION}}
+        IPFS_WEB_GATEWAY: ${{ fromJSON(inputs.secrets).IPFS_WEB_GATEWAY }}
+        DEFAULT_TTL_MINS: ${{ fromJSON(inputs.secrets).DEFAULT_TTL_MINS }}
+        AUTH_ALLOWED_LIST: ${{ fromJSON(inputs.secrets).AUTH_ALLOWED_LIST }}
       run: npm run build:stream:env
     - name: Build and Push Stream Image
       shell: bash
@@ -92,11 +135,53 @@ runs:
         GIT_SHA: ${{ github.sha }}
         DB_HOST: ${{ fromJSON(inputs.secrets).DB_HOST }}
         DB_PASSWORD: ${{ fromJSON(inputs.secrets).DB_PASSWORD }}
-        DB_PORT: ${{ fromJSON(inputs.secrets).DB_PORT }}
-        REDIS_PORT: ${{ fromJSON(inputs.secrets).REDIS_PORT }}
-        OPENSEA_B_API_KEY: ${{ fromJSON(inputs.secrets).OPENSEA_B_API_KEY }}
-        LOOKSRARE_API_KEY: ${{ fromJSON(inputs.secrets).LOOKSRARE_API_KEY }}
-        ALCHEMY_API_KEY: ${{ fromJSON(inputs.secrets).ALCHEMY_API_KEY }}
-        AUTH_ALLOWED_LIST: ${{ fromJSON(inputs.secrets).AUTH_ALLOWED_LIST }}
+        CHAIN_ID: ${{ fromJSON(inputs.secrets).CHAIN_ID }}
         AUTH_MESSAGE: ${{ fromJSON(inputs.secrets).AUTH_MESSAGE }}
+        SG_API_KEY: ${{ fromJSON(inputs.secrets).SG_API_KEY }}
+        CONFIRM_EMAIL_URL: "tbd"
+        ETH_GAS_STATION_API_KEY: ${{ fromJSON(inputs.secrets).ETH_GAS_STATION_API_KEY }}
+        TEAM_AUTH_TOKEN: ${{ fromJSON(inputs.secrets).TEAM_AUTH_TOKEN }}
+        MNEMONIC: ${{ fromJSON(inputs.secrets).MNEMONIC }}
+        MNEMONIC_RINKEBY: ${{ fromJSON(inputs.secrets).MNEMONIC_RINKEBY }}
+        HCS_TOPIC_ID: ${{ fromJSON(inputs.secrets).HCS_TOPIC_ID }}
+        HCS_ACCOUNT_ID: ${{ fromJSON(inputs.secrets).HCS_ACCOUNT_ID }}
+        HCS_PRIVATE_KEY: ${{ fromJSON(inputs.secrets).HCS_PRIVATE_KEY }}
+        ZMOK_API_URL: ${{ fromJSON(inputs.secrets).ZMOK_API_URL }}
+        UBIQUITY_API_KEY: ${{ fromJSON(inputs.secrets).UBIQUITY_API_KEY }}
+        INFURA_API_KEY: ${{ fromJSON(inputs.secrets).INFURA_API_KEY }}
+        ALCHEMY_API_KEY: ${{ fromJSON(inputs.secrets).ALCHEMY_API_KEY }}
+        ALCHEMY_API_KEY_PREVIEWLINK: ${{ fromJSON(inputs.secrets).ALCHEMY_API_KEY_PREVIEWLINK }}
+        ALCHEMY_API_KEY_PREVIEWLINK_GOERLI: ${{ fromJSON(inputs.secrets).ALCHEMY_API_KEY_PREVIEWLINK_GOERLI }}
+        ALCHEMY_API_URL: ${{ fromJSON(inputs.secrets).ALCHEMY_API_URL }}
+        ALCHEMY_API_URL_RINKEBY: ${{ fromJSON(inputs.secrets).ALCHEMY_API_URL_RINKEBY }}
+        ALCHEMY_API_URL_GOERLI: ${{ fromJSON(inputs.secrets).ALCHEMY_API_URL_GOERLI }}
+        ASSET_BUCKET: ${{ fromJSON(inputs.secrets).ASSET_BUCKET }}
+        ASSET_BUCKET_ROLE: ${{ fromJSON(inputs.secrets).ASSET_BUCKET_ROLE }}
+        SENTRY_DSN: ${{ fromJSON(inputs.secrets).SENTRY_DSN }}
+        PUBLIC_SALE_KEY: ${{ fromJSON(inputs.secrets).PUBLIC_SALE_KEY }}
+        SERVER_CONFIG: ${{ fromJSON(inputs.secrets).SERVER_CONFIG }}
+        SHARED_MINT_SECRET: ${{ fromJSON(inputs.secrets).SHARED_MINT_SECRET }}
+        SUPPORTED_NETWORKS: ${{ fromJSON(inputs.secrets).SUPPORTED_NETWORKS }}
+        TYPESENSE_HOST: ${{ fromJSON(inputs.secrets).TYPESENSE_HOST }}
+        TYPESENSE_API_KEY: ${{ fromJSON(inputs.secrets).TYPESENSE_API_KEY }}
+        MINTED_PROFILE_EVENTS_MAX_BLOCKS: ${{ fromJSON(inputs.secrets).MINTED_PROFILE_EVENTS_MAX_BLOCKS }}
+        PROFILE_NFTS_EXPIRE_DURATION: ${{ fromJSON(inputs.secrets).PROFILE_NFTS_EXPIRE_DURATION }}
+        BULL_MAX_REPEAT_COUNT: ${{ fromJSON(inputs.secrets).BULL_MAX_REPEAT_COUNT }}
+        OPENSEA_API_KEY: ${{ fromJSON(inputs.secrets).OPENSEA_API_KEY }}
+        OPENSEA_ORDERS_API_KEY: ${{ fromJSON(inputs.secrets).OPENSEA_ORDERS_API_KEY }}
+        LOOKSRARE_API_KEY: ${{ fromJSON(inputs.secrets).LOOKSRARE_API_KEY }}
+        PROFILE_SCORE_EXPIRE_DURATION: ${{ fromJSON(inputs.secrets).PROFILE_SCORE_EXPIRE_DURATION }}
+        NFT_EXTERNAL_ORDER_REFRESH_DURATION: ${{ fromJSON(inputs.secrets).NFT_EXTERNAL_ORDER_REFRESH_DURATION }}
+        TEST_DB_HOST: ${{ fromJSON(inputs.secrets).TEST_DB_HOST }}
+        TEST_DB_DATABASE: ${{ fromJSON(inputs.secrets).TEST_DB_DATABASE }}
+        TEST_DB_USERNAME: ${{ fromJSON(inputs.secrets).TEST_DB_USERNAME }}
+        TEST_DB_PORT: ${{ fromJSON(inputs.secrets).TEST_DB_PORT }}
+        TEST_DB_PASSWORD: ${{ fromJSON(inputs.secrets).TEST_DB_PASSWORD }}
+        TEST_DB_USE_SSL: ${{ fromJSON(inputs.secrets).TEST_DB_USE_SSL }}
+        ACTIVITY_ENDPOINTS_ENABLED: ${{ fromJSON(inputs.secrets).ACTIVITY_ENDPOINTS_ENABLED}}
+        NFTPORT_KEY: ${{ fromJSON(inputs.secrets).NFTPORT_KEY}}
+        REFRESH_NFT_DURATION: ${{ fromJSON(inputs.secrets).REFRESH_NFT_DURATION}}
+        IPFS_WEB_GATEWAY: ${{ fromJSON(inputs.secrets).IPFS_WEB_GATEWAY }}
+        DEFAULT_TTL_MINS: ${{ fromJSON(inputs.secrets).DEFAULT_TTL_MINS }}
+        AUTH_ALLOWED_LIST: ${{ fromJSON(inputs.secrets).AUTH_ALLOWED_LIST }}
       run: npm run deploy:stream
