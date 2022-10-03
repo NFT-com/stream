@@ -14,7 +14,7 @@ const PROFILE_NFTS_EXPIRE_DURATION = Number(process.env.PROFILE_NFTS_EXPIRE_DURA
 
 export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
   const chainId: string =  job.data?.chainId || process.env.CHAIN_ID
-  logger.debug('update nfts for profiles', job.data)
+  logger.info('update nfts for profiles')
   try {
     // 1. remove expired profiles from the UPDATED_NFTS_PROFILE cache
     await removeExpiredTimestampedZsetMembers(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`)
@@ -23,12 +23,12 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
     for (const profileId of cachedProfiles) {
       const profile = await repositories.profile.findById(profileId)
       if (!profile) {
-        logger.debug(`No profile found for ID ${profileId}`)
+        logger.info(`No profile found for ID ${profileId}`)
       } else {
         // check if updating NFTs for profile is in progress
         const inProgress = await cache.zscore(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, profileId)
         if (inProgress) {
-          logger.debug(`Updating NFTs for profile ${profileId} is in progress`)
+          logger.info(`Updating NFTs for profile ${profileId} is in progress`)
         } else {
           const updateBegin = Date.now()
           const wallet = await repositories.wallet.findOne({
@@ -38,7 +38,7 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
             },
           })
           if (!wallet) {
-            logger.debug(`No wallet found for ID ${profile.ownerWalletId}`)
+            logger.info(`No wallet found for ID ${profile.ownerWalletId}`)
           } else {
             try {
               // keep profile to cache, so we won't repeat profiles in progress
@@ -50,48 +50,48 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
                 wallet.address,
                 chainId,
               )
-              logger.debug(`checked NFT contract addresses for profile ${profile.id}`)
+              logger.info(`checked NFT contract addresses for profile ${profile.id}`)
               await nftService.updateWalletNFTs(
                 profile.ownerUserId,
                 wallet.id,
                 wallet.address,
                 chainId,
               )
-              logger.debug(`updated wallet NFTs for profile ${profile.id}`)
+              logger.info(`updated wallet NFTs for profile ${profile.id}`)
               await nftService.updateEdgesWeightForProfile(profile.id, profile.ownerWalletId)
-              logger.debug(`updated edges with weight for profile ${profile.id}`)
+              logger.info(`updated edges with weight for profile ${profile.id}`)
               await nftService.syncEdgesWithNFTs(profile.id)
-              logger.debug(`synced edges with NFTs for profile ${profile.id}`)
+              logger.info(`synced edges with NFTs for profile ${profile.id}`)
               // save visible NFT amount of profile
               await nftService.saveVisibleNFTsForProfile(profile.id, repositories)
-              logger.debug(`saved amount of visible NFTs to profile ${profile.id}`)
+              logger.info(`saved amount of visible NFTs to profile ${profile.id}`)
               // refresh NFTs for associated addresses
               let msg = await nftService.updateNFTsForAssociatedAddresses(
                 repositories,
                 profile,
                 chainId,
               )
-              logger.debug(msg)
+              logger.info(msg)
               msg = await nftService.updateCollectionForAssociatedContract(
                 repositories,
                 profile,
                 chainId,
                 wallet.address,
               )
-              logger.debug(msg)
+              logger.info(msg)
               // if gkIconVisible is true, we check if this profile owner still owns genesis key,
               if (profile.gkIconVisible) {
                 await nftService.updateGKIconVisibleStatus(repositories, chainId, profile)
-                logger.debug(`gkIconVisible updated for profile ${profile.id}`)
+                logger.info(`gkIconVisible updated for profile ${profile.id}`)
                 const updateEnd = Date.now()
-                logger.debug(`updateNFTsForProfile for profile ${profile.id} took ${(updateEnd - updateBegin) / 1000} seconds`)
+                logger.info(`updateNFTsForProfile for profile ${profile.id} took ${(updateEnd - updateBegin) / 1000} seconds`)
               } else {
                 const updateEnd = Date.now()
-                logger.debug(`updateNFTsForProfile for profile ${profile.id} took ${(updateEnd - updateBegin) / 1000} seconds`)
+                logger.info(`updateNFTsForProfile for profile ${profile.id} took ${(updateEnd - updateBegin) / 1000} seconds`)
               }
               // save profile score
               await nftService.saveProfileScore(repositories, profile)
-              logger.debug(`updated score for profile ${profile.id}`)
+              logger.info(`updated score for profile ${profile.id}`)
               // 3. Once we update NFTs for profile, we cache it to UPDATED_NFTS_PROFILE with expire date
               const now: Date = new Date()
               now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
