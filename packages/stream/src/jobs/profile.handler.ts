@@ -83,11 +83,6 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
               if (profile.gkIconVisible) {
                 await nftService.updateGKIconVisibleStatus(repositories, chainId, profile)
                 logger.info(`gkIconVisible updated for profile ${profile.id}`)
-                const updateEnd = Date.now()
-                logger.info(`updateNFTsForProfile for profile ${profile.id} took ${(updateEnd - updateBegin) / 1000} seconds`)
-              } else {
-                const updateEnd = Date.now()
-                logger.info(`updateNFTsForProfile for profile ${profile.id} took ${(updateEnd - updateBegin) / 1000} seconds`)
               }
               // save profile score
               await nftService.saveProfileScore(repositories, profile)
@@ -99,6 +94,8 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
               await cache.zadd(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, ttl, profile.id)
               await cache.zrem(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, [profile.id])
               await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
+              const updateEnd = Date.now()
+              logger.info(`updateNFTsForProfile for profile ${profile.id} took ${(updateEnd - updateBegin) / 1000} seconds`)
             } catch (err) {
               logger.error(`Error in updateNFTsForProfilesHandler: ${err}`)
             }
