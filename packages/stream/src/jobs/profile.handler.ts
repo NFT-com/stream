@@ -1,4 +1,5 @@
-import { Job } from 'bull'
+import Bull, { Job } from 'bull'
+import { ethers } from 'ethers'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -6,11 +7,85 @@ import {  nftService } from '@nftcom/gql/service'
 import { _logger, db } from '@nftcom/shared'
 
 import { cache, CacheKeys, removeExpiredTimestampedZsetMembers } from '../cache'
+import { nftUpdateSubqueue } from './jobs'
 
 const logger = _logger.Factory(_logger.Context.Bull)
 const repositories = db.newRepositories()
 
 const PROFILE_NFTS_EXPIRE_DURATION = Number(process.env.PROFILE_NFTS_EXPIRE_DURATION)
+
+const subQueueBaseOptions: Bull.JobOptions = {
+  attempts: 3,
+  removeOnComplete: true,
+  removeOnFail: true,
+  backoff: {
+    type: 'exponential',
+    delay: 1000,
+  },
+}
+
+export const nftUpdateBatchProcessor = async (job: Job): Promise<void> => {
+  logger.debug(`initiated nft update batch processor for contract ${job.data.contract} and tokenId ${job.data.tokenId}`)
+  try {
+    const { contract, tokenId, userId, walletId } = job.data
+    const chainId = job.data?.chainId || process.env.CHAIN_ID
+    const nft = {
+      contract: {
+        address: contract,
+      },
+      id: {
+        tokenId: tokenId,
+      },
+    }
+    const savedNFT = await nftService.updateNFTOwnershipAndMetadata(nft, userId, walletId, chainId)
+    await nftService.indexNFTsOnSearchEngine([savedNFT])
+    await nftService.updateCollectionForNFTs([savedNFT])
+  } catch (err) {
+    logger.error(`Error in nftUpdateBatchProcessor ${err}`)
+  }
+}
+
+const updateWalletNFTs = async (
+  userId: string,
+  walletId: string,
+  walletAddress: string,
+  chainId: string,
+  job: Job,
+): Promise<void> => {
+  try {
+    nftService.initiateWeb3(chainId)
+    const ownedNFTs = await nftService.getNFTsFromAlchemy(walletAddress)
+    logger.info(`Fetched ${ownedNFTs.length} NFTs from alchemy for wallet ${walletAddress} on chain ${chainId}`)
+    if (!ownedNFTs.length) return
+    if (!nftUpdateSubqueue) {
+      await job.moveToFailed({ message: 'nft-update-queue is not defined!' })
+    }
+    const existingJobs: Bull.Job[] = await nftUpdateSubqueue.getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting'])
+    // clear existing jobs
+    if (existingJobs.flat().length) {
+      await nftUpdateSubqueue.obliterate({ force: true })
+    }
+    for (let i = 0; i < ownedNFTs.length; i++) {
+      const contract = ethers.utils.getAddress(ownedNFTs[i].contract.address)
+      const tokenId = ownedNFTs[i].id.tokenId
+      await nftUpdateSubqueue.add({
+        chainId,
+        contract,
+        tokenId,
+        userId,
+        walletId,
+      }, {
+        ...subQueueBaseOptions,
+        jobId: `nft-update-processor-|contract:${contract}|tokenId:${tokenId}-chainId:${chainId}`,
+      })
+    }
+
+    // process subqueues to fetch NFT info in series
+    await nftUpdateSubqueue.process(1, nftUpdateBatchProcessor)
+  } catch (err) {
+    logger.error(`Error in updateWalletNFTs: ${err}`)
+  }
+}
 
 export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
   const chainId: string =  job.data?.chainId || process.env.CHAIN_ID
@@ -51,11 +126,12 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
                 chainId,
               )
               logger.info(`checked NFT contract addresses for profile ${profile.id}`)
-              await nftService.updateWalletNFTs(
+              await updateWalletNFTs(
                 profile.ownerUserId,
                 wallet.id,
                 wallet.address,
                 chainId,
+                job,
               )
               logger.info(`updated wallet NFTs for profile ${profile.id}`)
               await nftService.updateEdgesWeightForProfile(profile.id, profile.ownerWalletId)
@@ -107,3 +183,4 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
     logger.error(`Error in updateNFTsForProfilesHandler: ${err}`)
   }
 }
+
