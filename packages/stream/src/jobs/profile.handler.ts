@@ -1,5 +1,5 @@
 import Bull, { Job } from 'bull'
-import { ethers } from 'ethers'
+import * as Lodash from 'lodash'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -13,6 +13,8 @@ const logger = _logger.Factory(_logger.Context.Bull)
 const repositories = db.newRepositories()
 
 const PROFILE_NFTS_EXPIRE_DURATION = Number(process.env.PROFILE_NFTS_EXPIRE_DURATION)
+const MAX_BATCH_SIZE = 30
+const CONCURRENCY_NUMBER = 5
 
 const subQueueBaseOptions: Bull.JobOptions = {
   attempts: 3,
@@ -25,27 +27,34 @@ const subQueueBaseOptions: Bull.JobOptions = {
 }
 
 export const nftUpdateBatchProcessor = async (job: Job): Promise<void> => {
-  logger.debug(`initiated nft update batch processor for contract ${job.data.contract} and tokenId ${job.data.tokenId}`)
+  logger.info(`initiated nft update batch processor for profile ${job.data.profileId} - index : ${job.data.index}`)
   try {
-    const { contract, tokenId, userId, walletId } = job.data
+    const { userId, walletId, nfts } = job.data
     const chainId = job.data?.chainId || process.env.CHAIN_ID
-    const nft = {
-      contract: {
-        address: contract,
-      },
-      id: {
-        tokenId: tokenId,
-      },
+    const savedNFTs = []
+    await Promise.allSettled(
+      nfts.map(async (nft) => {
+        const savedNFT = await nftService.updateNFTOwnershipAndMetadata(
+          nft,
+          userId,
+          walletId,
+          chainId,
+        )
+        if (savedNFT) savedNFTs.push(savedNFT)
+      }),
+    )
+    if (savedNFTs.length) {
+      await nftService.indexNFTsOnSearchEngine(savedNFTs)
+      await nftService.updateCollectionForNFTs(savedNFTs)
     }
-    const savedNFT = await nftService.updateNFTOwnershipAndMetadata(nft, userId, walletId, chainId)
-    await nftService.indexNFTsOnSearchEngine([savedNFT])
-    await nftService.updateCollectionForNFTs([savedNFT])
+    return Promise.resolve()
   } catch (err) {
     logger.error(`Error in nftUpdateBatchProcessor ${err}`)
   }
 }
 
 const updateWalletNFTs = async (
+  profileId: string,
   userId: string,
   walletId: string,
   walletAddress: string,
@@ -65,23 +74,24 @@ const updateWalletNFTs = async (
     if (existingJobs.flat().length) {
       await nftUpdateSubqueue.obliterate({ force: true })
     }
-    for (let i = 0; i < ownedNFTs.length; i++) {
-      const contract = ethers.utils.getAddress(ownedNFTs[i].contract.address)
-      const tokenId = ownedNFTs[i].id.tokenId
+    const chunks = Lodash.chunk(ownedNFTs, MAX_BATCH_SIZE)
+    for (let i = 0; i< chunks.length; i++) {
       await nftUpdateSubqueue.add({
         chainId,
-        contract,
-        tokenId,
         userId,
         walletId,
+        profileId,
+        nfts: chunks[i],
+        index: i,
       }, {
         ...subQueueBaseOptions,
-        jobId: `nft-update-processor-|contract:${contract}|tokenId:${tokenId}-chainId:${chainId}`,
+        jobId: `nft-update-processor-|profileId:${profileId}|index:${i}-chainId:${chainId}`,
       })
     }
 
     // process subqueues to fetch NFT info in series
-    await nftUpdateSubqueue.process(1, nftUpdateBatchProcessor)
+    await nftUpdateSubqueue.process(CONCURRENCY_NUMBER, nftUpdateBatchProcessor)
+    logger.info(`updated wallet NFTs for profile ${profileId}`)
   } catch (err) {
     logger.error(`Error in updateWalletNFTs: ${err}`)
   }
@@ -127,13 +137,13 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
               )
               logger.info(`checked NFT contract addresses for profile ${profile.id}`)
               await updateWalletNFTs(
+                profileId,
                 profile.ownerUserId,
                 wallet.id,
                 wallet.address,
                 chainId,
                 job,
               )
-              logger.info(`updated wallet NFTs for profile ${profile.id}`)
               await nftService.updateEdgesWeightForProfile(profile.id, profile.ownerWalletId)
               logger.info(`updated edges with weight for profile ${profile.id}`)
               await nftService.syncEdgesWithNFTs(profile.id)
