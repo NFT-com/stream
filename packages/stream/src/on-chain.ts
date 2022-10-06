@@ -238,7 +238,7 @@ const keepAlive = ({
       const evt = looksrareExchangeInterface.parseLog(e)
       if (evt.name === LooksrareEventName.CancelAllOrders) {
         const [user, newMinNonce] = evt.args
-        const newMinNonceInNumber = Number(newMinNonce)
+        const newMinNonceInNumber = helper.bigNumberToNumber(newMinNonce)
         
         try {
           const orders: entity.TxOrder[] = await repositories.txOrder.find({
@@ -280,13 +280,15 @@ const keepAlive = ({
         }
       } else if (evt.name === LooksrareEventName.CancelMultipleOrders) {
         const [user, orderNonces] = evt.args
-        const nonces: number[] = orderNonces?.map((orderNonce: BigNumber) => Number(orderNonce))
+        const nonces: number[] = orderNonces?.map(
+          (orderNonce: BigNumber) => helper.bigNumberToNumber(orderNonce),
+        )
         try {
           const orders: entity.TxOrder[] = await repositories.txOrder.find({
             relations: ['activity'],
             where: {
               makerAddress: helper.checkSum(user),
-              nonce: In(nonces),
+              nonce: In([...nonces]),
               exchange: defs.ExchangeType.LooksRare,
               activity: {
                 status: defs.ActivityStatus.Valid,

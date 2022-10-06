@@ -14,6 +14,7 @@ import { initiateStreaming } from './pipeline'
 
 const logger = _logger.Factory(_logger.Context.General, _logger.Context.Misc)
 const chainId: string = process.env.CHAIN_ID || '5'
+logger.log('Chain Id for environment', chainId)
 const app = express()
 
 // health check
