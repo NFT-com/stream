@@ -125,7 +125,7 @@ const keepAlive = ({
         const [owner,profileUrl,destinationAddress] = evt.args
         const event = await repositories.event.findOne({
           where: {
-            chainId,
+            chainId: Number(chainId),
             contract: helper.checkSum(contracts.nftResolverAddress(Number(chainId))),
             eventName: evt.name,
             txHash: e.transactionHash,
