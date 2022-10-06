@@ -8,7 +8,7 @@
         "build": "npm run clean && npm run compile",
         "clean": "rimraf dist tsconfig.tsbuildinfo",
         "compile": "tsc && tsc-alias",
-        "dev": "doppler run -- concurrently -k -r \"nodemon\"",
+        "dev": "doppler run -- concurrently -k -r \"nodemon | pino-pretty\"",
         "start": "node ./dist/src/index"
     },
     "dependencies": {
@@ -27,7 +27,7 @@
         "kill-port": "^1.6.1",
         "lodash": "^4.17.21",
         "source-map-support": "^0.5.21",
-        "typeorm": "0.2.41",
+        "typeorm": "^0.3.10",
         "ws": "^8.8.1"
     },
     "devDependencies": {
@@ -35,6 +35,7 @@
         "@types/node": "^18.6.1",
         "concurrently": "^6.3.0",
         "nodemon": "^2.0.14",
+        "pino-pretty": "9.1.0",
         "rimraf": "^3.0.2",
         "ts-node": "^10.4.0",
         "tsc-alias": "^1.4.1",
