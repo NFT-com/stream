@@ -13,8 +13,8 @@ const logger = _logger.Factory(_logger.Context.Bull)
 const repositories = db.newRepositories()
 
 const PROFILE_NFTS_EXPIRE_DURATION = Number(process.env.PROFILE_NFTS_EXPIRE_DURATION)
-const MAX_BATCH_SIZE = 30
-const CONCURRENCY_NUMBER = 5
+const MAX_BATCH_SIZE = Number(process.env.MAX_NFT_BATCH_SIZE || 30)
+const CONCURRENCY_NUMBER = Number(process.env.NFT_CONCURRENCY_NUMBER || 5)
 const subqueuePrefix = 'nft-cron'
 const subqueueNFTName = 'nft-update-processor'
 
@@ -65,6 +65,7 @@ const updateWalletNFTs = async (
   chainId: string,
 ): Promise<void> => {
   try {
+    console.log('here')
     nftService.initiateWeb3(chainId)
     const ownedNFTs = await nftService.getNFTsFromAlchemy(walletAddress)
     logger.info(`Fetched ${ownedNFTs.length} NFTs from alchemy for wallet ${walletAddress} on chain ${chainId}`)
@@ -93,7 +94,7 @@ const updateWalletNFTs = async (
     // process sub-queues to fetch NFT info in series
     nftUpdateSubqueue.process(CONCURRENCY_NUMBER, nftUpdateBatchProcessor)
     nftUpdateSubqueue.on('global:completed', async (jobId, result) => {
-      // Job completed
+      // Job completedz`
       logger.info(`Job Id ${jobId} is completed - ${JSON.stringify(result)}`)
       completedJobs++
       if (completedJobs === chunks.length) {

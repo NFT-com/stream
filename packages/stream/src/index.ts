@@ -104,7 +104,7 @@ export const verifyConfiguration = (): void => {
 }
 
 let server
-const PORT = process.env.PORT || 8080
+const PORT = process.env.STREAM_PORT || 8080
 const startServer = async (): Promise<void> => {
   server = await app.listen(PORT)
   logger.info(`Server ready at http://localhost:${PORT}`)

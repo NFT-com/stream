@@ -5,7 +5,7 @@ import { _logger } from '@nftcom/shared'
 import { redisConfig } from '../config'
 import { deregisterStreamHandler, registerStreamHandler } from './handler'
 import { updateNFTsForProfilesHandler } from './profile.handler'
-import { nftExternalOrders } from './syncHandler'
+import { nftExternalOrders } from './sync.handler'
 
 const BULL_MAX_REPEAT_COUNT = parseInt(process.env.BULL_MAX_REPEAT_COUNT) || 250
 const logger = _logger.Factory(_logger.Context.Bull)

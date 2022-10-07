@@ -92,6 +92,9 @@ export const updateStreamEnvFile = (): void => {
   parsedFile['REFRESH_NFT_DURATION'] = process.env.REFRESH_NFT_DURATION || parsedFile['REFRESH_NFT_DURATION']
   parsedFile['IPFS_WEB_GATEWAY'] = process.env.IPFS_WEB_GATEWAY || parsedFile['IPFS_WEB_GATEWAY']
   parsedFile['DEFAULT_TTL_MINS'] = process.env.DEFAULT_TTL_MINS || parsedFile['DEFAULT_TTL_MINS']
+  parsedFile['MAX_NFT_BATCH_SIZE'] = process.env.MAX_NFT_BATCH_SIZE || parsedFile['MAX_NFT_BATCH_SIZE']
+  parsedFile['NFT_CONCURRENCY_NUMBER'] = process.env.NFT_CONCURRENCY_NUMBER || parsedFile['NFT_CONCURRENCY_NUMBER']
+  parsedFile['STREAM_PORT'] = process.env.STREAM_PORT || parsedFile['STREAM_PORT']
   parsedFile['AUTH_ALLOWED_LIST'] = process.env.AUTH_ALLOWED_LIST || parsedFile['AUTH_ALLOWED_LIST']
 
   console.log(JSON.stringify(parsedFile))
