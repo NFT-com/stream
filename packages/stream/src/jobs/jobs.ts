@@ -28,10 +28,10 @@ export const queues = new Map<string, Bull.Queue>()
 // nft cron subqueue
 const subqueuePrefix = 'nft-cron'
 const subqueueName = 'nft-batch-processor'
-const subqueueNFTName = 'nft-update-processor'
+// const subqueueNFTName = 'nft-update-processor'
 
 export let nftCronSubqueue: Bull.Queue = null
-export let nftUpdateSubqueue: Bull.Queue = null
+// export let nftUpdateSubqueue: Bull.Queue = null
 
 let didPublish: boolean
 
@@ -56,10 +56,10 @@ const createQueues = (): Promise<void> => {
       prefix: subqueuePrefix,
     })
 
-    nftUpdateSubqueue = new Bull(subqueueNFTName, {
-      redis: redis,
-      prefix: subqueuePrefix,
-    })
+    // nftUpdateSubqueue = new Bull(subqueueNFTName, {
+    //   redis: redis,
+    //   prefix: subqueuePrefix,
+    // })
 
     queues.set(QUEUE_TYPES.DEREGISTER_OS_STREAMS, new Bull(
       QUEUE_TYPES.DEREGISTER_OS_STREAMS, {
@@ -204,9 +204,9 @@ export const stopAndDisconnect = (): Promise<any> => {
   if (nftCronSubqueue) {
     values.push(nftCronSubqueue)
   }
-  if (nftUpdateSubqueue) {
-    values.push(nftUpdateSubqueue)
-  }
+  // if (nftUpdateSubqueue) {
+  //   values.push(nftUpdateSubqueue)
+  // }
   return Promise.all(values.map((queue) => {
     return queue.close()
   }))
