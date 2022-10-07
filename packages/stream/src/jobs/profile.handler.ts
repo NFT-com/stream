@@ -93,7 +93,7 @@ const updateWalletNFTs = async (
     // process sub-queues to fetch NFT info in series
     nftUpdateSubqueue.process(CONCURRENCY_NUMBER, nftUpdateBatchProcessor)
     nftUpdateSubqueue.on('global:completed', async (jobId, result) => {
-      // Job completedz`
+      // Job completed`
       logger.info(`Job Id ${jobId} is completed - ${JSON.stringify(result)}`)
       completedJobs++
       if (completedJobs === chunks.length) {
