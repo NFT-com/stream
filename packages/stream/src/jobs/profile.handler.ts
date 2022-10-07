@@ -65,7 +65,6 @@ const updateWalletNFTs = async (
   chainId: string,
 ): Promise<void> => {
   try {
-    console.log('here')
     nftService.initiateWeb3(chainId)
     const ownedNFTs = await nftService.getNFTsFromAlchemy(walletAddress)
     logger.info(`Fetched ${ownedNFTs.length} NFTs from alchemy for wallet ${walletAddress} on chain ${chainId}`)
