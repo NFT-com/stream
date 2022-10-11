@@ -101,10 +101,12 @@ const updateWalletNFTs = async (
         logger.info(`updated edges for profile ${profile.id}`)
         await nftService.syncEdgesWithNFTs(profile.id)
         logger.info(`synced edges with NFTs for profile ${profile.id}`)
-        // save visible NFT amount of profile
-        await nftService.saveVisibleNFTsForProfile(profile.id, repositories)
-        logger.info(`saved amount of visible NFTs to profile ${profile.id}`)
-        // refresh NFTs for associated addresses
+        await Promise.all([
+          nftService.saveVisibleNFTsForProfile(profile.id, repositories),
+          nftService.saveProfileScore(repositories, profile),
+        ])
+        logger.info(`saved amount of visible NFTs and score for profile ${profile.id}`)
+        // refresh NFTs for associated addresses and contract
         let msg = await nftService.updateNFTsForAssociatedAddresses(
           repositories,
           profile,
@@ -123,9 +125,6 @@ const updateWalletNFTs = async (
           await nftService.updateGKIconVisibleStatus(repositories, chainId, profile)
           logger.info(`gkIconVisible updated for profile ${profile.id}`)
         }
-        // save profile score
-        await nftService.saveProfileScore(repositories, profile)
-        logger.info(`updated score for profile ${profile.id}`)
         // clear existing jobs
         const existingJobs: Bull.Job[] = await nftUpdateSubqueue.getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting'])
         if (existingJobs.flat().length) {
@@ -135,9 +134,11 @@ const updateWalletNFTs = async (
         const now: Date = new Date()
         now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
         const ttl = now.getTime()
-        await cache.zadd(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, ttl, profile.id)
-        await cache.zrem(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, [profile.id])
-        await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
+        await Promise.all([
+          cache.zadd(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, ttl, profile.id),
+          cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id]),
+          cache.zrem(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, [profile.id]),
+        ])
       }
     })
   } catch (err) {
