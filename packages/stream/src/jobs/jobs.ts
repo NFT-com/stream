@@ -5,7 +5,7 @@ import { _logger } from '@nftcom/shared'
 import { redisConfig } from '../config'
 import { deregisterStreamHandler, registerStreamHandler } from './handler'
 import { updateNFTsForProfilesHandler } from './profile.handler'
-import { nftExternalOrders } from './syncHandler'
+import { nftExternalOrders } from './sync.handler'
 
 const BULL_MAX_REPEAT_COUNT = parseInt(process.env.BULL_MAX_REPEAT_COUNT) || 250
 const logger = _logger.Factory(_logger.Context.Bull)
@@ -28,8 +28,10 @@ export const queues = new Map<string, Bull.Queue>()
 // nft cron subqueue
 const subqueuePrefix = 'nft-cron'
 const subqueueName = 'nft-batch-processor'
+// const subqueueNFTName = 'nft-update-processor'
 
 export let nftCronSubqueue: Bull.Queue = null
+// export let nftUpdateSubqueue: Bull.Queue = null
 
 let didPublish: boolean
 
@@ -53,6 +55,11 @@ const createQueues = (): Promise<void> => {
       redis: redis,
       prefix: subqueuePrefix,
     })
+
+    // nftUpdateSubqueue = new Bull(subqueueNFTName, {
+    //   redis: redis,
+    //   prefix: subqueuePrefix,
+    // })
 
     queues.set(QUEUE_TYPES.DEREGISTER_OS_STREAMS, new Bull(
       QUEUE_TYPES.DEREGISTER_OS_STREAMS, {
@@ -197,6 +204,9 @@ export const stopAndDisconnect = (): Promise<any> => {
   if (nftCronSubqueue) {
     values.push(nftCronSubqueue)
   }
+  // if (nftUpdateSubqueue) {
+  //   values.push(nftUpdateSubqueue)
+  // }
   return Promise.all(values.map((queue) => {
     return queue.close()
   }))

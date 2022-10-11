@@ -107,6 +107,9 @@ runs:
         REFRESH_NFT_DURATION: ${{ fromJSON(inputs.secrets).REFRESH_NFT_DURATION}}
         IPFS_WEB_GATEWAY: ${{ fromJSON(inputs.secrets).IPFS_WEB_GATEWAY }}
         DEFAULT_TTL_MINS: ${{ fromJSON(inputs.secrets).DEFAULT_TTL_MINS }}
+        MAX_NFT_BATCH_SIZE: ${{ fromJSON(inputs.secrets).MAX_NFT_BATCH_SIZE }}
+        NFT_CONCURRENCY_NUMBER: ${{ fromJSON(inputs.secrets).NFT_CONCURRENCY_NUMBER }}
+        STREAM_PORT: ${{ fromJSON(inputs.secrets).STREAM_PORT }}
         AUTH_ALLOWED_LIST: ${{ fromJSON(inputs.secrets).AUTH_ALLOWED_LIST }}
       run: npm run build:stream:env
     - name: Build and Push Stream Image
@@ -183,5 +186,8 @@ runs:
         REFRESH_NFT_DURATION: ${{ fromJSON(inputs.secrets).REFRESH_NFT_DURATION}}
         IPFS_WEB_GATEWAY: ${{ fromJSON(inputs.secrets).IPFS_WEB_GATEWAY }}
         DEFAULT_TTL_MINS: ${{ fromJSON(inputs.secrets).DEFAULT_TTL_MINS }}
+        MAX_NFT_BATCH_SIZE: ${{ fromJSON(inputs.secrets).MAX_NFT_BATCH_SIZE }}
+        NFT_CONCURRENCY_NUMBER: ${{ fromJSON(inputs.secrets).NFT_CONCURRENCY_NUMBER }}
+        STREAM_PORT: ${{ fromJSON(inputs.secrets).STREAM_PORT }}
         AUTH_ALLOWED_LIST: ${{ fromJSON(inputs.secrets).AUTH_ALLOWED_LIST }}
       run: npm run deploy:stream
