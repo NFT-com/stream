@@ -13,7 +13,7 @@ const logger = _logger.Factory(_logger.Context.Bull)
 const repositories = db.newRepositories()
 
 const PROFILE_NFTS_EXPIRE_DURATION = Number(process.env.PROFILE_NFTS_EXPIRE_DURATION)
-const MAX_BATCH_SIZE = Number(process.env.MAX_NFT_BATCH_SIZE || 30)
+const MAX_BATCH_SIZE = Number(process.env.MAX_NFT_BATCH_SIZE || 20)
 const CONCURRENCY_NUMBER = Number(process.env.NFT_CONCURRENCY_NUMBER || 5)
 const subqueuePrefix = 'nft-cron'
 const subqueueNFTName = 'nft-update-processor'
@@ -31,7 +31,7 @@ const subQueueBaseOptions: Bull.JobOptions = {
 export const nftUpdateBatchProcessor = async (job: Job): Promise<boolean> => {
   logger.info(`initiated nft update batch processor for profile ${job.data.profileId} - index : ${job.data.index}`)
   try {
-    const { userId, walletId, nfts } = job.data
+    const { userId, walletId, nfts, profileId } = job.data
     const chainId = job.data?.chainId || process.env.CHAIN_ID
     const savedNFTs = []
     await Promise.allSettled(
@@ -48,6 +48,7 @@ export const nftUpdateBatchProcessor = async (job: Job): Promise<boolean> => {
     if (savedNFTs.length) {
       await nftService.indexNFTsOnSearchEngine(savedNFTs)
       await nftService.updateCollectionForNFTs(savedNFTs)
+      await nftService.saveEdgesWithWeight(savedNFTs, profileId, true)
     }
     return Promise.resolve(true)
   } catch (err) {
@@ -65,6 +66,8 @@ const updateWalletNFTs = async (
   chainId: string,
 ): Promise<void> => {
   try {
+    // Update edges with null weight
+    await nftService.updateEdgesWithNullWeight(profileId)
     nftService.initiateWeb3(chainId)
     const ownedNFTs = await nftService.getNFTsFromAlchemy(walletAddress)
     logger.info(`Fetched ${ownedNFTs.length} NFTs from alchemy for wallet ${walletAddress} on chain ${chainId}`)
@@ -104,8 +107,6 @@ const updateWalletNFTs = async (
           await nftUpdateSubqueue.obliterate({ force: true })
         }
         logger.info(`updated wallet NFTs for profile ${profileId}`)
-        await nftService.updateEdgesWeightForProfile(profile.id, profile.ownerWalletId)
-        logger.info(`updated edges with weight for profile ${profile.id}`)
         await nftService.syncEdgesWithNFTs(profile.id)
         logger.info(`synced edges with NFTs for profile ${profile.id}`)
         // save visible NFT amount of profile
