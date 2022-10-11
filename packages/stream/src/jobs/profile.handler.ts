@@ -30,7 +30,7 @@ const subQueueBaseOptions: Bull.JobOptions = {
 export const nftUpdateBatchProcessor = async (job: Job): Promise<boolean> => {
   logger.info(`initiated nft update batch processor for profile ${job.data.profileId} - index : ${job.data.index}`)
   try {
-    const { userId, walletId, nfts, profileId } = job.data
+    const { userId, walletId, nfts } = job.data
     const chainId = job.data?.chainId || process.env.CHAIN_ID
     const savedNFTs = []
     await Promise.allSettled(
@@ -47,7 +47,6 @@ export const nftUpdateBatchProcessor = async (job: Job): Promise<boolean> => {
     if (savedNFTs.length) {
       await nftService.indexNFTsOnSearchEngine(savedNFTs)
       await nftService.updateCollectionForNFTs(savedNFTs)
-      await nftService.saveEdgesWithWeight(savedNFTs, profileId, true)
     }
     return Promise.resolve(true)
   } catch (err) {
@@ -65,8 +64,6 @@ const updateWalletNFTs = async (
   chainId: string,
 ): Promise<void> => {
   try {
-    // Update edges with null weight
-    await nftService.updateEdgesWithNullWeight(profileId)
     nftService.initiateWeb3(chainId)
     const ownedNFTs = await nftService.getNFTsFromAlchemy(walletAddress)
     logger.info(`Fetched ${ownedNFTs.length} NFTs from alchemy for wallet ${walletAddress} on chain ${chainId}`)
@@ -99,12 +96,9 @@ const updateWalletNFTs = async (
       const completedJobs = await nftUpdateSubqueue.getCompletedCount()
       if (completedJobs === chunks.length) {
         // All jobs are completed
-        const existingJobs: Bull.Job[] = await nftUpdateSubqueue.getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting'])
-        // clear existing jobs
-        if (existingJobs.flat().length) {
-          await nftUpdateSubqueue.obliterate({ force: true })
-        }
         logger.info(`updated wallet NFTs for profile ${profileId}`)
+        await nftService.updateEdgesWeightForProfile(profile.id, walletId)
+        logger.info(`updated edges for profile ${profile.id}`)
         await nftService.syncEdgesWithNFTs(profile.id)
         logger.info(`synced edges with NFTs for profile ${profile.id}`)
         // save visible NFT amount of profile
@@ -132,6 +126,11 @@ const updateWalletNFTs = async (
         // save profile score
         await nftService.saveProfileScore(repositories, profile)
         logger.info(`updated score for profile ${profile.id}`)
+        // clear existing jobs
+        const existingJobs: Bull.Job[] = await nftUpdateSubqueue.getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting'])
+        if (existingJobs.flat().length) {
+          await nftUpdateSubqueue.obliterate({ force: true })
+        }
         // Once we update NFTs for profile, we cache it to UPDATED_NFTS_PROFILE with expire date
         const now: Date = new Date()
         now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
