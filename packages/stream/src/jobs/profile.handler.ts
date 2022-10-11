@@ -20,7 +20,6 @@ const subqueueNFTName = 'nft-update-processor'
 
 const subQueueBaseOptions: Bull.JobOptions = {
   attempts: 3,
-  removeOnComplete: true,
   removeOnFail: true,
   backoff: {
     type: 'exponential',
@@ -92,13 +91,12 @@ const updateWalletNFTs = async (
       })
     }
 
-    let completedJobs = 0
     // process sub-queues to fetch NFT info in series
     nftUpdateSubqueue.process(CONCURRENCY_NUMBER, nftUpdateBatchProcessor)
     nftUpdateSubqueue.on('global:completed', async (jobId, result) => {
-      // Job completed`
+      // Job completed
       logger.info(`Job Id ${jobId} is completed - ${JSON.stringify(result)}`)
-      completedJobs++
+      const completedJobs = await nftUpdateSubqueue.getCompletedCount()
       if (completedJobs === chunks.length) {
         // All jobs are completed
         const existingJobs: Bull.Job[] = await nftUpdateSubqueue.getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting'])
