@@ -1,5 +1,4 @@
-import Bull, { Job } from 'bull'
-import * as Lodash from 'lodash'
+import { Job } from 'bull'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -7,25 +6,11 @@ import {  nftService } from '@nftcom/gql/service'
 import { _logger, db, entity } from '@nftcom/shared'
 
 import { cache, CacheKeys, removeExpiredTimestampedZsetMembers } from '../cache'
-import { redis } from './jobs'
 
 const logger = _logger.Factory(_logger.Context.Bull)
 const repositories = db.newRepositories()
 
 const PROFILE_NFTS_EXPIRE_DURATION = Number(process.env.PROFILE_NFTS_EXPIRE_DURATION)
-const MAX_BATCH_SIZE = Number(process.env.MAX_NFT_BATCH_SIZE || 20)
-const CONCURRENCY_NUMBER = Number(process.env.NFT_CONCURRENCY_NUMBER || 5)
-const subqueuePrefix = 'nft-cron'
-const subqueueNFTName = 'nft-update-processor'
-
-const subQueueBaseOptions: Bull.JobOptions = {
-  attempts: 3,
-  removeOnFail: true,
-  backoff: {
-    type: 'exponential',
-    delay: 1000,
-  },
-}
 
 export const nftUpdateBatchProcessor = async (job: Job): Promise<boolean> => {
   logger.info(`initiated nft update batch processor for profile ${job.data.profileId} - index : ${job.data.index}`)
@@ -65,82 +50,47 @@ const updateWalletNFTs = async (
 ): Promise<void> => {
   try {
     nftService.initiateWeb3(chainId)
-    const ownedNFTs = await nftService.getNFTsFromAlchemy(walletAddress)
-    logger.info(`Fetched ${ownedNFTs.length} NFTs from alchemy for wallet ${walletAddress} on chain ${chainId}`)
-    if (!ownedNFTs.length) return
-    //cron sub-queue
-    const nftUpdateSubqueue = new Bull(subqueueNFTName + `-${chainId}-${profileId}`, {
-      redis: redis,
-      prefix: subqueuePrefix,
-    })
-    const chunks = Lodash.chunk(ownedNFTs, MAX_BATCH_SIZE)
-    for (let i = 0; i< chunks.length; i++) {
-      await nftUpdateSubqueue.add({
-        chainId,
-        userId,
-        walletId,
-        profileId,
-        nfts: chunks[i],
-        index: i,
-      }, {
-        ...subQueueBaseOptions,
-        jobId: `nft-update-processor|profileId:${profileId}|index:${i}-chainId:${chainId}`,
-      })
+    await nftService.updateWalletNFTs(userId, walletId, walletAddress, chainId)
+    logger.info(`updated wallet NFTs for profile ${profileId}`)
+    await nftService.updateEdgesWeightForProfile(profile.id, walletId)
+    logger.info(`updated edges for profile ${profile.id}`)
+    await nftService.syncEdgesWithNFTs(profile.id)
+    logger.info(`synced edges with NFTs for profile ${profile.id}`)
+    await Promise.all([
+      nftService.saveVisibleNFTsForProfile(profile.id, repositories),
+      nftService.saveProfileScore(repositories, profile),
+    ])
+    logger.info(`saved amount of visible NFTs and score for profile ${profile.id}`)
+    // refresh NFTs for associated addresses and contract
+    let msg = await nftService.updateNFTsForAssociatedAddresses(
+      repositories,
+      profile,
+      chainId,
+    )
+    logger.info(msg)
+    msg = await nftService.updateCollectionForAssociatedContract(
+      repositories,
+      profile,
+      chainId,
+      walletAddress,
+    )
+    logger.info(msg)
+    // if gkIconVisible is true, we check if this profile owner still owns genesis key,
+    if (profile.gkIconVisible) {
+      await nftService.updateGKIconVisibleStatus(repositories, chainId, profile)
+      logger.info(`gkIconVisible updated for profile ${profile.id}`)
     }
+    // Once we update NFTs for profile, we cache it to UPDATED_NFTS_PROFILE with expire date
+    const now: Date = new Date()
+    now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
+    const ttl = now.getTime()
+    await Promise.all([
+      cache.zadd(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, ttl, profile.id),
+      cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id]),
+      cache.zrem(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, [profile.id]),
+    ])
 
-    // process sub-queues to fetch NFT info in series
-    nftUpdateSubqueue.process(CONCURRENCY_NUMBER, nftUpdateBatchProcessor)
-    nftUpdateSubqueue.on('global:completed', async (jobId, result) => {
-      // Job completed
-      logger.info(`Job Id ${jobId} is completed - ${JSON.stringify(result)}`)
-      const completedJobs = await nftUpdateSubqueue.getCompletedCount()
-      if (completedJobs === chunks.length) {
-        // All jobs are completed
-        logger.info(`updated wallet NFTs for profile ${profileId}`)
-        await nftService.updateEdgesWeightForProfile(profile.id, walletId)
-        logger.info(`updated edges for profile ${profile.id}`)
-        await nftService.syncEdgesWithNFTs(profile.id)
-        logger.info(`synced edges with NFTs for profile ${profile.id}`)
-        await Promise.all([
-          nftService.saveVisibleNFTsForProfile(profile.id, repositories),
-          nftService.saveProfileScore(repositories, profile),
-        ])
-        logger.info(`saved amount of visible NFTs and score for profile ${profile.id}`)
-        // refresh NFTs for associated addresses and contract
-        let msg = await nftService.updateNFTsForAssociatedAddresses(
-          repositories,
-          profile,
-          chainId,
-        )
-        logger.info(msg)
-        msg = await nftService.updateCollectionForAssociatedContract(
-          repositories,
-          profile,
-          chainId,
-          walletAddress,
-        )
-        logger.info(msg)
-        // if gkIconVisible is true, we check if this profile owner still owns genesis key,
-        if (profile.gkIconVisible) {
-          await nftService.updateGKIconVisibleStatus(repositories, chainId, profile)
-          logger.info(`gkIconVisible updated for profile ${profile.id}`)
-        }
-        // clear existing jobs
-        const existingJobs: Bull.Job[] = await nftUpdateSubqueue.getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting'])
-        if (existingJobs.flat().length) {
-          await nftUpdateSubqueue.obliterate({ force: true })
-        }
-        // Once we update NFTs for profile, we cache it to UPDATED_NFTS_PROFILE with expire date
-        const now: Date = new Date()
-        now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
-        const ttl = now.getTime()
-        await Promise.all([
-          cache.zadd(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, ttl, profile.id),
-          cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id]),
-          cache.zrem(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, [profile.id]),
-        ])
-      }
-    })
+    logger.info(`completed updating NFTs for profile ${profile.id}`)
   } catch (err) {
     logger.error(`Error in updateWalletNFTs: ${err}`)
   }
@@ -177,7 +127,6 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
             try {
               // keep profile to cache, so we won't repeat profiles in progress
               await cache.zadd(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, 'INCR', 1, profile.id)
-
               await nftService.checkNFTContractAddresses(
                 profile.ownerUserId,
                 wallet.id,
