@@ -94,21 +94,9 @@ const keepAlive = ({
 
       if (evt.name === EventName.AssociateEvmUser) {
         const [owner,profileUrl,destinationAddress] = evt.args
-        const event = await repositories.event.findOne({
-          where: {
-            chainId: Number(chainId),
-            contract: helper.checkSum(contracts.nftResolverAddress(Number(chainId))),
-            eventName: evt.name,
-            txHash: e.transactionHash,
-            ownerAddress: owner,
-            blockNumber: Number(e.blockNumber),
-            profileUrl: profileUrl,
-            destinationAddress: helper.checkSum(destinationAddress),
-          },
-        })
-        if (!event) {
-          await repositories.event.save(
-            {
+        try {
+          const event = await repositories.event.findOne({
+            where: {
               chainId: Number(chainId),
               contract: helper.checkSum(contracts.nftResolverAddress(Number(chainId))),
               eventName: evt.name,
@@ -118,26 +106,30 @@ const keepAlive = ({
               profileUrl: profileUrl,
               destinationAddress: helper.checkSum(destinationAddress),
             },
-          )
-          logger.debug(`New WSS NFT Resolver ${evt.name} event found. ${ profileUrl } (owner = ${owner}) is associating ${ destinationAddress }. chainId=${chainId}`)
+          })
+          if (!event) {
+            await repositories.event.save(
+              {
+                chainId: Number(chainId),
+                contract: helper.checkSum(contracts.nftResolverAddress(Number(chainId))),
+                eventName: evt.name,
+                txHash: e.transactionHash,
+                ownerAddress: owner,
+                blockNumber: Number(e.blockNumber),
+                profileUrl: profileUrl,
+                destinationAddress: helper.checkSum(destinationAddress),
+              },
+            )
+            logger.debug(`New WSS NFT Resolver ${evt.name} event found. ${ profileUrl } (owner = ${owner}) is associating ${ destinationAddress }. chainId=${chainId}`)
+          }
+        } catch (err) {
+          logger.error(`Evt: ${EventName.AssociateEvmUser} -- Err: ${err}`)
         }
       } else if (evt.name == EventName.CancelledEvmAssociation) {
-        const [owner,profileUrl,destinationAddress] = evt.args
-        const event = await repositories.event.findOne({
-          where: {
-            chainId: Number(chainId),
-            contract: helper.checkSum(contracts.nftResolverAddress(Number(chainId))),
-            eventName: evt.name,
-            txHash: e.transactionHash,
-            ownerAddress: owner,
-            blockNumber: Number(e.blockNumber),
-            profileUrl: profileUrl,
-            destinationAddress: helper.checkSum(destinationAddress),
-          },
-        })
-        if (!event) {
-          await repositories.event.save(
-            {
+        try {
+          const [owner,profileUrl,destinationAddress] = evt.args
+          const event = await repositories.event.findOne({
+            where: {
               chainId: Number(chainId),
               contract: helper.checkSum(contracts.nftResolverAddress(Number(chainId))),
               eventName: evt.name,
@@ -147,25 +139,30 @@ const keepAlive = ({
               profileUrl: profileUrl,
               destinationAddress: helper.checkSum(destinationAddress),
             },
-          )
-          logger.debug(`New WSS NFT Resolver ${evt.name} event found. ${ profileUrl } (owner = ${owner}) is cancelling ${ destinationAddress }. chainId=${chainId}`)
+          })
+          if (!event) {
+            await repositories.event.save(
+              {
+                chainId: Number(chainId),
+                contract: helper.checkSum(contracts.nftResolverAddress(Number(chainId))),
+                eventName: evt.name,
+                txHash: e.transactionHash,
+                ownerAddress: owner,
+                blockNumber: Number(e.blockNumber),
+                profileUrl: profileUrl,
+                destinationAddress: helper.checkSum(destinationAddress),
+              },
+            )
+            logger.debug(`New WSS NFT Resolver ${evt.name} event found. ${ profileUrl } (owner = ${owner}) is cancelling ${ destinationAddress }. chainId=${chainId}`)
+          }
+        } catch (err) {
+          logger.error(`Evt: ${EventName.CancelledEvmAssociation} -- Err: ${err}`)
         }
       } else if (evt.name == EventName.ClearAllAssociatedAddresses) {
         const [owner,profileUrl] = evt.args
-        const event = await repositories.event.findOne({
-          where: {
-            chainId: Number(chainId),
-            contract: helper.checkSum(contracts.nftResolverAddress(Number(chainId))),
-            eventName: evt.name,
-            txHash: e.transactionHash,
-            ownerAddress: owner,
-            blockNumber: Number(e.blockNumber),
-            profileUrl: profileUrl,
-          },
-        })
-        if (!event) {
-          await repositories.event.save(
-            {
+        try {
+          const event = await repositories.event.findOne({
+            where: {
               chainId: Number(chainId),
               contract: helper.checkSum(contracts.nftResolverAddress(Number(chainId))),
               eventName: evt.name,
@@ -174,27 +171,30 @@ const keepAlive = ({
               blockNumber: Number(e.blockNumber),
               profileUrl: profileUrl,
             },
-          )
-          logger.debug(`New NFT Resolver ${evt.name} event found. ${ profileUrl } (owner = ${owner}) cancelled all associations. chainId=${chainId}`)
+          })
+          if (!event) {
+            await repositories.event.save(
+              {
+                chainId: Number(chainId),
+                contract: helper.checkSum(contracts.nftResolverAddress(Number(chainId))),
+                eventName: evt.name,
+                txHash: e.transactionHash,
+                ownerAddress: owner,
+                blockNumber: Number(e.blockNumber),
+                profileUrl: profileUrl,
+              },
+            )
+            logger.debug(`New NFT Resolver ${evt.name} event found. ${ profileUrl } (owner = ${owner}) cancelled all associations. chainId=${chainId}`)
+          }
+        } catch (err) {
+          logger.error(`Evt: ${EventName.ClearAllAssociatedAddresses} -- Err: ${err}`)
         }
       } else if (evt.name === EventName.AssociateSelfWithUser ||
         evt.name === EventName.RemovedAssociateProfile) {
         const [receiver, profileUrl, profileOwner]  = evt.args
-        const event = await repositories.event.findOne({
-          where: {
-            chainId: Number(chainId),
-            contract: helper.checkSum(contracts.nftResolverAddress(Number(chainId))),
-            eventName: evt.name,
-            txHash: e.transactionHash,
-            ownerAddress: profileOwner,
-            blockNumber: Number(e.blockNumber),
-            profileUrl: profileUrl,
-            destinationAddress: helper.checkSum(receiver),
-          },
-        })
-        if (!event) {
-          await repositories.event.save(
-            {
+        try {
+          const event = await repositories.event.findOne({
+            where: {
               chainId: Number(chainId),
               contract: helper.checkSum(contracts.nftResolverAddress(Number(chainId))),
               eventName: evt.name,
@@ -204,8 +204,24 @@ const keepAlive = ({
               profileUrl: profileUrl,
               destinationAddress: helper.checkSum(receiver),
             },
-          )
-          logger.debug(`New NFT Resolver ${evt.name} event found. profileUrl = ${profileUrl} (receiver = ${receiver}) profileOwner = ${[profileOwner]}. chainId=${chainId}`)
+          })
+          if (!event) {
+            await repositories.event.save(
+              {
+                chainId: Number(chainId),
+                contract: helper.checkSum(contracts.nftResolverAddress(Number(chainId))),
+                eventName: evt.name,
+                txHash: e.transactionHash,
+                ownerAddress: profileOwner,
+                blockNumber: Number(e.blockNumber),
+                profileUrl: profileUrl,
+                destinationAddress: helper.checkSum(receiver),
+              },
+            )
+            logger.debug(`New NFT Resolver ${evt.name} event found. profileUrl = ${profileUrl} (receiver = ${receiver}) profileOwner = ${[profileOwner]}. chainId=${chainId}`)
+          }
+        } catch (err) {
+          logger.error(`Evt: ${evt.name} -- Err: ${err}`)
         }
       } else {
         // not relevant in our search space
