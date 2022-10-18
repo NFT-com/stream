@@ -132,8 +132,8 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
           {
             removeOnComplete: true,
             removeOnFail: true,
-            // repeat every  5 minutes
-            repeat: { every: 5 * 60000 },
+            // repeat every minutes
+            repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_nfts_streams',
           })
       // case QUEUE_TYPES.REGISTER_OS_STREAMS:
