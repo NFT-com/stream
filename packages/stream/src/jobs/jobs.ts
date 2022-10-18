@@ -132,7 +132,7 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
           {
             removeOnComplete: true,
             removeOnFail: true,
-            // repeat every minutes
+            // repeat every minute
             repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_nfts_streams',
           })
