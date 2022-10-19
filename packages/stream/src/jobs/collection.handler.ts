@@ -66,7 +66,6 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
     // nftSyncSubqueue.process(1, nftBatchPersistenceHandler)
     logger.log(`nft sync handler process completed for: ${contract}, chainId: ${chainId}`)
   } catch (err) {
-    console.log(err)
     logger.error(`Error in nft sync handler for: ${contract}, chainId: ${chainId} --- err: ${err}`)
   }
 }
@@ -75,7 +74,6 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
   logger.log('initiated collection sync')
   const collections: string[] = job.data.collections
   const chainId: string = job.data.chainId || process.env.chainId || '5'
-  console.log(collections)
   try {
     const contractEntitiesToBeProcessed: Promise<Partial<entity.Collection>>[] = []
     const contractsToBeProcessed: string[] = []
