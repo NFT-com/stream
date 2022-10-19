@@ -2,10 +2,10 @@ import Bull from 'bull'
 import express from 'express'
 import kill from 'kill-port'
 
-import { _logger, db, fp } from '@nftcom/shared'
+import { _logger, db, fp, helper } from '@nftcom/shared'
 
 import { dbConfig } from './config'
-import { nftCronSubqueue,QUEUE_TYPES, queues, startAndListen, stopAndDisconnect } from './jobs/jobs'
+import { nftOrderSubqueue,QUEUE_TYPES, queues, startAndListen, stopAndDisconnect } from './jobs/jobs'
 import { authMiddleWare } from './middleware/auth'
 //import { startAndListen } from './jobs/jobs'
 import { startProvider, stopProvider } from './on-chain'
@@ -16,6 +16,10 @@ const logger = _logger.Factory(_logger.Context.General, _logger.Context.Misc)
 const chainId: string = process.env.CHAIN_ID || '5'
 logger.log(`Chain Id for environment: ${chainId}`)
 const app = express()
+
+app.use(express.json())
+
+app.use(express.urlencoded({ extended: false }))
 
 // health check
 app.get('/health', async (_req, res) => {
@@ -46,7 +50,7 @@ app.get('/syncOS', authMiddleWare, async (_req, res) => {
       })
     res.status(200).send({ message: 'Stated Sync!' })
   } catch (error) {
-    console.log('err', error)
+    logger.error(`err: ${error}`)
     res.status(400).send(error)
   }
 })
@@ -65,7 +69,7 @@ app.get('/syncLR', authMiddleWare, async (_req, res) => {
       })
     res.status(200).send({ message: 'Stated Sync!' })
   } catch (error) {
-    console.log('err', error)
+    logger.error(`err: ${error}`)
     res.status(400).send(error)
   }
 })
@@ -73,10 +77,10 @@ app.get('/syncLR', authMiddleWare, async (_req, res) => {
 // force stop external orders sync -authenticated
 app.get('/stopSync', authMiddleWare, async (_req, res) => {
   try {
-    const existingSubQueueJobs: Bull.Job[] = await nftCronSubqueue.getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting'])
+    const existingSubQueueJobs: Bull.Job[] = await nftOrderSubqueue.getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting'])
     // clear existing sub queue jobs
     if (existingSubQueueJobs.flat().length) {
-      nftCronSubqueue.obliterate({ force: true })
+      nftOrderSubqueue.obliterate({ force: true })
     }
 
     const existingQueueJobs: Bull.Job[] = await queues.get(QUEUE_TYPES.SYNC_CONTRACTS).getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting'])
@@ -87,7 +91,59 @@ app.get('/stopSync', authMiddleWare, async (_req, res) => {
 
     res.status(200).send({ message: 'Sync Stopped!' })
   } catch (error) {
-    console.log('err', error)
+    logger.error(`err: ${error}`)
+    res.status(400).send(error)
+  }
+})
+
+// sync collections
+app.post('/collectionSync', authMiddleWare, async (_req, res) => {
+  try {
+    const { collections } = _req.body
+    if (!collections || !collections.length || !(collections instanceof Array)) {
+      res.status(400).send({ message: 'No collection to sync!' })
+    }
+
+    const validCollections: string[] = []
+    const invalidCollections: string[] = []
+    for (let i=0; i < collections.length; i++) {
+      const collection: string = collections[i]
+      try {
+        const checkSumedContract: string = helper.checkSum(collection)
+        validCollections.push(checkSumedContract)
+      } catch (err) {
+        logger.error(`err: ${err}`)
+        invalidCollections.push(collection)
+      }
+    }
+    // sync collection + timestamp
+    const jobId = `sync_collections:${Date.now()}`
+    queues.get(QUEUE_TYPES.SYNC_COLLECTIONS)
+      .add({
+        SYNC_CONTRACTS: QUEUE_TYPES.SYNC_COLLECTIONS,
+        collections: validCollections,
+        chainId: process.env.CHAIN_ID,
+      }, {
+        removeOnComplete: true,
+        removeOnFail: true,
+        jobId,
+      })
+    
+    // response msg
+    let responseMsg = ''
+
+    if (validCollections.length) {
+      responseMsg += `Sync started for the following collections: ${validCollections.join(', ')}.`
+    }
+
+    if (invalidCollections.length) {
+      responseMsg += `The following collections are invalid: ${invalidCollections.join(', ')}.`
+    }
+    res.status(200).send({
+      message: responseMsg,
+    })
+  } catch (error) {
+    logger.error(`err: ${error}`)
     res.status(400).send(error)
   }
 })

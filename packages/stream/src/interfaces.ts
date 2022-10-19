@@ -110,3 +110,44 @@ export interface TxLooksrareProtocolData {
   currency: string
   collection: string
 }
+
+export interface NFTAlchemyMedia {
+  raw: string
+  gateway: string
+}
+
+export interface NFTAlchemyMetadataAttribute {
+  value: string
+  trait_type: string
+}
+
+export interface NFTAlchemy {
+  contract: {
+    address: string
+  }
+  id: {
+    tokenId: string
+    tokenMetadata: {
+      tokenType: string
+    }
+  }
+  title: string
+  description: string
+  tokenUri: {
+    raw: string
+    gateway: string
+  }
+  media: NFTAlchemyMedia[]
+  metadata: {
+    name: string
+    image: string
+    attributes: NFTAlchemyMetadataAttribute[]
+  }
+  timeLastUpdated: string
+  contractMetadata: {
+    name: string
+    symbol: string
+    totalSupply: string
+    tokenType: string
+  }
+}

@@ -3,6 +3,7 @@ import Bull from 'bull'
 import { _logger } from '@nftcom/shared'
 
 import { redisConfig } from '../config'
+import { collectionSyncHandler, spamCollectionSyncHandler } from './collection.handler'
 import { deregisterStreamHandler, registerStreamHandler } from './handler'
 import { updateNFTsForProfilesHandler } from './profile.handler'
 import { nftExternalOrders } from './sync.handler'
@@ -18,6 +19,8 @@ const queuePrefix = 'stream-queue'
 
 export enum QUEUE_TYPES {
   SYNC_CONTRACTS = 'SYNC_CONTRACTS',
+  SYNC_COLLECTIONS = 'SYNC_COLLECTIONS',
+  SYNC_SPAM_COLLECTIONS = 'SYNC_SPAM_COLLECTIONS',
   REGISTER_OS_STREAMS = 'REGISTER_OS_STREAMS',
   DEREGISTER_OS_STREAMS = 'DEREGISTER_OS_STREAMS',
   UPDATE_PROFILES_NFTS_STREAMS = 'UPDATE_PROFILES_NFTS_STREAMS'
@@ -25,13 +28,24 @@ export enum QUEUE_TYPES {
 
 export const queues = new Map<string, Bull.Queue>()
 
-// nft cron subqueue
-const subqueuePrefix = 'nft-cron'
-const subqueueName = 'nft-batch-processor'
+// nft order subqueue
+const orderSubqueuePrefix = 'nft-order-sync'
+const orderSubqueueName = 'nft-order-batch-processor'
+
 // const subqueueNFTName = 'nft-update-processor'
 
-export let nftCronSubqueue: Bull.Queue = null
+// collection sync subqueue
+const collectionSubqueuePrefix = 'collection-sync'
+const collectionSubqueueName = 'collection-batch-processor'
+
+// nft sync subqueue
+// const nftSyncSubqueuePrefix: string = 'nft-sync'
+// const nftSyncSubqueueName: string = 'nft-sync-batch-processor'
+
+export let nftOrderSubqueue: Bull.Queue = null
 // export let nftUpdateSubqueue: Bull.Queue = null
+export let collectionSyncSubqueue: Bull.Queue = null
+export const nftSyncSubqueue: Bull.Queue = null
 
 let didPublish: boolean
 
@@ -50,11 +64,37 @@ const createQueues = (): Promise<void> => {
         redis,
       }))
 
-    //cron subqueue
-    nftCronSubqueue = new Bull(subqueueName, {
+    // sync external collections
+    queues.set(QUEUE_TYPES.SYNC_COLLECTIONS, new Bull(
+      QUEUE_TYPES.SYNC_COLLECTIONS, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
+    // sync spam collections
+    queues.set(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, new Bull(
+      QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
+    //order subqueue
+    nftOrderSubqueue = new Bull(orderSubqueueName, {
       redis: redis,
-      prefix: subqueuePrefix,
+      prefix: orderSubqueuePrefix,
     })
+
+    //collection subqueue
+    collectionSyncSubqueue = new Bull(collectionSubqueueName, {
+      redis: redis,
+      prefix: collectionSubqueuePrefix,
+    })
+
+    //nft subqueue
+    //  nftSyncSubqueue = new Bull(nftSyncSubqueueName, {
+    //   redis: redis,
+    //   prefix: nftSyncSubqueuePrefix,
+    // })
 
     // nftUpdateSubqueue = new Bull(subqueueNFTName, {
     //   redis: redis,
@@ -136,6 +176,19 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             repeat: { every: 5 * 60000 },
             jobId: 'update_profiles_nfts_streams',
           })
+      case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
+        return queues.get(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS)
+          .add({
+            SYNC_SPAM_COLLECTIONS: QUEUE_TYPES.SYNC_SPAM_COLLECTIONS,
+            chainId: process.env.CHAIN_ID,
+          },
+          {
+            removeOnComplete: true,
+            removeOnFail: true,
+            // repeat every once every day
+            repeat: { every: 24 * 60 * 60000 },
+            jobId: 'sync_spam_collections',
+          })
       // case QUEUE_TYPES.REGISTER_OS_STREAMS:
       //   return queues.get(QUEUE_TYPES.REGISTER_OS_STREAMS)
       //     .add({ REGISTER_OS_STREAMS: QUEUE_TYPES.REGISTER_OS_STREAMS }, {
@@ -169,6 +222,12 @@ const listenToJobs = async (): Promise<void> => {
     case QUEUE_TYPES.SYNC_CONTRACTS:
       queue.process(nftExternalOrders)
       break
+    case QUEUE_TYPES.SYNC_COLLECTIONS:
+      queue.process(collectionSyncHandler)
+      break
+    case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
+      queue.process(spamCollectionSyncHandler)
+      break
     case QUEUE_TYPES.REGISTER_OS_STREAMS:
       queue.process(registerStreamHandler)
       break
@@ -200,12 +259,17 @@ export const startAndListen = (): Promise<void> => {
 
 export const stopAndDisconnect = (): Promise<any> => {
   const values = [...queues.values()]
-  // close cron sub-queue
-  if (nftCronSubqueue) {
-    values.push(nftCronSubqueue)
+  // close order sub-queue
+  if (nftOrderSubqueue) {
+    values.push(nftOrderSubqueue)
   }
-  // if (nftUpdateSubqueue) {
-  //   values.push(nftUpdateSubqueue)
+  // close collection sub-queue
+  if (collectionSyncSubqueue) {
+    values.push(collectionSyncSubqueue)
+  }
+  // close nft sub-queue
+  // if (nftSyncSubqueue) {
+  //   values.push(nftSyncSubqueue)
   // }
   return Promise.all(values.map((queue) => {
     return queue.close()

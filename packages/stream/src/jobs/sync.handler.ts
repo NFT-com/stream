@@ -4,7 +4,7 @@ import { _logger, db, defs,entity, helper } from '@nftcom/shared'
 
 import { retrieveMultipleOrdersLooksrare } from '../looksrare'
 import { OpenseaOrderRequest, retrieveMultipleOrdersOpensea } from '../opensea'
-import { nftCronSubqueue } from './jobs'
+import { nftOrderSubqueue } from './jobs'
 
 const repositories = db.newRepositories()
 const logger = _logger.Factory(_logger.Context.Bull)
@@ -65,14 +65,14 @@ const nftExternalOrderBatchProcessor = async (job: Job): Promise<void> => {
 export const nftExternalOrders = async (job: Job): Promise<void> => {
   logger.debug('initiated external orders for nfts', job.data)
   try {
-    if (!nftCronSubqueue) {
+    if (!nftOrderSubqueue) {
       await job.moveToFailed({ message: 'nft-cron-queue is not defined!' })
     }
 
-    const existingJobs: Bull.Job[] = await nftCronSubqueue.getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting'])
+    const existingJobs: Bull.Job[] = await nftOrderSubqueue.getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting'])
     // clear existing jobs
     if (existingJobs.flat().length) {
-      nftCronSubqueue.obliterate({ force: true })
+      nftOrderSubqueue.obliterate({ force: true })
     }
     const chainId: string =  job.data?.chainId || process.env.CHAIN_ID
     logger.log(`chainId: ${chainId}`)
@@ -88,13 +88,13 @@ export const nftExternalOrders = async (job: Job): Promise<void> => {
       offset = i
       if (job.id === 'fetch_os_orders') {
         // opensea
-        nftCronSubqueue.add({ offset, limit, chainId, exchange: defs.ExchangeType.OpenSea }, {
+        nftOrderSubqueue.add({ offset, limit, chainId, exchange: defs.ExchangeType.OpenSea }, {
           ...subQueueBaseOptions,
           jobId: `nft-batch-processor-opensea|offset:${offset}|limit:${limit}-chainId:${chainId}`,
         })
       } else {
         // looksrare
-        nftCronSubqueue.add({ offset, limit, chainId, exchange: defs.ExchangeType.LooksRare  }, {
+        nftOrderSubqueue.add({ offset, limit, chainId, exchange: defs.ExchangeType.LooksRare  }, {
           ...subQueueBaseOptions,
           jobId: `nft-batch-processor-looksrare|offset:${offset}|limit:${limit}-chainId:${chainId}`,
         })
@@ -102,7 +102,7 @@ export const nftExternalOrders = async (job: Job): Promise<void> => {
     }
 
     // process subqueues in series; hence concurrency is explicitly set to one for rate limits
-    nftCronSubqueue.process(1, nftExternalOrderBatchProcessor)
+    nftOrderSubqueue.process(1, nftExternalOrderBatchProcessor)
 
     logger.debug('updated external orders for nfts')
   } catch (err) {

@@ -15,7 +15,11 @@ export enum CacheKeys {
   REGISTERED = 'registered-slug',
   DEREGISTER = 'deregister-slug',
   SYNCED_OS = 'synced_os',
-  SYNCED_LR = 'synced_lr'
+  SYNCED_LR = 'synced_lr',
+  SYNC_COLLECTION = 'sync_collection',
+  SPAM_COLLECTIONS = 'spam_collections',
+  SYNC_IN_PROGRESS = 'sync_in_progress',
+  RECENTLY_SYNCED = 'recently_synced'
 }
 
 const createCacheConnection = (): void => {
