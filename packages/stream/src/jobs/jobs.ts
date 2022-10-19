@@ -3,7 +3,9 @@ import Bull from 'bull'
 import { _logger } from '@nftcom/shared'
 
 import { redisConfig } from '../config'
-import { deregisterStreamHandler, registerStreamHandler } from './handler'
+import { getEthereumEvents } from './mint.handler'
+import { nftExternalOrdersOnDemand } from './order.handler'
+import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
 import { updateNFTsForProfilesHandler } from './profile.handler'
 import { nftExternalOrders } from './sync.handler'
 
@@ -20,7 +22,10 @@ export enum QUEUE_TYPES {
   SYNC_CONTRACTS = 'SYNC_CONTRACTS',
   REGISTER_OS_STREAMS = 'REGISTER_OS_STREAMS',
   DEREGISTER_OS_STREAMS = 'DEREGISTER_OS_STREAMS',
-  UPDATE_PROFILES_NFTS_STREAMS = 'UPDATE_PROFILES_NFTS_STREAMS'
+  UPDATE_PROFILES_NFTS_STREAMS = 'UPDATE_PROFILES_NFTS_STREAMS',
+  FETCH_EXTERNAL_ORDERS = 'FETCH_EXTERNAL_ORDERS',
+  FETCH_EXTERNAL_ORDERS_ON_DEMAND = 'FETCH_EXTERNAL_ORDERS_ON_DEMAND',
+  GENERATE_COMPOSITE_IMAGE = 'GENERATE_COMPOSITE_IMAGE',
 }
 
 export const queues = new Map<string, Bull.Queue>()
@@ -33,10 +38,33 @@ const subqueueName = 'nft-batch-processor'
 export let nftCronSubqueue: Bull.Queue = null
 // export let nftUpdateSubqueue: Bull.Queue = null
 
+const networkList = process.env.SUPPORTED_NETWORKS.split('|')
+const networks = new Map()
+networkList.map(network => {
+  return networks.set(
+    network.replace('ethereum:', '').split(':')[0], // chain id
+    network.replace('ethereum:', '').split(':')[1], // human readable network name
+  )
+})
+
 let didPublish: boolean
 
 const createQueues = (): Promise<void> => {
   return new Promise((resolve) => {
+    networks.forEach((chainId: string, network: string) => {
+      queues.set(network, new Bull(chainId, {
+        prefix: queuePrefix,
+        redis,
+      }))
+    })
+
+    // add composite image generation job to queue...
+    queues.set(QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, new Bull(
+      QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
     queues.set(QUEUE_TYPES.REGISTER_OS_STREAMS, new Bull(
       QUEUE_TYPES.REGISTER_OS_STREAMS, {
         prefix: queuePrefix,
@@ -69,6 +97,13 @@ const createQueues = (): Promise<void> => {
 
     queues.set(QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS, new Bull(
       QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
+    // external orders on demand
+    queues.set(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, new Bull(
+      QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, {
         prefix: queuePrefix,
         redis,
       }))
@@ -136,26 +171,49 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_nfts_streams',
           })
-      // case QUEUE_TYPES.REGISTER_OS_STREAMS:
-      //   return queues.get(QUEUE_TYPES.REGISTER_OS_STREAMS)
-      //     .add({ REGISTER_OS_STREAMS: QUEUE_TYPES.REGISTER_OS_STREAMS }, {
-      //       removeOnComplete: true,
-      //       removeOnFail: true,
-      //       // repeat every  2 minutes
-      //       repeat: { every: 10 * 60000 },
-      //       jobId: 'register_os_streams',
-      //     })
-      // case QUEUE_TYPES.DEREGISTER_OS_STREAMS:
-      //   return queues.get(QUEUE_TYPES.DEREGISTER_OS_STREAMS)
-      //     .add({ DEREGISTER_OS_STREAMS: QUEUE_TYPES.DEREGISTER_OS_STREAMS }, {
-      //       removeOnComplete: true,
-      //       removeOnFail: true,
-      //       // repeat every  2 minutes
-      //       repeat: { every: 10 * 60000 },
-      //       jobId: 'deregister_os_streams',
-      //     })
+      case QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND:
+        return queues.get(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND)
+          .add({
+            FETCH_EXTERNAL_ORDERS_ON_DEMAND: QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND,
+            chainId: process.env.CHAIN_ID,
+          }, {
+            attempts: 5,
+            removeOnComplete: true,
+            removeOnFail: true,
+            backoff: {
+              type: 'exponential',
+              delay: 2000,
+            },
+            // repeat every  2 minutes
+            repeat: { every: 2 * 60000 },
+            jobId: 'fetch_external_orders_on_demand',
+          })
+        // case QUEUE_TYPES.REGISTER_OS_STREAMS:
+        //   return queues.get(QUEUE_TYPES.REGISTER_OS_STREAMS)
+        //     .add({ REGISTER_OS_STREAMS: QUEUE_TYPES.REGISTER_OS_STREAMS }, {
+        //       removeOnComplete: true,
+        //       removeOnFail: true,
+        //       // repeat every  2 minutes
+        //       repeat: { every: 10 * 60000 },
+        //       jobId: 'register_os_streams',
+        //     })
+        // case QUEUE_TYPES.DEREGISTER_OS_STREAMS:
+        //   return queues.get(QUEUE_TYPES.DEREGISTER_OS_STREAMS)
+        //     .add({ DEREGISTER_OS_STREAMS: QUEUE_TYPES.DEREGISTER_OS_STREAMS }, {
+        //       removeOnComplete: true,
+        //       removeOnFail: true,
+        //       // repeat every  2 minutes
+        //       repeat: { every: 10 * 60000 },
+        //       jobId: 'deregister_os_streams',
+        //     })
       default:
-        return Promise.resolve()
+        return queues.get(chainId).add({ chainId }, {
+          removeOnComplete: true,
+          removeOnFail: true,
+          // repeat every 3 minutes
+          repeat: { every: 3 * 60000 },
+          jobId: `chainid_${chainId}_job`,
+        })
       }
     })).then(() => undefined)
   }
@@ -169,6 +227,9 @@ const listenToJobs = async (): Promise<void> => {
     case QUEUE_TYPES.SYNC_CONTRACTS:
       queue.process(nftExternalOrders)
       break
+    case QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND:
+      queue.process(nftExternalOrdersOnDemand)
+      break
     case QUEUE_TYPES.REGISTER_OS_STREAMS:
       queue.process(registerStreamHandler)
       break
@@ -179,7 +240,7 @@ const listenToJobs = async (): Promise<void> => {
       queue.process(updateNFTsForProfilesHandler)
       break
     default:
-      break
+      queue.process(getEthereumEvents)
     }
   }
 }

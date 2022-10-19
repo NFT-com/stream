@@ -1,8 +1,9 @@
 import { Job } from 'bull'
+import { IsNull } from 'typeorm'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import {  nftService } from '@nftcom/gql/service'
+import {  core,nftService } from '@nftcom/gql/service'
 import { _logger, db, entity } from '@nftcom/shared'
 
 import { cache, CacheKeys, removeExpiredTimestampedZsetMembers } from '../cache'
@@ -154,3 +155,28 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
   }
 }
 
+export const generateCompositeImages = async (job: Job): Promise<any> => {
+  try {
+    logger.debug('generate Composite Images', job.data)
+
+    const MAX_PROFILE_COUNTS = 200
+    const profiles = await repositories.profile.find({
+      where: {
+        photoURL: IsNull(),
+      },
+    })
+    const slicedProfiles = profiles.slice(0, MAX_PROFILE_COUNTS)
+    await Promise.allSettled(
+      slicedProfiles.map(async (profile) => {
+        const imageURL = await core.generateCompositeImage(profile.url, core.DEFAULT_NFT_IMAGE)
+        await repositories.profile.updateOneById(profile.id, {
+          photoURL: imageURL,
+        })
+        logger.debug(`Composite Image for Profile ${ profile.url } was generated`)
+      }),
+    )
+    logger.debug('generated composite images for profiles', { counts: MAX_PROFILE_COUNTS })
+  } catch (err) {
+    logger.error(`Error in generateCompositeImages Job: ${err}`)
+  }
+}
