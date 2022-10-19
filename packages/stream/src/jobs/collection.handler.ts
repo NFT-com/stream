@@ -75,6 +75,9 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
   const collections: string[] = job.data.collections
   const chainId: string = job.data.chainId || process.env.chainId || '5'
   try {
+    // check recently imported
+
+    // check in progress
     const contractEntitiesToBeProcessed: Promise<Partial<entity.Collection>>[] = []
     const contractsToBeProcessed: string[] = []
     const existsInDB: entity.Collection[] = await repositories.collection.find({
@@ -108,6 +111,7 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
     }
 
     if (contractsToBeProcessed.length) {
+      // move to in progress cache
       Promise.all(contractEntitiesToBeProcessed)
         .then(
           (collections: entity.Collection[]) =>
@@ -156,6 +160,8 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
       // process subqueues in series; hence concurrency is explicitly set to one for rate limits
       collectionSyncSubqueue.process(1, nftSyncHandler)
     }
+    // remove from in progress cache
+    // move to recently refreshed cache
     logger.log('completed collection sync')
   } catch (err) {
     logger.error(`Error in collectionSyncHandler: ${err}`)
