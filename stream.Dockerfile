@@ -2,28 +2,28 @@ FROM node:16-alpine as deps
 
 WORKDIR /app
 
-COPY stream/package.json ./stream/package.json
+COPY stream/package*.json ./stream/
 COPY stream/.npmrc ./stream/.npmrc
 COPY stream/tsconfig.json ./stream/tsconfig.json
-COPY NFT-backend/package.json ./NFT-backend/package.json
+COPY NFT-backend/package*.json ./NFT-backend/
 COPY NFT-backend/.npmrc ./NFT-backend/.npmrc
 COPY NFT-backend/tsconfig.json ./NFT-backend/tsconfig.json
-COPY stream/packages/stream/package.json ./stream/packages/stream/package.json
-COPY NFT-backend/packages/shared/package.json ./NFT-backend/packages/shared/package.json
-COPY NFT-backend/packages/gql/package.json ./NFT-backend/packages/gql/package.json
+COPY stream/packages/stream/package*.json ./stream/packages/stream/
+COPY NFT-backend/packages/shared/package*.json ./NFT-backend/packages/shared/
+COPY NFT-backend/packages/gql/package*.json ./NFT-backend/packages/gql/
 
 
 # add tools for native dependencies (node-gpy)
 RUN apk add --no-cache --virtual .gyp python3 make g++ \
     && npm set progress=false \
     && cd /app/stream \
-    && npm install --omit=dev \
+    && npm ci --omit=dev \
     && cp -R node_modules prod_node_modules \
-    && npm install \
+    && npm ci \
     && cd /app/NFT-backend \
-    && npm install --omit=dev \
+    && npm ci --omit=dev \
     && cp -R node_modules prod_node_modules \
-    && npm install \
+    && npm ci \
     && apk del .gyp
 
 COPY stream/packages/stream ./stream/packages/stream
