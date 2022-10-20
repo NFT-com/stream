@@ -2,8 +2,8 @@ import Bull, { Job } from 'bull'
 
 import { _logger, db, defs,entity, helper } from '@nftcom/shared'
 
-import { retrieveMultipleOrdersLooksrare } from '../looksrare'
-import { OpenseaOrderRequest, retrieveMultipleOrdersOpensea } from '../opensea'
+import { retrieveMultipleOrdersLooksrare } from '../service/looksrare'
+import { OpenseaOrderRequest, retrieveMultipleOrdersOpensea } from '../service/opensea'
 import { nftOrderSubqueue } from './jobs'
 
 const repositories = db.newRepositories()

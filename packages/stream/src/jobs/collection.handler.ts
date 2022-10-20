@@ -5,10 +5,10 @@ import { In } from 'typeorm'
 
 import { _logger, db, entity } from '@nftcom/shared'
 
-import { getAlchemyInterceptor } from '../alchemy'
-import { cache, CacheKeys, removeExpiredTimestampedZsetMembers } from '../cache'
-import { NFTAlchemy } from '../interfaces'
-import { collectionEntityBuilder, nftEntityBuilder } from '../utils/nftBuilder'
+import { NFTAlchemy } from '../interface'
+import { getAlchemyInterceptor } from '../service/alchemy'
+import { cache, CacheKeys } from '../service/cache'
+import { collectionEntityBuilder, nftEntityBuilder } from '../utils/builder/nftBuilder'
 import { collectionSyncSubqueue } from './jobs'
 
 const logger = _logger.Factory(_logger.Context.Bull)
@@ -66,7 +66,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
     // move to recently refreshed cache
     await Promise.all([
       cache.srem(`${CacheKeys.SYNC_IN_PROGRESS}_${chainId}`, contract),
-      cache.zadd(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, Date.now(), contract),
+      cache.sadd(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, contract),
     ])
     // process subqueues in series; hence concurrency is explicitly set to one for rate limits
     // nftSyncSubqueue.process(1, nftBatchPersistenceHandler)
@@ -81,11 +81,6 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
   const collections: string[] = job.data.collections
   const chainId: string = job.data.chainId || process.env.chainId || '5'
   try {
-    // remove expired
-    await removeExpiredTimestampedZsetMembers(
-      `${CacheKeys.RECENTLY_SYNCED}_${chainId}`,
-      Date.now(),
-    )
     // check recently imported
 
     // check in progress
@@ -99,7 +94,7 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
 
     for (let i = 0; i < collections.length; i++) {
       const contract: string = collections[i]
-      const itemPresentInRefreshedCache: string = await cache.zscore(`${CacheKeys.REFRESHED_NFT_ORDERS_EXT}_${chainId}`, contract)
+      const itemPresentInRefreshedCache: number = await cache.sismember(`${CacheKeys.REFRESHED_NFT_ORDERS_EXT}_${chainId}`, contract)
       if (itemPresentInRefreshedCache) {
         continue
       }

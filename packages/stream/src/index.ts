@@ -7,10 +7,10 @@ import { _logger, db, fp, helper } from '@nftcom/shared'
 import { dbConfig } from './config'
 import { nftOrderSubqueue,QUEUE_TYPES, queues, startAndListen, stopAndDisconnect } from './jobs/jobs'
 import { authMiddleWare } from './middleware/auth'
-//import { startAndListen } from './jobs/jobs'
-import { startProvider, stopProvider } from './on-chain'
-import { client } from './opensea'
 import { initiateStreaming } from './pipeline'
+//import { startAndListen } from './jobs/jobs'
+import { startProvider, stopProvider } from './service/on-chain'
+import { client } from './service/opensea'
 
 const logger = _logger.Factory(_logger.Context.General, _logger.Context.Misc)
 const chainId: string = process.env.CHAIN_ID || '5'

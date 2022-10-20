@@ -1,6 +1,6 @@
 import Redis from 'ioredis'
 
-import { redisConfig } from './config'
+import { redisConfig } from '../config'
 
 let redis: Redis
 const DEFAULT_TTL_MINS = Number(process.env.DEFAULT_TTL_MINS) || 15 // 15 mins

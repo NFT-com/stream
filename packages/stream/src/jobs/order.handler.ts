@@ -7,7 +7,7 @@ import { looksrareService,openseaService } from '@nftcom/gql/service'
 import { _logger, db, entity } from '@nftcom/shared'
 import { helper } from '@nftcom/shared'
 
-import { cache, CacheKeys, removeExpiredTimestampedZsetMembers, ttlForTimestampedZsetMembers } from '../cache'
+import { cache, CacheKeys, removeExpiredTimestampedZsetMembers, ttlForTimestampedZsetMembers } from '../service/cache'
 
 // exported for tests
 export const repositories = db.newRepositories()

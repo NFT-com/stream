@@ -4,12 +4,12 @@ import { BigNumber } from 'ethers'
 
 import { _logger, db, defs, entity } from '@nftcom/shared'
 
+import { delay } from '../utils'
+import { orderEntityBuilder } from '../utils/builder/orderBuilder'
 import { cache, CacheKeys } from './cache'
-import { delay } from './utils'
-import { orderEntityBuilder } from './utils/orderBuilder'
 
 const LOOKSRARE_API_BASE_URL = 'https://api.looksrare.org/api/v1'
-const LOOKSRARE_API_TESTNET_BASE_URL = 'https://api-rinkeby.looksrare.org/api/v1'
+const LOOKSRARE_API_TESTNET_BASE_URL = 'https://api-goerli.looksrare.org/api/v1'
 const LOOKSRARE_LISTING_BATCH_SIZE = 4
 const LOOKSRARE_API_KEY = process.env.LOOKSRARE_API_KEY
 

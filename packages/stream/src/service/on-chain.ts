@@ -6,7 +6,7 @@ import { In, LessThan } from 'typeorm'
 import {  nftService } from '@nftcom/gql/service'
 import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
-import { cancelEntityBuilder,txEntityBuilder } from './utils/orderBuilder'
+import { cancelEntityBuilder,txEntityBuilder } from '../utils/orderBuilder'
 
 const repositories = db.newRepositories()
 const nftResolverInterface = new utils.Interface(contracts.NftResolverABI())

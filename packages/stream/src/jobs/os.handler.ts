@@ -2,10 +2,10 @@ import  { Job } from 'bull'
 
 import { _logger } from '@nftcom/shared'
 
-import { cache, CacheKeys } from '../cache'
-import { DistinctContract } from '../interfaces'
-import { client } from '../opensea'
+import { DistinctContract } from '../interface'
 import { allowedEvents, fetchAllNFTs, mapContractsToSlugs } from '../pipeline'
+import { cache, CacheKeys } from '../service/cache'
+import { client } from '../service/opensea'
 
 const logger = _logger.Factory(_logger.Context.Bull)
 export const registerStreamHandler = async (job: Job): Promise<any> => {
