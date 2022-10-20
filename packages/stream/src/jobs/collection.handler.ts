@@ -37,6 +37,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
       const collectionNFTs: AxiosResponse = await alchemyInstance
         .get(
           `/getNFTsForCollection?${queryParams}`)
+
       if(collectionNFTs?.data?.nfts.length) {
         const nfts = collectionNFTs?.data?.nfts
         const nftTokenMap: string[] = nfts.map((nft: NFTAlchemy) => nft.id.tokenId)
@@ -64,10 +65,8 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
     }
     // remove from in progress cache
     // move to recently refreshed cache
-    await Promise.all([
-      cache.srem(`${CacheKeys.SYNC_IN_PROGRESS}_${chainId}`, contract),
-      cache.sadd(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, contract),
-    ])
+    await cache.srem(`${CacheKeys.SYNC_IN_PROGRESS}_${chainId}`, contract)
+    await cache.sadd(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, contract)
     // process subqueues in series; hence concurrency is explicitly set to one for rate limits
     // nftSyncSubqueue.process(1, nftBatchPersistenceHandler)
     logger.log(`nft sync handler process completed for: ${contract}, chainId: ${chainId}`)
@@ -82,7 +81,6 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
   const chainId: string = job.data.chainId || process.env.chainId || '5'
   try {
     // check recently imported
-
     // check in progress
     const contractEntitiesToBeProcessed: Promise<Partial<entity.Collection>>[] = []
     const contractsToBeProcessed: string[] = []
@@ -94,12 +92,12 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
 
     for (let i = 0; i < collections.length; i++) {
       const contract: string = collections[i]
-      const itemPresentInRefreshedCache: number = await cache.sismember(`${CacheKeys.REFRESHED_NFT_ORDERS_EXT}_${chainId}`, contract)
+      const itemPresentInRefreshedCache: number = await cache.sismember(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, contract)
       if (itemPresentInRefreshedCache) {
         continue
       }
 
-      const itemPresentInProgressCache: number = await cache.sismember(`${CacheKeys.REFRESHED_NFT_ORDERS_EXT}_${chainId}`, contract)
+      const itemPresentInProgressCache: number = await cache.sismember(`${CacheKeys.SYNC_IN_PROGRESS}_${chainId}`, contract)
       if (itemPresentInProgressCache) {
         continue
       }
@@ -135,7 +133,6 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
         )
         .then(
           (savedCollections: entity.Collection[]) => {
-            console.log('saved', savedCollections)
             const collections: string[] = savedCollections.map(
               (savedCollection: entity.Collection) => savedCollection.id,
             )
@@ -184,7 +181,6 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
 
 // export const nftBatchPersistenceHandler = async (job: Job): Promise<void> => {
 //     const { contract, nfts, chainId } = job.data
-//     console.log('here')
 //     logger.log(`nft batch persistence handler process started for: ${contract}, chainId: ${chainId}`)
 
 //     try {
