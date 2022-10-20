@@ -8,6 +8,7 @@ import { dbConfig } from './config'
 import { nftOrderSubqueue,QUEUE_TYPES, queues, startAndListen, stopAndDisconnect } from './jobs/jobs'
 import { authMiddleWare } from './middleware/auth'
 import { initiateStreaming } from './pipeline'
+import { cache, CacheKeys } from './service/cache'
 //import { startAndListen } from './jobs/jobs'
 import { startProvider, stopProvider } from './service/on-chain'
 import { client } from './service/opensea'
@@ -106,8 +107,13 @@ app.post('/collectionSync', authMiddleWare, async (_req, res) => {
 
     const validCollections: string[] = []
     const invalidCollections: string[] = []
+    const recentlyRefreshed: string[] = []
     for (let i=0; i < collections.length; i++) {
       const collection: string = collections[i]
+      const collecionSynced: number = await cache.sismember(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, collection)
+      if (collecionSynced) {
+        recentlyRefreshed.push(collection)
+      }
       try {
         const checkSumedContract: string = helper.checkSum(collection)
         validCollections.push(checkSumedContract)
@@ -139,6 +145,11 @@ app.post('/collectionSync', authMiddleWare, async (_req, res) => {
     if (invalidCollections.length) {
       responseMsg += `The following collections are invalid: ${invalidCollections.join(', ')}.`
     }
+
+    if (recentlyRefreshed.length) {
+      responseMsg += `The following collections are recently refreshed: ${recentlyRefreshed.join(', ')}.`
+    }
+
     res.status(200).send({
       message: responseMsg,
     })
