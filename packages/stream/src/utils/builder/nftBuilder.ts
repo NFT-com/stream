@@ -3,7 +3,7 @@
 import {  alchemyService,nftService } from '@nftcom/gql/service'
 import { defs, entity, helper } from '@nftcom/shared'
 
-import { NFTAlchemy } from '../interfaces'
+import { NFTAlchemy } from '../../interface'
 
 export const collectionEntityBuilder = async (
   contract: string,
