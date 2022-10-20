@@ -62,6 +62,12 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
         }
       }
     }
+    // remove from in progress cache
+    // move to recently refreshed cache
+    await Promise.all([
+      cache.srem(CacheKeys.SYNC_IN_PROGRESS, contract),
+      cache.zadd(CacheKeys.RECENTLY_SYNCED, Date.now(), contract),
+    ])
     // process subqueues in series; hence concurrency is explicitly set to one for rate limits
     // nftSyncSubqueue.process(1, nftBatchPersistenceHandler)
     logger.log(`nft sync handler process completed for: ${contract}, chainId: ${chainId}`)
@@ -112,6 +118,7 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
 
     if (contractsToBeProcessed.length) {
       // move to in progress cache
+      await cache.sadd(CacheKeys.SYNC_IN_PROGRESS, ...contractsToBeProcessed)
       Promise.all(contractEntitiesToBeProcessed)
         .then(
           (collections: entity.Collection[]) =>
@@ -160,8 +167,6 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
       // process subqueues in series; hence concurrency is explicitly set to one for rate limits
       collectionSyncSubqueue.process(1, nftSyncHandler)
     }
-    // remove from in progress cache
-    // move to recently refreshed cache
     logger.log('completed collection sync')
   } catch (err) {
     logger.error(`Error in collectionSyncHandler: ${err}`)

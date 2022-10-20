@@ -3,7 +3,7 @@ import Redis from 'ioredis'
 import { redisConfig } from './config'
 
 let redis: Redis
-// const DEFAULT_TTL_MINS = 1 // 1hr
+const DEFAULT_TTL_MINS = Number(process.env.DEFAULT_TTL_MINS) || 15 // 15 mins
 
 export enum CacheKeys {
   REFRESH_NFT_ORDERS_EXT = 'refresh_nft_orders_ext',
@@ -27,6 +27,14 @@ const createCacheConnection = (): void => {
     host: redisConfig.host,
     port: redisConfig.port,
   })
+}
+
+export const ttlForTimestampedZsetMembers = (ttl?: Date): number => {
+  const currentTime: Date = new Date(ttl? ttl: Date.now())
+  if (!ttl) {
+    currentTime.setMinutes(currentTime.getMinutes() + DEFAULT_TTL_MINS)
+  }
+  return currentTime.getTime()
 }
 
 // for expired set members
