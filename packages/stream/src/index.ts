@@ -70,7 +70,7 @@ app.get('/syncLR', authMiddleWare, async (_req, res) => {
   }
 })
 
-// force stop external orders sync -authenticated
+// force stop external orders sync - authenticated
 app.get('/stopSync', authMiddleWare, async (_req, res) => {
   try {
     const existingSubQueueJobs: Bull.Job[] = await nftCronSubqueue.getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting'])
