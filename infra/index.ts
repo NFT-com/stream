@@ -7,7 +7,7 @@ import * as pulumi from '@pulumi/pulumi'
 
 import { SharedInfraOutput, sharedOutputFileName } from './defs'
 import { createSharedInfra } from './shared'
-import { createStreamCluster, updateStreamEnvFile } from './stream'
+import { createStreamCluster } from './stream'
 
 export const sharedOutToJSONFile = (outMap: pulumi.automation.OutputMap): void => {
   const dbHost = outMap.dbHost.value
@@ -32,16 +32,10 @@ const main = async (): Promise<any> => {
   const args = process.argv.slice(2)
   const deployShared = args?.[0] === 'deploy:shared' || false
   const deployStream = args?.[0] === 'deploy:stream' || false
-  const buildStreamEnv = args?.[0] === 'stream:env' || false
 
   if (deployShared) {
     return createSharedInfra(true)
       .then(sharedOutToJSONFile)
-  }
-
-  if (buildStreamEnv) {
-    updateStreamEnvFile()
-    return
   }
 
   if (deployStream) {

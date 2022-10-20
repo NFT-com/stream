@@ -60,11 +60,9 @@ COPY --from=build /app/NFT-backend/packages/shared/dist ./NFT-backend/packages/s
 
 COPY --from=build /app/NFT-backend/packages/gql/package.json ./NFT-backend/packages/gql/package.json
 COPY --from=build /app/NFT-backend/packages/gql/dist ./NFT-backend/packages/gql/dist
-#COPY --from=build /app/NFT-backend/packages/gql/.env ./NFT-backend/packages/gql/.env
 
 COPY --from=build /app/stream/packages/stream/package.json ./stream/packages/stream/package.json
 COPY --from=build /app/stream/packages/stream/dist ./stream/packages/stream/dist
-COPY --from=build /app/stream/packages/stream/.env ./stream/packages/stream/.env
 
 WORKDIR /app/stream/packages/stream
 

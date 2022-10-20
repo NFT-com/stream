@@ -190,6 +190,232 @@ const createEcsTaskDefinition = (
           portMappings: [
             { containerPort: 8080, hostPort: 8080, protocol: 'tcp' },
           ],
+          environment: [
+            {
+              Name: 'STAGE',
+              Value: process.env.STAGE,
+            },
+            {
+              Name: 'PULUMI_CONFIG_PASSPHRASE',
+              Value: process.env.PULUMI_CONFIG_PASSPHRASE,
+            },
+            {
+              Name: 'AWS_ACCOUNT_ID',
+              Value: process.env.AWS_ACCOUNT_ID,
+            },
+            {
+              Name: 'ECR_REGISTRY',
+              Value: process.env.ECR_REGISTRY,
+            },
+            {
+              Name: 'GIT_SHA',
+              Value: process.env.GIT_SHA,
+            },
+            {
+              Name: 'DB_HOST',
+              Value: process.env.DB_HOST,
+            },
+            {
+              Name: 'DB_USE_SSL',
+              Value: process.env.DB_USE_SSL,
+            },
+            {
+              Name: 'DB_PASSWORD',
+              Value: process.env.DB_PASSWORD,
+            },
+            {
+              Name: 'DB_PORT',
+              Value: process.env.DB_PORT,
+            },
+            {
+              Name: 'CHAIN_ID',
+              Value: process.env.CHAIN_ID,
+            },
+            {
+              Name: 'AUTH_MESSAGE',
+              Value: process.env.AUTH_MESSAGE,
+            },
+            {
+              Name: 'AUTH_ALLOWED_LIST',
+              Value: process.env.AUTH_ALLOWED_LIST,
+            },
+            {
+              Name: 'SG_API_KEY',
+              Value: process.env.SG_API_KEY,
+            },
+            {
+              Name: 'ETH_GAS_STATION_API_KEY',
+              Value: process.env.ETH_GAS_STATION_API_KEY,
+            },
+            {
+              Name: 'TEAM_AUTH_TOKEN',
+              Value: process.env.TEAM_AUTH_TOKEN,
+            },
+            {
+              Name: 'MNEMONIC',
+              Value: process.env.MNEMONIC,
+            },
+            {
+              Name: 'MNEMONIC_RINKEBY',
+              Value: process.env.MNEMONIC_RINKEBY,
+            },
+            {
+              Name: 'HCS_TOPIC_ID',
+              Value: process.env.HCS_TOPIC_ID,
+            },
+            {
+              Name: 'HCS_ACCOUNT_ID',
+              Value: process.env.HCS_ACCOUNT_ID,
+            },
+            {
+              Name: 'HCS_PRIVATE_KEY',
+              Value: process.env.HCS_PRIVATE_KEY,
+            },
+            {
+              Name: 'ZMOK_API_URL',
+              Value: process.env.ZMOK_API_URL,
+            },
+            {
+              Name: 'INFURA_API_KEY',
+              Value: process.env.INFURA_API_KEY,
+            },
+            {
+              Name: 'ALCHEMY_API_KEY',
+              Value: process.env.ALCHEMY_API_KEY,
+            },
+            {
+              Name: 'ALCHEMY_API_URL',
+              Value: process.env.ALCHEMY_API_URL,
+            },
+            {
+              Name: 'ALCHEMY_API_URL_GOERLI',
+              Value: process.env.ALCHEMY_API_URL_GOERLI,
+            },
+            {
+              Name: 'SENTRY_DSN',
+              Value: process.env.SENTRY_DSN,
+            },
+            {
+              Name: 'PUBLIC_SALE_KEY',
+              Value: process.env.PUBLIC_SALE_KEY,
+            },
+            {
+              Name: 'SERVER_CONFIG',
+              Value: process.env.SERVER_CONFIG,
+            },
+            {
+              Name: 'SHARED_MINT_SECRET',
+              Value: process.env.SHARED_MINT_SECRET,
+            },
+            {
+              Name: 'SUPPORTED_NETWORKS',
+              Value: process.env.SUPPORTED_NETWORKS,
+            },
+            {
+              Name: 'TYPESENSE_HOST',
+              Value: process.env.TYPESENSE_HOST,
+            },
+            {
+              Name: 'TYPESENSE_API_KEY',
+              Value: process.env.TYPESENSE_API_KEY,
+            },
+            {
+              Name: 'MINTED_PROFILE_EVENTS_MAX_BLOCKS',
+              Value: process.env.MINTED_PROFILE_EVENTS_MAX_BLOCKS,
+            },
+            {
+              Name: 'PROFILE_NFTS_EXPIRE_DURATION',
+              Value: process.env.PROFILE_NFTS_EXPIRE_DURATION,
+            },
+            {
+              Name: 'BULL_MAX_REPEAT_COUNT',
+              Value: process.env.BULL_MAX_REPEAT_COUNT,
+            },
+            {
+              Name: 'OPENSEA_API_KEY',
+              Value: process.env.OPENSEA_API_KEY,
+            },
+            {
+              Name: 'OPENSEA_ORDERS_API_KEY',
+              Value: process.env.OPENSEA_ORDERS_API_KEY,
+            },
+            {
+              Name: 'LOOKSRARE_API_KEY',
+              Value: process.env.LOOKSRARE_API_KEY,
+            },
+            {
+              Name: 'PROFILE_SCORE_EXPIRE_DURATION',
+              Value: process.env.PROFILE_SCORE_EXPIRE_DURATION,
+            },
+            {
+              Name: 'NFT_EXTERNAL_ORDER_REFRESH_DURATION',
+              Value: process.env.NFT_EXTERNAL_ORDER_REFRESH_DURATION,
+            },
+            {
+              Name: 'TEST_DB_HOST',
+              Value: process.env.TEST_DB_HOST,
+            },
+            {
+              Name: 'TEST_DB_DATABASE',
+              Value: process.env.TEST_DB_DATABASE,
+            },
+            {
+              Name: 'TEST_DB_USERNAME',
+              Value: process.env.TEST_DB_USERNAME,
+            },
+            {
+              Name: 'TEST_DB_PORT',
+              Value: process.env.TEST_DB_PORT,
+            },
+            {
+              Name: 'TEST_DB_PASSWORD',
+              Value: process.env.TEST_DB_PASSWORD,
+            },
+            {
+              Name: 'TEST_DB_USE_SSL',
+              Value: process.env.TEST_DB_USE_SSL,
+            },
+            {
+              Name: 'ACTIVITY_ENDPOINTS_ENABLED',
+              Value: process.env.ACTIVITY_ENDPOINTS_ENABLED,
+            },
+            {
+              Name: 'NFTPORT_KEY',
+              Value: process.env.NFTPORT_KEY,
+            },
+            {
+              Name: 'REFRESH_NFT_DURATION',
+              Value: process.env.REFRESH_NFT_DURATION,
+            },
+            {
+              Name: 'IPFS_WEB_GATEWAY',
+              Value: process.env.IPFS_WEB_GATEWAY,
+            },
+            {
+              Name: 'DEFAULT_TTL_MINS',
+              Value: process.env.DEFAULT_TTL_MINS,
+            },
+            {
+              Name: 'ASSET_BUCKET',
+              Value: process.env.ASSET_BUCKET,
+            },
+            {
+              Name: 'ASSET_BUCKET_ROLE',
+              Value: process.env.ASSET_BUCKET_ROLE,
+            },
+            {
+              Name: 'REDIS_HOST',
+              Value: process.env.REDIS_HOST,
+            },
+            {
+              Name: 'REDIS_PORT',
+              Value: process.env.REDIS_PORT,
+            },
+            {
+              Name: 'PORT',
+              Value: process.env.PORT,
+            },
+          ],
         },
       ]),
       cpu: config.require('ecsTaskCpu'),
