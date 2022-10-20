@@ -6,7 +6,7 @@ import { IsNull } from 'typeorm'
 import {  core,nftService } from '@nftcom/gql/service'
 import { _logger, db, entity } from '@nftcom/shared'
 
-import { cache, CacheKeys, removeExpiredTimestampedZsetMembers } from '../cache'
+import { cache, CacheKeys, removeExpiredTimestampedZsetMembers } from '../service/cache'
 
 const logger = _logger.Factory(_logger.Context.Bull)
 const repositories = db.newRepositories()

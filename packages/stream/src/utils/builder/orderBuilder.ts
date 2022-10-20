@@ -2,9 +2,9 @@ import { BigNumber } from 'ethers'
 
 import { db, defs, entity, helper } from '@nftcom/shared'
 
-import { SeaportConsideration,TxLooksrareProtocolData, TxSeaportProtocolData } from '../interfaces'
-import { LooksRareOrder } from '../looksrare'
-import { SeaportOffer, SeaportOrder } from '../opensea'
+import { SeaportConsideration,TxLooksrareProtocolData, TxSeaportProtocolData } from '../../interface'
+import { LooksRareOrder } from '../../service/looksrare'
+import { SeaportOffer, SeaportOrder } from '../../service/opensea'
 
 type Order = SeaportOrder | LooksRareOrder
 

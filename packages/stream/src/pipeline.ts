@@ -1,9 +1,9 @@
 import { _logger,db, defs, entity, helper } from '@nftcom/shared'
 import { BaseStreamMessage, EventType } from '@opensea/stream-js'
 
-import { cache, CacheKeys }from './cache'
-import { Chain, DistinctContract, OSChainTypes, OSEventPayload, OSListingEventPayload, OSOfferEventPayload } from './interfaces'
-import { client, retrieveSlugsForContracts } from './opensea'
+import { Chain, DistinctContract, OSChainTypes, OSEventPayload, OSListingEventPayload, OSOfferEventPayload } from './interface'
+import { cache, CacheKeys }from './service/cache'
+import { client, retrieveSlugsForContracts } from './service/opensea'
 
 const logger = _logger.Factory(_logger.Context.Opensea)
 export const allowedEvents: EventType[] = [

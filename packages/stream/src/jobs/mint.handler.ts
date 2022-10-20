@@ -6,7 +6,7 @@ import { BigNumber, ethers, providers, utils } from 'ethers'
 import {  core, HederaConsensusService } from '@nftcom/gql/service'
 import { _logger, contracts, db, defs, helper } from '@nftcom/shared'
 
-import { cache } from '../cache'
+import { cache } from '../service/cache'
 
 const logger = _logger.Factory(_logger.Context.Bull)
 const repositories = db.newRepositories()
