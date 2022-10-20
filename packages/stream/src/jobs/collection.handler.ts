@@ -6,7 +6,7 @@ import { In } from 'typeorm'
 import { _logger, db, entity } from '@nftcom/shared'
 
 import { getAlchemyInterceptor } from '../alchemy'
-import { cache, CacheKeys } from '../cache'
+import { cache, CacheKeys, removeExpiredTimestampedZsetMembers } from '../cache'
 import { NFTAlchemy } from '../interfaces'
 import { collectionEntityBuilder, nftEntityBuilder } from '../utils/nftBuilder'
 import { collectionSyncSubqueue } from './jobs'
@@ -65,8 +65,8 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
     // remove from in progress cache
     // move to recently refreshed cache
     await Promise.all([
-      cache.srem(CacheKeys.SYNC_IN_PROGRESS, contract),
-      cache.zadd(CacheKeys.RECENTLY_SYNCED, Date.now(), contract),
+      cache.srem(`${CacheKeys.SYNC_IN_PROGRESS}_${chainId}`, contract),
+      cache.zadd(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, Date.now(), contract),
     ])
     // process subqueues in series; hence concurrency is explicitly set to one for rate limits
     // nftSyncSubqueue.process(1, nftBatchPersistenceHandler)
@@ -81,6 +81,11 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
   const collections: string[] = job.data.collections
   const chainId: string = job.data.chainId || process.env.chainId || '5'
   try {
+    // remove expired
+    await removeExpiredTimestampedZsetMembers(
+      `${CacheKeys.RECENTLY_SYNCED}_${chainId}`,
+      Date.now(),
+    )
     // check recently imported
 
     // check in progress
@@ -94,6 +99,15 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
 
     for (let i = 0; i < collections.length; i++) {
       const contract: string = collections[i]
+      const itemPresentInRefreshedCache: string = await cache.zscore(`${CacheKeys.REFRESHED_NFT_ORDERS_EXT}_${chainId}`, contract)
+      if (itemPresentInRefreshedCache) {
+        continue
+      }
+
+      const itemPresentInProgressCache: number = await cache.sismember(`${CacheKeys.REFRESHED_NFT_ORDERS_EXT}_${chainId}`, contract)
+      if (itemPresentInProgressCache) {
+        continue
+      }
       // check collection spam (Alchemy cache)
       const contractExistsInDB: entity.Collection = existsInDB.filter(
         (collection: entity.Collection) => collection.contract === contract,
