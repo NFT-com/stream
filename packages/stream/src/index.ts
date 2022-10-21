@@ -49,7 +49,7 @@ app.get('/syncOS', authMiddleWare, async (_req, res) => {
         removeOnFail: true,
         jobId: 'fetch_os_orders',
       })
-    res.status(200).send({ message: 'Stated Sync!' })
+    res.status(200).send({ message: 'Started Sync!' })
   } catch (error) {
     logger.error(`err: ${error}`)
     res.status(400).send(error)
