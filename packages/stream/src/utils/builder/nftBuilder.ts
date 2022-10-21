@@ -33,8 +33,11 @@ export const collectionEntityBuilder = async (
   }
 }
 
+// TODO: record more information, maybe re-use update logic from up updateNFTMetadata
+// @rohan, @jason
 export const nftEntityBuilder = (
   nft: NFTAlchemy,
+  chainId: string,
 ): entity.NFT => {
   return {
     contract: helper.checkSum(nft.contract.address),
@@ -46,6 +49,7 @@ export const nftEntityBuilder = (
       imageURL: nft.metadata.image,
       traits: [],
     },
+    chainId,
     userId: 'test',
     walletId: 'test',
 

@@ -1,8 +1,12 @@
 
 import { AxiosInstance, AxiosResponse } from 'axios'
 import Bull, { Job } from 'bull'
+import { BigNumber } from 'ethers'
 import { In } from 'typeorm'
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import { nftService } from '@nftcom/gql/service'
 import { _logger, db, entity } from '@nftcom/shared'
 
 import { NFTAlchemy } from '../interface'
@@ -29,37 +33,49 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
   logger.log(`nft sync handler process started for: ${contract}, chainId: ${chainId}`)
   try {
     const alchemyInstance: AxiosInstance = await getAlchemyInterceptor(chainId)
+
+    logger.log(`alchemyInstance: ${alchemyInstance}`)
     // process nfts for collection
     let processCondition = true
     let startToken = ''
-    const queryParams = `contractAddress=${contract}&withMetadata=true&startToken=${startToken}&limit=100`
+    let queryParams = `contractAddress=${contract}&withMetadata=true&startToken=${startToken}&limit=100`
     while(processCondition) {
       const collectionNFTs: AxiosResponse = await alchemyInstance
         .get(
           `/getNFTsForCollection?${queryParams}`)
 
-      if(collectionNFTs?.data?.nfts.length) {
+      logger.log(`${queryParams}, response: ${JSON.stringify(collectionNFTs?.data?.nfts)}`)
+
+      if (collectionNFTs?.data?.nfts.length) {
         const nfts = collectionNFTs?.data?.nfts
-        const nftTokenMap: string[] = nfts.map((nft: NFTAlchemy) => nft.id.tokenId)
+        const nftTokenMap: string[] = nfts.map(
+          (nft: NFTAlchemy) => BigNumber.from(nft.id.tokenId).toHexString())
         const existingNFTs: entity.NFT[] = await repositories.nft.find(
-          { where: { contract, tokenId: In(nftTokenMap) } },
+          { where: { contract, tokenId: In(nftTokenMap), chainId } },
         )
-        const existingNFTTokenMap: string[] = existingNFTs.map((nft: entity.NFT) => nft.tokenId)
+        const existingNFTTokenMap: string[] = existingNFTs.map(
+          (nft: entity.NFT) => BigNumber.from(nft.tokenId).toHexString())
+          
+        logger.log(`existingNFT: ${JSON.stringify(existingNFTTokenMap)}`)
         const nftPromiseArray: entity.NFT[] = []
         const alchemyNFTs: NFTAlchemy[] = nfts
 
         for (const nft of alchemyNFTs) {
           // create if not exist, update if does
-          if (!existingNFTTokenMap.includes(nft.id.tokenId)) {
-            nftPromiseArray.push(nftEntityBuilder(nft))
+          if (!existingNFTTokenMap.includes(BigNumber.from(nft.id.tokenId).toHexString())) {
+            nftPromiseArray.push(nftEntityBuilder(nft, chainId))
           }
         }
-        await repositories.nft.saveMany(nftPromiseArray)
+        await repositories.nft.saveMany(nftPromiseArray, { chunk: 50 }) // temp chunk
+        await nftService.indexNFTsOnSearchEngine(nftPromiseArray)
+        logger.log(`saved ${queryParams}`)
 
-        if(!collectionNFTs?.data?.nextToken) {
+        if (!collectionNFTs?.data?.nextToken) {
           processCondition = false
         } else {
           startToken = collectionNFTs?.data?.nextToken
+          queryParams = `contractAddress=${contract}&withMetadata=true&startToken=${startToken}&limit=100`
+          logger.log(`startToken: ${startToken}`)
         }
       }
     }
@@ -115,13 +131,22 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
           contractsToBeProcessed.push(contract)
         }
       } else {
-        if(isSpam) {
+        if (isSpam) {
           await repositories.collection.updateOneById(contractExistsInDB.id,
             { ...contractExistsInDB, isSpam: true },
           )
+        } else {
+          contractEntitiesToBeProcessed.push(collectionEntityBuilder(
+            contract,
+            chainId,
+          ))
+          contractsToBeProcessed.push(contract) // full resync (for cases where collections already exist, but we want to fetch all the NFTs)
         }
       }
     }
+
+    logger.log(`contractEntitiesToBeProcessed: ${JSON.stringify(contractEntitiesToBeProcessed)}`)
+    logger.log(`contractsToBeProcessed: ${JSON.stringify(contractsToBeProcessed)}`)
 
     if (contractsToBeProcessed.length) {
       // move to in progress cache

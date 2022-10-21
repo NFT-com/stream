@@ -1,4 +1,4 @@
-import { _logger,db, defs, entity, helper } from '@nftcom/shared'
+import { _logger, db, defs, entity, helper } from '@nftcom/shared'
 import { BaseStreamMessage, EventType } from '@opensea/stream-js'
 
 import { Chain, DistinctContract, OSChainTypes, OSEventPayload, OSListingEventPayload, OSOfferEventPayload } from './interface'
