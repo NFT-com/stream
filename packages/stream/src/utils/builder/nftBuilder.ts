@@ -35,6 +35,7 @@ export const collectionEntityBuilder = async (
 
 export const nftEntityBuilder = (
   nft: NFTAlchemy,
+  chainId: string,
 ): entity.NFT => {
   return {
     contract: helper.checkSum(nft.contract.address),
@@ -46,6 +47,7 @@ export const nftEntityBuilder = (
       imageURL: nft.metadata.image,
       traits: [],
     },
+    chainId,
     userId: 'test',
     walletId: 'test',
 

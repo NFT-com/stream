@@ -1,14 +1,14 @@
 import axios, { AxiosError, AxiosInstance } from 'axios'
 import axiosRetry, { IAxiosRetryConfig } from 'axios-retry'
 
-const ALCHEMY_NFT_API_URL = process.env.ALCHEMY_NFT_API_URL
-const ALCHEMY_NFT_API_URL_GOERLI = process.env.ALCHEMY_NFT_API_URL_GOERLI
+const ALCHEMY_API_URL = process.env.ALCHEMY_API_URL
+const ALCHEMY_API_URL_GOERLI = process.env.ALCHEMY_API_URL_GOERLI
 
 export const getAlchemyInterceptor = (
   chainId: string,
 ): AxiosInstance => {
   const alchemyInstance = axios.create({
-    baseURL: chainId === '1' ? ALCHEMY_NFT_API_URL : ALCHEMY_NFT_API_URL_GOERLI,
+    baseURL: Number(chainId) == 1 ? ALCHEMY_API_URL : ALCHEMY_API_URL_GOERLI,
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',

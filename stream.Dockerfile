@@ -7,7 +7,7 @@ COPY stream/.npmrc ./stream/.npmrc
 COPY stream/tsconfig.json ./stream/tsconfig.json
 COPY NFT-backend/package*.json ./NFT-backend/
 COPY NFT-backend/.npmrc ./NFT-backend/.npmrc
-COPY NFT-backend/tsconfig.json ./NFT-backend/tsconfig.json
+COPY NFT-backend/tsconfig.base.json ./NFT-backend/tsconfig.base.json
 COPY stream/packages/stream/package*.json ./stream/packages/stream/
 COPY NFT-backend/packages/shared/package*.json ./NFT-backend/packages/shared/
 COPY NFT-backend/packages/gql/package*.json ./NFT-backend/packages/gql/
