@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import {  alchemyService,nftService } from '@nftcom/gql/service'
+import {  alchemyService, nftService } from '@nftcom/gql/service'
 import { defs, entity, helper } from '@nftcom/shared'
 
 import { NFTAlchemy } from '../../interface'
@@ -33,8 +33,6 @@ export const collectionEntityBuilder = async (
   }
 }
 
-// TODO: record more information, maybe re-use update logic from up updateNFTMetadata
-// @rohan, @jason
 export const nftEntityBuilder = (
   nft: NFTAlchemy,
   chainId: string,
@@ -42,12 +40,12 @@ export const nftEntityBuilder = (
   return {
     contract: helper.checkSum(nft.contract.address),
     tokenId: helper.bigNumberToHex(nft.id.tokenId),
-    type: nft.id.tokenMetadata.tokenType,
+    type: nftService.getNftType(nft),
     metadata: {
-      name: nft.metadata.name,
-      description: nft.description,
-      imageURL: nft.metadata.image,
-      traits: [],
+      name: nft?.title || nft?.metadata?.name,
+      description: nftService.getNftDescription(nft),
+      imageURL: nftService.getNftImage(nft?.metadata),
+      traits: nftService.getMetadata(nft?.metadata),
     },
     chainId,
     userId: 'test',
