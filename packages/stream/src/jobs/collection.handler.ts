@@ -36,7 +36,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
 
     // process nfts for collection
     let processCondition = true
-    let startToken = startTokenParam || ''
+    let startToken = Number(startTokenParam) || ''
     let queryParams = `contractAddress=${contract}&withMetadata=true&startToken=${startToken}&limit=100`
     while(processCondition) {
       const collectionNFTs: AxiosResponse = await alchemyInstance
@@ -181,7 +181,7 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
       for (let i = 0; i < contractEntitiesToBeProcessed.length; i++) {
         const contract: string = contractsToBeProcessed?.[i]
         // build queues
-        const jobId = `collection-nft-batch-processor-collection|contract:${contract}-chainId:${chainId}`
+        const jobId = `collection-nft-batch-processor-collection|contract:${contract}-chainId:${chainId}-startTokenParam:${startTokenParam}`
         const job: Bull.Job = await collectionSyncSubqueue.getJob(jobId)
 
         if (!job || !job?.isActive() || !job?.isWaiting()) {
