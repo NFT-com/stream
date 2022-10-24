@@ -100,6 +100,7 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
     // check in progress
     const contractEntitiesToBeProcessed: Promise<Partial<entity.Collection>>[] = []
     const contractsToBeProcessed: string[] = []
+    const contractToBeSaved: Promise<Partial<entity.Collection>>[] = []
     const existsInDB: entity.Collection[] = await repositories.collection.find({
       where: {
         contract: In(collections),
@@ -129,6 +130,10 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
             chainId,
           ))
           contractsToBeProcessed.push(contract)
+          contractToBeSaved.push(collectionEntityBuilder(
+            contract,
+            chainId,
+          ))
         }
       } else {
         if (isSpam) {
@@ -145,13 +150,10 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
       }
     }
 
-    logger.log(`contractEntitiesToBeProcessed: ${JSON.stringify(contractEntitiesToBeProcessed)}`)
-    logger.log(`contractsToBeProcessed: ${JSON.stringify(contractsToBeProcessed)}`)
-
     if (contractsToBeProcessed.length) {
       // move to in progress cache
       await cache.sadd(CacheKeys.SYNC_IN_PROGRESS, ...contractsToBeProcessed)
-      Promise.all(contractEntitiesToBeProcessed)
+      Promise.all(contractToBeSaved)
         .then(
           (collections: entity.Collection[]) =>
             repositories.collection.saveMany(collections),
