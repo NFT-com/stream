@@ -33,6 +33,8 @@ export const collectionEntityBuilder = async (
   }
 }
 
+// TODO: record more information, maybe re-use update logic from up updateNFTMetadata
+// @rohan, @jason
 export const nftEntityBuilder = (
   nft: NFTAlchemy,
   chainId: string,
