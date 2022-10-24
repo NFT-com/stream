@@ -26,14 +26,13 @@ RUN apk add --no-cache --virtual .gyp python3 make g++ \
     && apk del .gyp
 
 COPY stream/packages/stream ./stream/packages/stream
-COPY NFT-backend/packages/shared ./NFT-backend/packages/shared
-COPY NFT-backend/packages/gql ./NFT-backend/packages/gql
-COPY NFT-backend/packages/nftport-client ./NFT-backend/packages/nftport-client
-COPY NFT-backend/packages/error-types ./NFT-backend/packages/error-types
-COPY NFT-backend/packages/contract-data ./NFT-backend/packages/contract-data
-COPY NFT-backend/packages/cache ./NFT-backend/packages/cache
+COPY NFT-backend/packages ./NFT-backend/packages
+
 
 FROM deps as build
+
+WORKDIR /app/NFT-backend
+RUN npm install
 
 WORKDIR /app/NFT-backend/packages/shared
 RUN npm install

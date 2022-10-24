@@ -13,14 +13,6 @@
       ]
     }
   },
-    "references": [
-      {
-        "path": "../../../NFT-backend/packages/shared"
-      },
-      {
-        "path": "../../../NFT-backend/packages/gql"
-      }
-    ],
   "include": [
     "src/**/*.ts",
     "src/*.ts"
