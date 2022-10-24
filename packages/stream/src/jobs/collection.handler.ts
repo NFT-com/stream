@@ -33,8 +33,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
   logger.log(`nft sync handler process started for: ${contract}, chainId: ${chainId}`)
   try {
     const alchemyInstance: AxiosInstance = await getAlchemyInterceptor(chainId)
-
-    logger.log(`alchemyInstance: ${alchemyInstance}`)
+    
     // process nfts for collection
     let processCondition = true
     let startToken = ''
@@ -43,8 +42,6 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
       const collectionNFTs: AxiosResponse = await alchemyInstance
         .get(
           `/getNFTsForCollection?${queryParams}`)
-
-      logger.log(`${queryParams}, response: ${JSON.stringify(collectionNFTs?.data?.nfts)}`)
 
       if (collectionNFTs?.data?.nfts.length) {
         const nfts = collectionNFTs?.data?.nfts
@@ -56,7 +53,6 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
         const existingNFTTokenMap: string[] = existingNFTs.map(
           (nft: entity.NFT) => BigNumber.from(nft.tokenId).toHexString())
           
-        logger.log(`existingNFT: ${JSON.stringify(existingNFTTokenMap)}`)
         const nftPromiseArray: entity.NFT[] = []
         const alchemyNFTs: NFTAlchemy[] = nfts
 
@@ -75,7 +71,6 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
         } else {
           startToken = collectionNFTs?.data?.nextToken
           queryParams = `contractAddress=${contract}&withMetadata=true&startToken=${startToken}&limit=100`
-          logger.log(`startToken: ${startToken}`)
         }
       }
     }
