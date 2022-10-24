@@ -93,8 +93,8 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
     }
     // remove from in progress cache
     // move to recently refreshed cache
-    await cache.srem(`${CacheKeys.SYNC_IN_PROGRESS}_${chainId}`, contract + `${startToken}`)
-    await cache.sadd(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, contract + `${startToken}`)
+    await cache.srem(`${CacheKeys.SYNC_IN_PROGRESS}_${chainId}`, contract + `${Number(startTokenParam) || ''}`)
+    await cache.sadd(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, contract + `${Number(startTokenParam) || ''}`)
     // process subqueues in series; hence concurrency is explicitly set to one for rate limits
     // nftSyncSubqueue.process(1, nftBatchPersistenceHandler)
     logger.log(`nft sync handler process completed for: ${contract}, chainId: ${chainId}`)

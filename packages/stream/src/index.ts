@@ -108,7 +108,7 @@ app.post('/collectionSync', authMiddleWare, validate(collectionSyncSchema), asyn
     const recentlyRefreshed: SyncCollectionInput[] = []
     for (let i = 0; i < collections.length; i++) {
       const collection: SyncCollectionInput = collections[i]
-      const collecionSynced: number = await cache.sismember(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, collection.address + collections[i]?.startToken || '')
+      const collecionSynced: number = await cache.sismember(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, helper.checkSum(collection.address) + (collections[i]?.startToken || ''))
       if (collecionSynced) {
         recentlyRefreshed.push(collection)
       } else {
@@ -141,19 +141,19 @@ app.post('/collectionSync', authMiddleWare, validate(collectionSyncSchema), asyn
     const responseMsg = []
 
     if (validCollections.length) {
-      responseMsg.push(`Sync started for the following collections: ${validCollections.join(', ')}.`)
+      responseMsg.push(`Sync started for the following collections: ${validCollections.map(i => i.address).join(', ')}.`)
     }
 
     if (invalidCollections.length) {
-      responseMsg.push(`The following collections are invalid: ${invalidCollections.join(', ')}.`)
+      responseMsg.push(`The following collections are invalid: ${invalidCollections.map(i => i.address).join(', ')}.`)
     }
 
     if (recentlyRefreshed.length) {
-      responseMsg.push(`The following collections are recently refreshed: ${recentlyRefreshed.join(', ')}.`)
+      responseMsg.push(`The following collections are recently refreshed: ${recentlyRefreshed.map(i => i.address).join(', ')}.`)
     }
 
     res.status(200).send({
-      message: responseMsg.join('\n'),
+      message: responseMsg.join(' '),
     })
   } catch (error) {
     logger.error(`err: ${error}`)
