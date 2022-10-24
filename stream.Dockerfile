@@ -27,8 +27,7 @@ RUN apk add --no-cache --virtual .gyp python3 make g++ \
     && apk del .gyp
 
 COPY stream/packages/stream ./stream/packages/stream
-COPY NFT-backend/packages/shared ./NFT-backend/packages/shared
-COPY NFT-backend/packages/gql ./NFT-backend/packages/gql
+COPY NFT-backend/packages ./NFT-backend/packages
 
 FROM deps as build
 
