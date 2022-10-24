@@ -5,9 +5,9 @@ import kill from 'kill-port'
 import { _logger, db, fp, helper } from '@nftcom/shared'
 
 import { dbConfig } from './config'
-import { nftOrderSubqueue,QUEUE_TYPES, queues, startAndListen, stopAndDisconnect } from './jobs/jobs'
+import { nftOrderSubqueue, QUEUE_TYPES, queues, startAndListen, stopAndDisconnect } from './jobs/jobs'
 import { authMiddleWare } from './middleware/auth'
-import { collectionSyncSchema, validate } from './middleware/validate'
+import { collectionSyncSchema, SyncCollectionInput, validate } from './middleware/validate'
 import { initiateStreaming } from './pipeline'
 import { cache, CacheKeys } from './service/cache'
 //import { startAndListen } from './jobs/jobs'
@@ -101,24 +101,27 @@ app.get('/stopSync', authMiddleWare, async (_req, res) => {
 // sync collections
 app.post('/collectionSync', authMiddleWare, validate(collectionSyncSchema), async (_req, res) => {
   try {
-    const { collections, startToken } = _req.body
-    const startTokenParam = startToken || ''
+    const { collections } = _req.body
 
-    const validCollections: string[] = []
-    const invalidCollections: string[] = []
-    const recentlyRefreshed: string[] = []
-    for (let i=0; i < collections.length; i++) {
-      const collection: string = collections[i]
-      const collecionSynced: number = await cache.sismember(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, collection)
+    const validCollections: SyncCollectionInput[] = []
+    const invalidCollections: SyncCollectionInput[] = []
+    const recentlyRefreshed: SyncCollectionInput[] = []
+    for (let i = 0; i < collections.length; i++) {
+      const collection: SyncCollectionInput = collections[i]
+      const collecionSynced: number = await cache.sismember(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, collection.address + collections[i]?.startToken || '')
       if (collecionSynced) {
         recentlyRefreshed.push(collection)
-      }
-      try {
-        const checkSumedContract: string = helper.checkSum(collection)
-        validCollections.push(checkSumedContract)
-      } catch (err) {
-        logger.error(`err: ${err}`)
-        invalidCollections.push(collection)
+      } else {
+        try {
+          const checkSumedContract: string = helper.checkSum(collection.address)
+          validCollections.push({
+            address: checkSumedContract,
+            startToken: collections[i]?.startToken,
+          })
+        } catch (err) {
+          logger.error(`err: ${err}`)
+          invalidCollections.push(collection)
+        }
       }
     }
     // sync collection + timestamp
@@ -127,7 +130,6 @@ app.post('/collectionSync', authMiddleWare, validate(collectionSyncSchema), asyn
       .add({
         SYNC_CONTRACTS: QUEUE_TYPES.SYNC_COLLECTIONS,
         collections: validCollections,
-        startTokenParam,
         chainId: process.env.CHAIN_ID,
       }, {
         removeOnComplete: true,
@@ -136,22 +138,22 @@ app.post('/collectionSync', authMiddleWare, validate(collectionSyncSchema), asyn
       })
     
     // response msg
-    let responseMsg = ''
+    const responseMsg = []
 
     if (validCollections.length) {
-      responseMsg += `Sync started for the following collections: ${validCollections.join(', ')}.`
+      responseMsg.push(`Sync started for the following collections: ${validCollections.join(', ')}.`)
     }
 
     if (invalidCollections.length) {
-      responseMsg += `The following collections are invalid: ${invalidCollections.join(', ')}.`
+      responseMsg.push(`The following collections are invalid: ${invalidCollections.join(', ')}.`)
     }
 
     if (recentlyRefreshed.length) {
-      responseMsg += `The following collections are recently refreshed: ${recentlyRefreshed.join(', ')}.`
+      responseMsg.push(`The following collections are recently refreshed: ${recentlyRefreshed.join(', ')}.`)
     }
 
     res.status(200).send({
-      message: responseMsg,
+      message: responseMsg.join('\n'),
     })
   } catch (error) {
     logger.error(`err: ${error}`)

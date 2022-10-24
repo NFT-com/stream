@@ -10,6 +10,7 @@ import { nftService } from '@nftcom/gql/service'
 import { _logger, db, entity, helper } from '@nftcom/shared'
 
 import { NFTAlchemy } from '../interface'
+import { SyncCollectionInput } from '../middleware/validate'
 import { getAlchemyInterceptor } from '../service/alchemy'
 import { cache, CacheKeys } from '../service/cache'
 import { collectionEntityBuilder, nftEntityBuilder } from '../utils/builder/nftBuilder'
@@ -92,8 +93,8 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
     }
     // remove from in progress cache
     // move to recently refreshed cache
-    await cache.srem(`${CacheKeys.SYNC_IN_PROGRESS}_${chainId}`, contract)
-    await cache.sadd(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, contract)
+    await cache.srem(`${CacheKeys.SYNC_IN_PROGRESS}_${chainId}`, contract + `${startToken}`)
+    await cache.sadd(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, contract + `${startToken}`)
     // process subqueues in series; hence concurrency is explicitly set to one for rate limits
     // nftSyncSubqueue.process(1, nftBatchPersistenceHandler)
     logger.log(`nft sync handler process completed for: ${contract}, chainId: ${chainId}`)
@@ -104,29 +105,30 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
 
 export const collectionSyncHandler = async (job: Job): Promise<void> => {
   logger.log('initiated collection sync')
-  const collections: string[] = job.data.collections
-  const startTokenParam: string = job.data.startTokenParam
+  const collections: SyncCollectionInput[] = job.data.collections
+  const filteredCollections: string[] = collections.map(i => i.address)
   const chainId: string = job.data.chainId || process.env.chainId || '5'
   try {
     // check recently imported
     // check in progress
-    const contractEntitiesToBeProcessed: Promise<Partial<entity.Collection>>[] = []
+    const contractInput: SyncCollectionInput[] = []
     const contractsToBeProcessed: string[] = []
     const contractToBeSaved: Promise<Partial<entity.Collection>>[] = []
     const existsInDB: entity.Collection[] = await repositories.collection.find({
       where: {
-        contract: In(collections),
+        contract: In(filteredCollections),
       },
     })
 
     for (let i = 0; i < collections.length; i++) {
-      const contract: string = collections[i]
-      const itemPresentInRefreshedCache: number = await cache.sismember(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, contract)
+      const contract: string = collections[i].address
+      const startTokenParam: string = collections[i]?.startToken || ''
+      const itemPresentInRefreshedCache: number = await cache.sismember(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, contract + startTokenParam)
       if (itemPresentInRefreshedCache) {
         continue
       }
 
-      const itemPresentInProgressCache: number = await cache.sismember(`${CacheKeys.SYNC_IN_PROGRESS}_${chainId}`, contract)
+      const itemPresentInProgressCache: number = await cache.sismember(`${CacheKeys.SYNC_IN_PROGRESS}_${chainId}`, contract + startTokenParam)
       if (itemPresentInProgressCache) {
         continue
       }
@@ -134,14 +136,13 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
       const contractExistsInDB: entity.Collection = existsInDB.filter(
         (collection: entity.Collection) => collection.contract === contract,
       )?.[0]
-      const isSpam: number = await cache.sismember(CacheKeys.SPAM_COLLECTIONS, contract)
+      const isSpam: number = await cache.sismember(
+        CacheKeys.SPAM_COLLECTIONS, contract + startTokenParam,
+      )
       if (!contractExistsInDB) {
         if(!isSpam) {
-          contractEntitiesToBeProcessed.push(collectionEntityBuilder(
-            contract,
-            chainId,
-          ))
-          contractsToBeProcessed.push(contract)
+          contractInput.push(collections[i])
+          contractsToBeProcessed.push(contract + startTokenParam)
           contractToBeSaved.push(collectionEntityBuilder(
             contract,
             chainId,
@@ -153,11 +154,8 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
             { ...contractExistsInDB, isSpam: true },
           )
         } else {
-          contractEntitiesToBeProcessed.push(collectionEntityBuilder(
-            contract,
-            chainId,
-          ))
-          contractsToBeProcessed.push(contract) // full resync (for cases where collections already exist, but we want to fetch all the NFTs)
+          contractInput.push(collections[i])
+          contractsToBeProcessed.push(contract + startTokenParam) // full resync (for cases where collections already exist, but we want to fetch all the NFTs)
         }
       }
     }
@@ -178,8 +176,9 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
             logger.log(`Collections Saved: ${collections.join(', ')}`)
           })
       // run process
-      for (let i = 0; i < contractEntitiesToBeProcessed.length; i++) {
-        const contract: string = contractsToBeProcessed?.[i]
+      for (let i = 0; i < contractInput.length; i++) {
+        const contract: string = contractInput?.[i]?.address
+        const startTokenParam: string = contractInput?.[i]?.startToken || ''
         // build queues
         const jobId = `collection-nft-batch-processor-collection|contract:${contract}-chainId:${chainId}-startTokenParam:${startTokenParam}`
         const job: Bull.Job = await collectionSyncSubqueue.getJob(jobId)
