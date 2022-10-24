@@ -7,6 +7,7 @@ import { _logger, db, fp, helper } from '@nftcom/shared'
 import { dbConfig } from './config'
 import { nftOrderSubqueue,QUEUE_TYPES, queues, startAndListen, stopAndDisconnect } from './jobs/jobs'
 import { authMiddleWare } from './middleware/auth'
+import { collectionSyncSchema, validate } from './middleware/validate'
 import { initiateStreaming } from './pipeline'
 import { cache, CacheKeys } from './service/cache'
 //import { startAndListen } from './jobs/jobs'
@@ -98,12 +99,10 @@ app.get('/stopSync', authMiddleWare, async (_req, res) => {
 })
 
 // sync collections
-app.post('/collectionSync', authMiddleWare, async (_req, res) => {
+app.post('/collectionSync', authMiddleWare, validate(collectionSyncSchema), async (_req, res) => {
   try {
-    const { collections } = _req.body
-    if (!collections || !collections.length || !(collections instanceof Array)) {
-      res.status(400).send({ message: 'No collection to sync!' })
-    }
+    const { collections, startToken } = _req.body
+    const startTokenParam = startToken || ''
 
     const validCollections: string[] = []
     const invalidCollections: string[] = []
@@ -128,6 +127,7 @@ app.post('/collectionSync', authMiddleWare, async (_req, res) => {
       .add({
         SYNC_CONTRACTS: QUEUE_TYPES.SYNC_COLLECTIONS,
         collections: validCollections,
+        startTokenParam,
         chainId: process.env.CHAIN_ID,
       }, {
         removeOnComplete: true,

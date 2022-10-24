@@ -29,14 +29,14 @@ const subQueueBaseOptions: Bull.JobOptions = {
 }
 
 export const nftSyncHandler = async (job: Job): Promise<void> => {
-  const { contract, chainId } = job.data
+  const { contract, chainId, startTokenParam } = job.data
   logger.log(`nft sync handler process started for: ${contract}, chainId: ${chainId}`)
   try {
     const alchemyInstance: AxiosInstance = await getAlchemyInterceptor(chainId)
 
     // process nfts for collection
     let processCondition = true
-    let startToken = ''
+    let startToken = startTokenParam || ''
     let queryParams = `contractAddress=${contract}&withMetadata=true&startToken=${startToken}&limit=100`
     while(processCondition) {
       const collectionNFTs: AxiosResponse = await alchemyInstance
@@ -105,6 +105,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
 export const collectionSyncHandler = async (job: Job): Promise<void> => {
   logger.log('initiated collection sync')
   const collections: string[] = job.data.collections
+  const startTokenParam: string = job.data.startTokenParam
   const chainId: string = job.data.chainId || process.env.chainId || '5'
   try {
     // check recently imported
@@ -185,7 +186,7 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
 
         if (!job || !job?.isActive() || !job?.isWaiting()) {
           collectionSyncSubqueue.add(
-            { contract, chainId },
+            { contract, chainId, startTokenParam },
             {
               ...subQueueBaseOptions,
               jobId,
