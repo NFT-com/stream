@@ -3,9 +3,9 @@ import { AnyZodObject, z } from 'zod'
 
 export const collectionSyncSchema = z.object({
   body: z.object({
-    collections: z.string(z.array({
+    collections: z.string({
       required_error: 'No collection to sync! Please send in collections',
-    })),
+    }).array(),
     startToken: z.string().optional(),
   }),
 })
