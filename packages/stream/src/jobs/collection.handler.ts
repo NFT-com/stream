@@ -7,7 +7,7 @@ import { In } from 'typeorm'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import { nftService } from '@nftcom/gql/service'
-import { _logger, db, entity } from '@nftcom/shared'
+import { _logger, db, entity, helper } from '@nftcom/shared'
 
 import { NFTAlchemy } from '../interface'
 import { getAlchemyInterceptor } from '../service/alchemy'
@@ -33,7 +33,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
   logger.log(`nft sync handler process started for: ${contract}, chainId: ${chainId}`)
   try {
     const alchemyInstance: AxiosInstance = await getAlchemyInterceptor(chainId)
-    
+
     // process nfts for collection
     let processCondition = true
     let startToken = ''
@@ -48,7 +48,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
         const nftTokenMap: string[] = nfts.map(
           (nft: NFTAlchemy) => BigNumber.from(nft.id.tokenId).toHexString())
         const existingNFTs: entity.NFT[] = await repositories.nft.find(
-          { where: { contract, tokenId: In(nftTokenMap), chainId } },
+          { where: { contract: helper.checkSum(contract), tokenId: In(nftTokenMap), chainId } },
         )
         const existingNFTTokenMap: string[] = existingNFTs.map(
           (nft: entity.NFT) => BigNumber.from(nft.tokenId).toHexString())
@@ -62,15 +62,31 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
             nftPromiseArray.push(nftEntityBuilder(nft, chainId))
           }
         }
-        await repositories.nft.saveMany(nftPromiseArray, { chunk: 50 }) // temp chunk
-        await nftService.indexNFTsOnSearchEngine(nftPromiseArray)
-        logger.log(`saved ${queryParams}`)
 
-        if (!collectionNFTs?.data?.nextToken) {
-          processCondition = false
-        } else {
-          startToken = collectionNFTs?.data?.nextToken
-          queryParams = `contractAddress=${contract}&withMetadata=true&startToken=${startToken}&limit=100`
+        try {
+          if (nftPromiseArray?.length > 0) {
+            await nftService.indexNFTsOnSearchEngine(nftPromiseArray)
+            await repositories.nft.saveMany(nftPromiseArray, { chunk: 50 }) // temp chunk
+            logger.log(`saved ${queryParams}`)
+          }
+  
+          if (!collectionNFTs?.data?.nextToken) {
+            processCondition = false
+          } else {
+            startToken = collectionNFTs?.data?.nextToken
+            queryParams = `contractAddress=${contract}&withMetadata=true&startToken=${startToken}&limit=100`
+          }
+        } catch (errSave) {
+          logger.log(`error while saving nftSyncHandler but continuing ${errSave}...${startToken}...${queryParams}`)
+          logger.log(`error nftPromiseArray: ${nftPromiseArray}`)
+          logger.log(`error existing: ${existingNFTs}`)
+
+          if (!collectionNFTs?.data?.nextToken) {
+            processCondition = false
+          } else {
+            startToken = collectionNFTs?.data?.nextToken
+            queryParams = `contractAddress=${contract}&withMetadata=true&startToken=${startToken}&limit=100`
+          }
         }
       }
     }
