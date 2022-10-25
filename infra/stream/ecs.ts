@@ -415,6 +415,10 @@ const createEcsTaskDefinition = (
               Name: 'PORT',
               Value: process.env.PORT,
             },
+            {
+              Name: 'CONFIRM_EMAIL_URL',
+              Value: process.env.CONFIRM_EMAIL_URL,
+            },
           ],
         },
       ]),
