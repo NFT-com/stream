@@ -98,7 +98,7 @@ app.get('/stopSync', authMiddleWare, async (_req, res) => {
   }
 })
 
-// sync collections
+// sync collections - 
 app.post('/collectionSync', authMiddleWare, validate(collectionSyncSchema), async (_req, res) => {
   try {
     const { collections } = _req.body
