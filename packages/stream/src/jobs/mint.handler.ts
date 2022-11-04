@@ -479,6 +479,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
               },
             })
             if (!profile) {
+              // profile + incentive action
               await core.createProfileFromEvent(
                 chainId,
                 owner,
