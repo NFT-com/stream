@@ -479,14 +479,19 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
               },
             })
             if (!profile) {
-              await core.createProfileFromEvent(
-                chainId,
-                owner,
-                tokenId,
-                repositories,
-                profileUrl,
-                true,
-              )
+              // profile + incentive action
+              try {
+                await core.createProfileFromEvent(
+                  chainId,
+                  owner,
+                  tokenId,
+                  repositories,
+                  profileUrl,
+                  true,
+                )
+              } catch (err) {
+                logger.error(`Profile mint error: ${err}`)
+              }
 
               logger.debug(`Profile ${ profileUrl } was minted by address ${ owner }`)
               await HederaConsensusService.submitMessage(

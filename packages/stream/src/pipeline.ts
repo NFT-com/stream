@@ -13,7 +13,7 @@ export const allowedEvents: EventType[] = [
 ]
 
 const repositories = db.newRepositories()
-// fetch all nfts
+// fetch all nfts -
 export const fetchAllNFTs = (): Promise<DistinctContract[]> => {
   logger.log('----initiating fetch----')
   return repositories.nft.findDistinctContracts()
