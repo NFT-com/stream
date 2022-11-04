@@ -3,7 +3,7 @@ import { Job } from 'bull'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import { looksrareService,openseaService } from '@nftcom/gql/service'
+import { looksrareService, openseaService, x2y2Service } from '@nftcom/gql/service'
 import { _logger, db, entity, helper } from '@nftcom/shared'
 
 import { cache, CacheKeys, removeExpiredTimestampedZsetMembers, ttlForTimestampedZsetMembers } from '../service/cache'
@@ -178,9 +178,10 @@ export const nftExternalOrdersOnDemand = async (job: Job): Promise<void> => {
       })
 
       // settlements should not depend on each other
-      const [opensea, looksrare] = await Promise.allSettled([
+      const [opensea, looksrare, x2y2] = await Promise.allSettled([
         openseaService.retrieveMultipleOrdersOpensea(nftRequest, chainId, true),
         looksrareService.retrieveMultipleOrdersLooksrare(nftRequest,chainId, true),
+        x2y2Service.retrieveMultipleOrdersX2Y2(nftRequest, chainId, true),
       ])
 
       const listings: entity.TxOrder[] = []
@@ -208,6 +209,18 @@ export const nftExternalOrdersOnDemand = async (job: Job): Promise<void> => {
         // looksrare offers
         if (looksrare.value.offers.length) {
           bids.push(...looksrare.value.offers)
+        }
+      }
+
+      if (x2y2.status === 'fulfilled') {
+        // x2y2 listings
+        if (x2y2.value.listings.length) {
+          listings.push(...x2y2.value.listings)
+        }
+
+        // x2y2 offers
+        if (x2y2.value.offers.length) {
+          bids.push(...x2y2.value.offers)
         }
       }
 
