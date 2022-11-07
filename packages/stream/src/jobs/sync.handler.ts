@@ -1,5 +1,8 @@
 import Bull, { Job } from 'bull'
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import { x2y2Service } from '@nftcom/gql/service'
 import { _logger, db, defs,entity, helper } from '@nftcom/shared'
 
 import { retrieveMultipleOrdersLooksrare } from '../service/looksrare'
@@ -51,6 +54,8 @@ const nftExternalOrderBatchProcessor = async (job: Job): Promise<void> => {
       case defs.ExchangeType.LooksRare:
         await retrieveMultipleOrdersLooksrare(nftRequest, chainId, false)
         break
+      case defs.ExchangeType.X2Y2:
+        await x2y2Service.retrieveMultipleOrdersX2Y2(nftRequest, chainId, false)
       }
 
       // settlements should not depend on each other
