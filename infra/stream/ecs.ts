@@ -216,6 +216,10 @@ const createEcsTaskDefinition = (
               Value: process.env.DB_HOST,
             },
             {
+              Name: 'DB_HOST_RO',
+              Value: process.env.DB_HOST_RO,
+            },
+            {
               Name: 'DB_USE_SSL',
               Value: process.env.DB_USE_SSL,
             },
