@@ -32,7 +32,7 @@ const attachLBListeners = (
 
   new aws.lb.Listener('listener_https_dev_st_ecs', {
     certificateArn:
-      'arn:aws:acm:us-east-1:016437323894:certificate/0c01a3a8-59c4-463a-87ec-5c487695f09e',
+      'arn:aws:acm:us-east-1:016437323894:certificate/44dc39c0-4231-41f6-8f27-03029bddfa8e',
     defaultActions: [
       {
         targetGroupArn: tg.arn,
