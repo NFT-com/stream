@@ -10,7 +10,7 @@ import { nftService } from '@nftcom/gql/service'
 import { _logger, db, entity, helper } from '@nftcom/shared'
 
 import { NFTAlchemy } from '../interface'
-import { SyncCollectionInput } from '../middleware/validate'
+import { CollectionType, SyncCollectionInput } from '../middleware/validate'
 import { getAlchemyInterceptor } from '../service/alchemy'
 import { cache, CacheKeys } from '../service/cache'
 import { collectionEntityBuilder, nftEntityBuilder } from '../utils/builder/nftBuilder'
@@ -136,20 +136,25 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
       const contractExistsInDB: entity.Collection = existsInDB.filter(
         (collection: entity.Collection) => collection.contract === contract,
       )?.[0]
+      const isSpamFromInput: boolean = collections[i].type === CollectionType.SPAM
       const isSpam: number = await cache.sismember(
         CacheKeys.SPAM_COLLECTIONS, contract + startTokenParam,
       )
+      const isOfficial: boolean = collections[i].type === CollectionType.OFFICIAL
       if (!contractExistsInDB) {
-        if(!isSpam) {
-          contractInput.push(collections[i])
-          contractsToBeProcessed.push(contract + startTokenParam)
+        if(!isSpam && !isSpamFromInput) {
+          if (isOfficial) {
+            contractInput.push(collections[i])
+            contractsToBeProcessed.push(contract + startTokenParam)
+          }
           contractToBeSaved.push(collectionEntityBuilder(
             contract,
+            isOfficial,
             chainId,
           ))
         }
       } else {
-        if (isSpam) {
+        if (isSpam || isSpamFromInput) {
           await repositories.collection.updateOneById(contractExistsInDB.id,
             { ...contractExistsInDB, isSpam: true },
           )

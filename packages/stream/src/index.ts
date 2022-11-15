@@ -1,6 +1,7 @@
 import Bull from 'bull'
 import express from 'express'
 import kill from 'kill-port'
+import multer from 'multer'
 
 import { _logger, db, fp, helper } from '@nftcom/shared'
 
@@ -17,6 +18,8 @@ import { client } from './service/opensea'
 const logger = _logger.Factory(_logger.Context.General, _logger.Context.Misc)
 const chainId: string = process.env.CHAIN_ID || '5'
 logger.log(`Chain Id for environment: ${chainId}`)
+
+const upload = multer({ storage: multer.memoryStorage() })
 const app = express()
 
 app.use(express.json())
@@ -159,6 +162,77 @@ app.post('/collectionSync', authMiddleWare, validate(collectionSyncSchema), asyn
     logger.error(`err: ${error}`)
     res.status(400).send(error)
   }
+})
+
+// sync collections through file 
+app.post('/uploadCollections', upload.single('file'), async (_req, res) => {
+  if (_req.file != undefined) {
+    const fileBufferToString: string = _req.file.buffer.toString('utf8')
+    const stringBufferArray: string[] = fileBufferToString.split('\n')
+    const validCollections: SyncCollectionInput[] = []
+    const invalidCollections: SyncCollectionInput[] = []
+    const recentlyRefreshed: SyncCollectionInput[] = []
+
+    if (stringBufferArray.length) {
+      for (const row of stringBufferArray) {
+        if (typeof row === 'string' && row.length && row.includes(',')) {
+          const rowSplit: string[] = row.split(',')
+          const contract: string = rowSplit?.[0]
+          const type: string = rowSplit?.[1]?.replace('\r', '')
+          try {
+            const checksumContract: string = helper.checkSum(contract)
+            const collecionSynced: number = await cache.sismember(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, helper.checkSum(checksumContract))
+            if (collecionSynced) {
+              recentlyRefreshed.push({ address: checksumContract })
+            } else {
+              validCollections.push({ address: checksumContract, type })
+            }
+          } catch (err) {
+            invalidCollections.push({ address: contract })
+            logger.error(`checksum error: ${err}`)
+          }
+        }
+      }
+    }
+
+    // sync collection + timestamp
+    const jobId = `sync_collections_from_csv:${Date.now()}`
+    queues.get(QUEUE_TYPES.SYNC_COLLECTIONS)
+      .add({
+        SYNC_CONTRACTS: QUEUE_TYPES.SYNC_COLLECTIONS,
+        collections: validCollections,
+        chainId: process.env.CHAIN_ID,
+      }, {
+        removeOnComplete: true,
+        removeOnFail: true,
+        jobId,
+      })
+
+    // response msg
+    const responseMsg = []
+
+    if (validCollections.length) {
+      responseMsg.push(`Sync started for the following collections: ${validCollections.map(i => i.address).join(', ')}.`)
+    }
+    
+    if (invalidCollections.length) {
+      responseMsg.push(`The following collections are invalid: ${invalidCollections.map(i => i.address).join(', ')}.`)
+    }
+    
+    if (recentlyRefreshed.length) {
+      responseMsg.push(`The following collections are recently refreshed: ${recentlyRefreshed.map(i => i.address).join(', ')}.`)
+    }
+    
+    // if (recentlyRefreshed.length) {
+    //   responseMsg.push(`The following collections are recently refreshed: ${recentlyRefreshed.map(i => i.address).join(', ')}.`)
+    // }
+    
+    res.status(200).send({
+      message: responseMsg.join(' '),
+    })
+  }
+  // const fileContents: any[] = await readFile((_req as any).file.buffer);
+  // res.json(fileContents);
 })
 
 // error handler

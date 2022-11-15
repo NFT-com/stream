@@ -7,6 +7,7 @@ import { NFTAlchemy } from '../../interface'
 
 export const collectionEntityBuilder = async (
   contract: string,
+  isOfficial: boolean,
   chainId: string,
 ): Promise<Partial<entity.Collection>> => {
   // get collection info
@@ -30,6 +31,7 @@ export const collectionEntityBuilder = async (
     name: collectionName,
     chainId,
     deployer,
+    isOfficial,
   }
 }
 
