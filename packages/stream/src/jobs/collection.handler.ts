@@ -138,25 +138,28 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
       )?.[0]
       const collectionType: string = collections[i].type
       const isSpamFromInput: boolean = collectionType === CollectionType.SPAM
-      const isSpam: number = await cache.sismember(
+      const isSpamFromCache: number = await cache.sismember(
         CacheKeys.SPAM_COLLECTIONS, contract + startTokenParam,
       )
       const isOfficial: boolean = collectionType === CollectionType.OFFICIAL
+      const isSpam: boolean = Boolean(isSpamFromCache) || isSpamFromInput
       if (!contractExistsInDB) {
-        if(!isSpam && !isSpamFromInput) {
+        if(!isSpam) {
           // for v2,  checks for collection type and runs when official; for v1 endpoint, runs for triggered collections
           if (collectionType && isOfficial || !collectionType) {
             contractInput.push(collections[i])
             contractsToBeProcessed.push(contract + startTokenParam)
           }
-          contractToBeSaved.push(collectionEntityBuilder(
-            contract,
-            isOfficial,
-            chainId,
-          ))
         }
+
+        contractToBeSaved.push(collectionEntityBuilder(
+          contract,
+          isOfficial,
+          isSpam,
+          chainId,
+        ))
       } else {
-        if (isSpam || isSpamFromInput) {
+        if (isSpam) {
           await repositories.collection.updateOneById(contractExistsInDB.id,
             { ...contractExistsInDB, isSpam: true },
           )
