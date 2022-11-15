@@ -19,7 +19,14 @@ const logger = _logger.Factory(_logger.Context.General, _logger.Context.Misc)
 const chainId: string = process.env.CHAIN_ID || '5'
 logger.log(`Chain Id for environment: ${chainId}`)
 
-const upload = multer({ storage: multer.memoryStorage() })
+const upload = multer({ storage: multer.memoryStorage(),
+  limit: {
+    fields: 3,
+  },
+  fileFilter: (_req, file, cb) => {
+    file.mimetype === 'text/csv' ? cb(null, true) : cb(new Error('Only csvs are allowed'), false)
+  },
+})
 const app = express()
 
 app.use(express.json())
