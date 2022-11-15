@@ -1,7 +1,13 @@
 import { NextFunction, Request, Response } from 'express'
 import { AnyZodObject, z } from 'zod'
 
-export type SyncCollectionInput = { address: string; startToken?: string };
+export type SyncCollectionInput = { address: string; startToken?: string; type?: string };
+
+export enum CollectionType {
+  OFFICIAL = 'official',
+  SPAM = 'spam',
+  NONE = 'none'
+}
 
 export const collectionSyncSchema = z.object({
   body: z.object({
