@@ -136,14 +136,16 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
       const contractExistsInDB: entity.Collection = existsInDB.filter(
         (collection: entity.Collection) => collection.contract === contract,
       )?.[0]
-      const isSpamFromInput: boolean = collections[i].type === CollectionType.SPAM
+      const collectionType: string = collections[i].type
+      const isSpamFromInput: boolean = collectionType === CollectionType.SPAM
       const isSpam: number = await cache.sismember(
         CacheKeys.SPAM_COLLECTIONS, contract + startTokenParam,
       )
-      const isOfficial: boolean = collections[i].type === CollectionType.OFFICIAL
+      const isOfficial: boolean = collectionType === CollectionType.OFFICIAL
       if (!contractExistsInDB) {
         if(!isSpam && !isSpamFromInput) {
-          if (isOfficial) {
+          // for v2,  checks for collection type and runs when official; for v1 endpoint, runs for triggered collections
+          if (collectionType && isOfficial || !collectionType) {
             contractInput.push(collections[i])
             contractsToBeProcessed.push(contract + startTokenParam)
           }
@@ -159,8 +161,10 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
             { ...contractExistsInDB, isSpam: true },
           )
         } else {
-          contractInput.push(collections[i])
-          contractsToBeProcessed.push(contract + startTokenParam) // full resync (for cases where collections already exist, but we want to fetch all the NFTs)
+          if (collectionType && isOfficial || !collectionType) {
+            contractInput.push(collections[i])
+            contractsToBeProcessed.push(contract + startTokenParam) // full resync (for cases where collections already exist, but we want to fetch all the NFTs)
+          }
         }
       }
     }
