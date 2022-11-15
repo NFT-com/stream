@@ -165,7 +165,7 @@ app.post('/collectionSync', authMiddleWare, validate(collectionSyncSchema), asyn
 })
 
 // sync collections through file 
-app.post('/uploadCollections', upload.single('file'), async (_req, res) => {
+app.post('/uploadCollections', authMiddleWare, upload.single('file'), async (_req, res) => {
   if (_req.file != undefined) {
     const fileBufferToString: string = _req.file.buffer.toString('utf8')
     const stringBufferArray: string[] = fileBufferToString.split('\n')
