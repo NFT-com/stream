@@ -9,6 +9,7 @@ import { nftExternalOrdersOnDemand } from './order.handler'
 import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
 import { updateNFTsForProfilesHandler } from './profile.handler'
 import { nftExternalOrders } from './sync.handler'
+import { syncTrading } from './trading.handler'
 
 const BULL_MAX_REPEAT_COUNT = parseInt(process.env.BULL_MAX_REPEAT_COUNT) || 250
 const logger = _logger.Factory(_logger.Context.Bull)
@@ -29,6 +30,7 @@ export enum QUEUE_TYPES {
   FETCH_EXTERNAL_ORDERS = 'FETCH_EXTERNAL_ORDERS',
   FETCH_EXTERNAL_ORDERS_ON_DEMAND = 'FETCH_EXTERNAL_ORDERS_ON_DEMAND',
   GENERATE_COMPOSITE_IMAGE = 'GENERATE_COMPOSITE_IMAGE',
+  SYNC_TRADING = 'SYNC_TRADING',
 }
 
 export const queues = new Map<string, Bull.Queue>()
@@ -71,6 +73,13 @@ const createQueues = (): Promise<void> => {
         redis,
       }))
     })
+
+    // add trading handler job to queue...
+    queues.set(QUEUE_TYPES.SYNC_TRADING, new Bull(
+      QUEUE_TYPES.SYNC_TRADING, {
+        prefix: queuePrefix,
+        redis,
+      }))
 
     // add composite image generation job to queue...
     queues.set(QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, new Bull(
@@ -259,6 +268,14 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             repeat: { every: 2 * 60000 },
             jobId: 'fetch_external_orders_on_demand',
           })
+      case QUEUE_TYPES.SYNC_TRADING:
+        return queues.get(QUEUE_TYPES.SYNC_TRADING).add({ chainId: process.env.CHAIN_ID }, {
+          removeOnComplete: true,
+          removeOnFail: true,
+          // repeat every 5 minutes
+          repeat: { every: 5 * 60000 },
+          jobId: 'sync_trading',
+        })
       default:
         return queues.get(chainId).add({ chainId }, {
           removeOnComplete: true,
@@ -297,6 +314,9 @@ const listenToJobs = async (): Promise<void> => {
       break
     case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
       queue.process(updateNFTsForProfilesHandler)
+      break
+    case QUEUE_TYPES.SYNC_TRADING:
+      queue.process(syncTrading)
       break
     default:
       queue.process(getEthereumEvents)
