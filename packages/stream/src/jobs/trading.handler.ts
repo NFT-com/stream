@@ -1,17 +1,18 @@
 import { Job } from 'bull'
 import { ethers, utils } from 'ethers'
 
-import { _logger, contracts, db,defs, helper } from '@nftcom/shared'
+import { _logger, contracts, db, defs, helper } from '@nftcom/shared'
 
 import { cache } from '../service/cache'
+import { activityBuilder } from '../utils/builder/orderBuilder'
 import { getCachedBlock, getPastLogs, provider } from './mint.handler'
 
 const logger = _logger.Factory(_logger.Context.Bull)
 const repositories = db.newRepositories()
 
-// const eventABI = contracts.marketplaceEventABI()
+const eventABI = contracts.marketplaceEventABI()
 const marketplaceABI = contracts.marketplaceABIJSON()
-// const eventIface = new utils.Interface(eventABI)
+const eventIface = new utils.Interface(eventABI)
 const marketplaceIface = new utils.Interface(marketplaceABI)
 
 /**
@@ -382,6 +383,46 @@ const listenCancelEvents = async (
 //         const makerSig = event.args.makerSig
 //         const takerSig = event.args.takerSig
 //
+//         let txListingOrder, txBidOrder
+//         txListingOrder = await repositories.txOrder.findOne({
+//           where: {
+//             orderHash: makerHash,
+//             exchange: defs.ExchangeType.Marketplace,
+//             orderType: defs.ActivityType.Listing,
+//             protocol: defs.ProtocolType.Marketplace,
+//             chainId: chainId.toString(),
+//           },
+//         })
+//         txBidOrder = await repositories.txOrder.findOne({
+//           where: {
+//             orderHash: takerHash,
+//             exchange: defs.ExchangeType.Marketplace,
+//             orderType: defs.ActivityType.Bid,
+//             protocol: defs.ProtocolType.Marketplace,
+//             chainId: chainId.toString(),
+//           },
+//         })
+//
+//         if (!txListingOrder) {
+//           txListingOrder = await repositories.txOrder.save({
+//             orderHash: makerHash,
+//             nonce: -1,
+//             auctionType,
+//             protocolData: {
+//               signature: {
+//                 v: makerSig.v,
+//                 r: makerSig.r,
+//                 s: makerSig.s,
+//               },
+//               start: -1,
+//               end: -1,
+//               salt: -1,
+//               makeAsset: [],
+//               takeAsset: [],
+//             },
+//             chainId: chainId.toString(),
+//           })
+//         }
 //         let marketAsk, marketBid
 //         marketAsk = await repositories.marketAsk.findOne({ where: { structHash: makerHash } })
 //         marketBid = await repositories.marketBid.findOne({ where: { structHash: takerHash } })
@@ -495,77 +536,96 @@ const listenCancelEvents = async (
  * @param cachedBlock
  * @param latestBlock
  */
-// const listenMatchTwoAEvents = async (
-//   chainId: number,
-//   provider: ethers.providers.BaseProvider,
-//   cachedBlock: number,
-//   latestBlock: number,
-// ): Promise<void[]> => {
-//   const address = contracts.marketplaceEventAddress(chainId)
-//   const topics = [
-//     utils.id('Match2A(bytes32,address,address,uint256,uint256,uint256,uint256)'),
-//   ]
-//   try {
-//     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
-//
-//     logger.debug('Match2A logs', logs.length)
-//
-//     const promises = logs.map(async (log) => {
-//       const event = eventIface.parseLog(log)
-//       const makerHash = log.topics[1]
-//       const makerAddress = event.args.makerAddress
-//       const takerAddress = event.args.takerAddress
-//       const start = Number(event.args.start)
-//       const end = Number(event.args.end)
-//       const nonce = Number(event.args.nonce)
-//       const salt = Number(event.args.salt)
-//
-//       let marketAsk = await repositories.marketAsk.findOne({ where: {
-//         structHash: makerHash } })
-//
-//       if (!marketAsk) {
-//         marketAsk = await repositories.marketAsk.save({
-//           structHash: makerHash,
-//           nonce,
-//           makerAddress,
-//           takerAddress,
-//           start,
-//           end,
-//           salt,
-//           chainId: chainId.toString(),
-//
-//           // placeholder values
-//           auctionType: defs.AuctionType.FixedPrice,
-//           signature: {
-//             v: -1,
-//             r: '',
-//             s: '',
-//           },
-//           makeAsset: [],
-//           takeAsset: [],
-//         })
-//
-//         logger.debug('created new marketAsk from Match2A ', marketAsk.id)
-//       } else {
-//         await repositories.marketAsk.updateOneById(marketAsk.id, {
-//           makerAddress,
-//           takerAddress,
-//           start: start,
-//           end: end,
-//           nonce: nonce,
-//           salt: salt,
-//         })
-//
-//         logger.debug('updated existing marketAsk from Match2A ', marketAsk.id)
-//       }
-//     })
-//
-//     await Promise.allSettled(promises)
-//   } catch (e) {
-//     logger.error(`Error in listenMatchTwoAEvents: ${e}`)
-//   }
-//   return
-// }
+const listenMatchTwoAEvents = async (
+  chainId: number,
+  provider: ethers.providers.BaseProvider,
+  cachedBlock: number,
+  latestBlock: number,
+): Promise<void[]> => {
+  const address = contracts.marketplaceEventAddress(chainId)
+  const topics = [
+    utils.id('Match2A(bytes32,address,address,uint256,uint256,uint256,uint256)'),
+  ]
+  try {
+    const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
+
+    logger.debug('Match2A logs', logs.length)
+
+    const promises = logs.map(async (log) => {
+      const event = eventIface.parseLog(log)
+      const makerHash = log.topics[1]
+      const makerAddress = utils.getAddress(event.args.makerAddress)
+      const takerAddress = utils.getAddress(event.args.takerAddress)
+      const start = Number(event.args.start)
+      const end = Number(event.args.end)
+      const nonce = Number(event.args.nonce)
+      const salt = Number(event.args.salt)
+
+      let txListingOrder = await repositories.txOrder.findOne({
+        where: {
+          orderHash: makerHash,
+          exchange: defs.ExchangeType.Marketplace,
+          orderType: defs.ActivityType.Listing,
+          protocol: defs.ProtocolType.Marketplace,
+          chainId: chainId.toString(),
+        },
+      })
+      if (!txListingOrder) {
+        const activity = await activityBuilder(
+          defs.ActivityType.Listing,
+          makerHash,
+          makerAddress,
+          chainId.toString(),
+          [],
+          '0x',
+          start,
+          end,
+        )
+        txListingOrder = await repositories.txOrder.save({
+          activity,
+          orderHash: makerHash,
+          nonce,
+          protocolData: {
+            auctionType: defs.AuctionType.FixedPrice,
+            signature: {
+              v: -1,
+              r: '',
+              s: '',
+            },
+            salt,
+            makeAsset: [],
+            takeAsset: [],
+            chainId: chainId.toString(),
+          },
+        })
+        logger.debug('created new listing order from Match2A ', txListingOrder.id)
+      } else {
+        await repositories.txActivity.updateOneById(txListingOrder.activity.id, {
+          timestamp: new Date(start * 1000),
+          expiration: new Date(end * 1000),
+        })
+
+        await repositories.txOrder.updateOneById(txListingOrder.id, {
+          makerAddress,
+          takerAddress,
+          nonce,
+          protocolData: {
+            ...txListingOrder.protocolData,
+            start,
+            end,
+            salt,
+          },
+        })
+
+        logger.debug('updated existing listing order from Match2A ', txListingOrder.id)
+      }
+    })
+    await Promise.allSettled(promises)
+  } catch (e) {
+    logger.error(`Error in listenMatchTwoAEvents: ${e}`)
+  }
+  return
+}
 
 /**
  * listen to Match2B events
@@ -879,8 +939,7 @@ export const syncTrading = async (job: Job): Promise<any> => {
     await listenApprovalEvents(chainId, chainProvider, cachedBlock, latestBlock.number)
     // await listenNonceIncrementedEvents(chainId, chainProvider, cachedBlock, latestBlock.number)
     await listenCancelEvents(chainId, chainProvider, cachedBlock, latestBlock.number)
-    //
-    // await listenMatchTwoAEvents(chainId, chainProvider, cachedBlock, latestBlock.number)
+    await listenMatchTwoAEvents(chainId, chainProvider, cachedBlock, latestBlock.number)
     // await listenMatchTwoBEvents(chainId, chainProvider, cachedBlock, latestBlock.number)
     // await listenMatchThreeAEvents(chainId, chainProvider, cachedBlock, latestBlock.number)
     // await listenMatchThreeBEvents(chainId, chainProvider, cachedBlock, latestBlock.number)
