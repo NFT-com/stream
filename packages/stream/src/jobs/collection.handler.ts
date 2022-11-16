@@ -2,7 +2,7 @@
 import { AxiosInstance, AxiosResponse } from 'axios'
 import Bull, { Job } from 'bull'
 import { BigNumber } from 'ethers'
-import { In } from 'typeorm'
+import { In, Not } from 'typeorm'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -13,11 +13,15 @@ import { NFTAlchemy } from '../interface'
 import { CollectionType, SyncCollectionInput } from '../middleware/validate'
 import { getAlchemyInterceptor } from '../service/alchemy'
 import { cache, CacheKeys } from '../service/cache'
+import { getEtherscanInterceptor } from '../service/etherscan'
+import { delay } from '../utils'
 import { collectionEntityBuilder, nftEntityBuilder } from '../utils/builder/nftBuilder'
 import { collectionSyncSubqueue } from './jobs'
 
 const logger = _logger.Factory(_logger.Context.Bull)
 const repositories = db.newRepositories()
+
+const MAX_BATCH_SIZE = 1000
 
 const subQueueBaseOptions: Bull.JobOptions = {
   attempts: 2,
@@ -255,4 +259,77 @@ export const spamCollectionSyncHandler = async (job: Job): Promise<void> => {
   } catch (err) {
     logger.log(`Error in spam collection sync: ${err}`)
   }
+}
+
+export const collectionIssuanceDateSync = async (job: Job): Promise<void> => {
+  const chainId: string = job?.data?.chainId || process.env.CHAIN_ID || '5'
+
+  const processedContracts: string[] = await cache.smembers(
+    CacheKeys.COLLECTION_ISSUANCE_DATE,
+  )
+  const progressContracts: string[] = await cache.smembers(
+    CacheKeys.COLLECTION_ISSUANCE_DATE_IN_PROGRESS,
+  )
+  const cachedContracts: string[] = [...processedContracts, ...progressContracts]
+  // official collection
+  const officialCollections: entity.Collection[] = await repositories.collection.find({
+    where: {
+      isOfficial: true,
+      issuanceDate: null,
+      chainId,
+      contract: Not(In(cachedContracts)),
+    },
+    select: {
+      id: true,
+      contract: true,
+    },
+  })
+
+  let count = 0
+  const updateContracts: Partial<entity.Collection>[] = []
+  const updatePromiseArray = []
+  const etherscanInterceptor = getEtherscanInterceptor(chainId)
+  for (const collection of officialCollections) {
+    const collectionInCache: number = await cache.sismember(
+      CacheKeys.COLLECTION_ISSUANCE_DATE, collection.contract,
+    )
+    const collectionInProgressCache: number = await cache.sismember(
+      CacheKeys.COLLECTION_ISSUANCE_DATE_IN_PROGRESS, collection.contract,
+    )
+    // if collection does not have issuance date, process
+    if (!collectionInCache && !collectionInProgressCache) {
+      await cache.sadd(CacheKeys.COLLECTION_ISSUANCE_DATE_IN_PROGRESS, collection.contract)
+      const query = `module=account&action=txlist&address=${collection.contract}&page=1&offset=1&startblock=0&endblock=99999999&sort=asc`
+      const response: AxiosResponse = await etherscanInterceptor.get(query)
+      if (response?.data) {
+        const issuanceDateTimeStamp: string = response?.data?.result?.[0]?.timestamp
+        if (issuanceDateTimeStamp) {
+          const issuanceDate = new Date(Number(issuanceDateTimeStamp) * 1000)
+          updateContracts.push({ ...collection, issuanceDate })
+          await cache.srem(CacheKeys.COLLECTION_ISSUANCE_DATE_IN_PROGRESS, collection.contract)
+        }
+      }
+      count++
+      if (count === 5) {
+        await delay(1000)
+      }
+    }
+
+    // for efficient memory storage, process persistence in batches of 1000
+    if (updateContracts.length === MAX_BATCH_SIZE) {
+      updatePromiseArray.push(repositories.collection.saveMany(updateContracts))
+    }
+  }
+
+  // add to cache
+  const updateResult = await Promise.all(updatePromiseArray)
+  
+  const cacheContracts: string[] = []
+  for(const result of updateResult) {
+    for (const item of result) {
+      cacheContracts.push(item?.contract)
+    }
+  }
+
+  await cache.sadd(CacheKeys.COLLECTION_ISSUANCE_DATE, ...cacheContracts)
 }
