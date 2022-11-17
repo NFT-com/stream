@@ -50,7 +50,7 @@ export const activityBuilder = async (
   activity.read = false
   activity.timestamp = new Date(timestampFromSource * 1000) // convert to ms
   activity.expiration = expirationFromSource ? new Date(expirationFromSource * 1000) : null // conver to ms
-  activity.walletAddress = helper.checkSum(walletAddress)
+  activity.walletAddress = walletAddress === '0x' ? '0x' : helper.checkSum(walletAddress)
   activity.chainId = chainId
   activity.nftContract = contract === '0x' ? '0x' : helper.checkSum(contract)
   activity.nftId = [...nftIds]
