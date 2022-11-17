@@ -272,9 +272,8 @@ export const collectionIssuanceDateSync = async (job: Job): Promise<void> => {
   )
   const cachedContracts: string[] = [...processedContracts, ...progressContracts]
   // official collection
-  const officialCollections: entity.Collection[] = await repositories.collection.find({
+  const collections: entity.Collection[] = await repositories.collection.find({
     where: {
-      isOfficial: true,
       issuanceDate: null,
       chainId,
       contract: Not(In(cachedContracts)),
@@ -289,7 +288,7 @@ export const collectionIssuanceDateSync = async (job: Job): Promise<void> => {
   const updateContracts: Partial<entity.Collection>[] = []
   const updatePromiseArray = []
   const etherscanInterceptor = getEtherscanInterceptor(chainId)
-  for (const collection of officialCollections) {
+  for (const collection of collections) {
     const collectionInCache: number = await cache.sismember(
       CacheKeys.COLLECTION_ISSUANCE_DATE, collection.contract,
     )
