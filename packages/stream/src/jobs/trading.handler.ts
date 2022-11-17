@@ -82,6 +82,8 @@ const listenApprovalEvents = async (
             protocol: defs.ProtocolType.Marketplace,
             transactionHash: log.transactionHash,
             blockNumber: log.blockNumber.toString(),
+            nftContractAddress: '0x',
+            nftContractTokenId: '',
             maker: makerAddress,
             taker: '0x',
             chainId: chainId.toString(),
@@ -116,6 +118,8 @@ const listenApprovalEvents = async (
               protocol: defs.ProtocolType.Marketplace,
               transactionHash: log.transactionHash,
               blockNumber: log.blockNumber.toString(),
+              nftContractAddress: '0x',
+              nftContractTokenId: '',
               maker: makerAddress,
               taker: '0x',
               chainId: chainId.toString(),
@@ -241,6 +245,7 @@ const listenCancelEvents = async (
         const txCancel = await repositories.txCancel.findOne({
           where: {
             exchange: defs.ExchangeType.Marketplace,
+            foreignType: defs.CancelActivities[0],
             foreignKeyId: txOrder.orderHash,
             transactionHash: log.transactionHash,
             chainId: chainId.toString(),
@@ -333,7 +338,7 @@ const parseAsset = async (
     // fetch ID from nft table...
     const nfts = await repositories.nft.find({
       where: {
-        contract: utils.getAddress(assetTypeData[0].toLowerCase()),
+        contract: utils.getAddress(assetTypeData[0]),
       },
     })
     const nft = nfts.find((nft) => BigNumber.from(nft.tokenId).toHexString()
@@ -436,13 +441,13 @@ const listenMatchEvents = async (
             makerAddress: '0x',
             takerAddress: '0x',
             nonce: -1,
-            auctionType,
             protocolData: {
               signature: {
                 v: makerSig.v,
                 r: makerSig.r,
                 s: makerSig.s,
               },
+              auctionType,
               salt: -1,
             },
             makeAsset: [],
@@ -471,13 +476,13 @@ const listenMatchEvents = async (
             makerAddress: '0x',
             takerAddress: '0x',
             nonce: -1,
-            auctionType,
             protocolData: {
               signature: {
                 v: takerSig.v,
                 r: takerSig.r,
                 s: takerSig.s,
               },
+              auctionType,
               salt: -1,
             },
             makeAsset: [],
