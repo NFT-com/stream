@@ -19,7 +19,9 @@ export enum CacheKeys {
   SYNC_COLLECTION = 'sync_collection',
   SPAM_COLLECTIONS = 'spam_collections',
   SYNC_IN_PROGRESS = 'sync_in_progress',
-  RECENTLY_SYNCED = 'recently_synced'
+  RECENTLY_SYNCED = 'recently_synced',
+  COLLECTION_ISSUANCE_DATE = 'collection_issuance_date',
+  COLLECTION_ISSUANCE_DATE_IN_PROGRESS = 'collection_issuance_date_in_progress'
 }
 
 const createCacheConnection = (): void => {

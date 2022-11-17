@@ -296,6 +296,18 @@ const createEcsTaskDefinition = (
               Value: process.env.ALCHEMY_API_URL_GOERLI,
             },
             {
+              Name: 'ETHERSCAN_API_KEY',
+              Value: process.env.ETHERSCAN_API_KEY,
+            },
+            {
+              Name: 'ETHERSCAN_API_URL',
+              Value: process.env.ETHERSCAN_API_URL,
+            },
+            {
+              Name: 'ETHERSCAN_API_URL_GOERLI',
+              Value: process.env.ETHERSCAN_API_URL_GOERLI,
+            },
+            {
               Name: 'SENTRY_DSN',
               Value: process.env.SENTRY_DSN,
             },
