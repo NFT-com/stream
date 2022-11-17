@@ -96,6 +96,9 @@ runs:
         ALCHEMY_API_URL: ${{ fromJSON(inputs.secrets).ALCHEMY_API_URL }}
         ALCHEMY_API_URL_RINKEBY: ${{ fromJSON(inputs.secrets).ALCHEMY_API_URL_RINKEBY }}
         ALCHEMY_API_URL_GOERLI: ${{ fromJSON(inputs.secrets).ALCHEMY_API_URL_GOERLI }}
+        ETHERSCAN_API_KEY: ${{ fromJSON(inputs.secrets).ETHERSCAN_API_URL }}
+        ETHERSCAN_API_URL: ${{ fromJSON(inputs.secrets).ETHERSCAN_API_URL_RINKEBY }}
+        ETHERSCAN_API_URL_GOERLI: ${{ fromJSON(inputs.secrets).ETHERSCAN_API_URL_GOERLI }}
         ASSET_BUCKET: ${{ fromJSON(inputs.secrets).ASSET_BUCKET }}
         ASSET_BUCKET_ROLE: ${{ fromJSON(inputs.secrets).ASSET_BUCKET_ROLE }}
         SENTRY_DSN: ${{ fromJSON(inputs.secrets).SENTRY_DSN }}
