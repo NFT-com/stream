@@ -3,7 +3,7 @@ import Bull from 'bull'
 import { _logger } from '@nftcom/shared'
 
 import { redisConfig } from '../config'
-import { collectionSyncHandler, spamCollectionSyncHandler } from './collection.handler'
+import { collectionIssuanceDateSync, collectionSyncHandler, spamCollectionSyncHandler } from './collection.handler'
 import { getEthereumEvents } from './mint.handler'
 import { nftExternalOrdersOnDemand } from './order.handler'
 import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
@@ -29,6 +29,7 @@ export enum QUEUE_TYPES {
   FETCH_EXTERNAL_ORDERS = 'FETCH_EXTERNAL_ORDERS',
   FETCH_EXTERNAL_ORDERS_ON_DEMAND = 'FETCH_EXTERNAL_ORDERS_ON_DEMAND',
   GENERATE_COMPOSITE_IMAGE = 'GENERATE_COMPOSITE_IMAGE',
+  FETCH_COLLECTION_ISSUANCE_DATE = 'FETCH_COLLECTION_ISSUANCE_DATE'
 }
 
 export const queues = new Map<string, Bull.Queue>()
@@ -259,6 +260,23 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             repeat: { every: 2 * 60000 },
             jobId: 'fetch_external_orders_on_demand',
           })
+      case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
+        return queues.get(QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE)
+          .add({
+            FETCH_EXTERNAL_ORDERS_ON_DEMAND: QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE,
+            chainId: process.env.CHAIN_ID,
+          }, {
+            attempts: 5,
+            removeOnComplete: true,
+            removeOnFail: true,
+            backoff: {
+              type: 'exponential',
+              delay: 2000,
+            },
+            // repeat every  12 hours
+            repeat: { every: 12 * 60 * 60000 },
+            jobId: 'fetch_collection_issuance_date',
+          })
       default:
         return queues.get(chainId).add({ chainId }, {
           removeOnComplete: true,
@@ -297,6 +315,9 @@ const listenToJobs = async (): Promise<void> => {
       break
     case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
       queue.process(updateNFTsForProfilesHandler)
+      break
+    case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
+      queue.process(collectionIssuanceDateSync)
       break
     default:
       queue.process(getEthereumEvents)
