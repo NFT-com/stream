@@ -67,7 +67,7 @@ const listenApprovalEvents = async (
         const txTransaction = await repositories.txTransaction.findOne({
           where: {
             exchange: defs.ExchangeType.Marketplace,
-            transactionType: defs.ActivityType.Bid,
+            transactionType: defs.ActivityType.Listing,
             protocol: defs.ProtocolType.Marketplace,
             maker: makerAddress,
             transactionHash: log.transactionHash,
@@ -83,6 +83,7 @@ const listenApprovalEvents = async (
             transactionHash: log.transactionHash,
             blockNumber: log.blockNumber.toString(),
             maker: makerAddress,
+            taker: '0x',
             chainId: chainId.toString(),
           })
         }
@@ -116,6 +117,7 @@ const listenApprovalEvents = async (
               transactionHash: log.transactionHash,
               blockNumber: log.blockNumber.toString(),
               maker: makerAddress,
+              taker: '0x',
               chainId: chainId.toString(),
             })
           }
