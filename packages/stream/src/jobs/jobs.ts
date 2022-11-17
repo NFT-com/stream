@@ -273,9 +273,9 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
               type: 'exponential',
               delay: 2000,
             },
-            // repeat every  2 hours
-            repeat: { every: 2 * 60 * 60000 },
-            jobId: 'fetch_external_orders_on_demand',
+            // repeat every  12 hours
+            repeat: { every: 12 * 60 * 60000 },
+            jobId: 'fetch_collection_issuance_date',
           })
       default:
         return queues.get(chainId).add({ chainId }, {
