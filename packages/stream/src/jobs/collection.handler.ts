@@ -6,7 +6,7 @@ import { In, Not } from 'typeorm'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import { nftService } from '@nftcom/gql/service'
+import { nftPortService,nftService } from '@nftcom/gql/service'
 import { _logger, db, entity, helper } from '@nftcom/shared'
 
 import { NFTAlchemy } from '../interface'
@@ -331,4 +331,29 @@ export const collectionIssuanceDateSync = async (job: Job): Promise<void> => {
   }
 
   await cache.sadd(CacheKeys.COLLECTION_ISSUANCE_DATE, ...cacheContracts)
+}
+export const raritySync = async (job: Job): Promise<void> => {
+  logger.log('initiated rarity sync')
+  const chainId: string = job.data.chainId || process.env.chainId || '5'
+  try {
+    const cachedCollections = await cache.zrevrangebyscore(`${CacheKeys.REFRESH_COLLECTION_RARITY}_${chainId}`, '+inf', '(0')
+    const rarityPromise = []
+    if(cachedCollections?.length) {
+      // loop
+      for (const collection of cachedCollections) {
+        console.log('collection', collection)
+        rarityPromise.push(
+          nftPortService.retrieveNFTDetailsNFTPort,
+        )
+      }
+
+      // find rarity
+
+      // parse rarity to update nft
+    }
+  } catch (err) {
+    logger.log(`Error in spam collection sync: ${err}`)
+  }
+  logger.log('completed rarity sync')
+  //Promise.resolve()
 }
