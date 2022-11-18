@@ -453,6 +453,7 @@ const listenMatchEvents = async (
             makeAsset: [],
             takeAsset: [],
             chainId: chainId.toString(),
+            createdInternally: true,
           })
         }
 
@@ -488,6 +489,7 @@ const listenMatchEvents = async (
             makeAsset: [],
             takeAsset: [],
             chainId: chainId.toString(),
+            createdInternally: true,
           })
 
           logger.info('created new bid order ', txBidOrder.id)
@@ -649,6 +651,7 @@ const listenMatchTwoAEvents = async (
           makeAsset: [],
           takeAsset: [],
           chainId: chainId.toString(),
+          createdInternally: true,
         })
         logger.info('created new listing order from Match2A ', txListingOrder.id)
       } else {
@@ -763,6 +766,7 @@ const listenMatchTwoBEvents = async (
           makeAsset,
           takeAsset,
           chainId: chainId.toString(),
+          createdInternally: true,
         })
 
         logger.info('created new listing order from Match2B ', txListingOrder.id)
@@ -855,6 +859,7 @@ const listenMatchThreeAEvents = async (
           makeAsset: [],
           takeAsset: [],
           chainId: chainId.toString(),
+          createdInternally: true,
         })
         logger.info('created new bid order from Match3A ', txBidOrder.id)
       } else {
@@ -969,6 +974,7 @@ const listenMatchThreeBEvents = async (
           makeAsset,
           takeAsset,
           chainId: chainId.toString(),
+          createdInternally: true,
         })
 
         logger.info('created new bid order from Match3B ', txBidOrder.id)
