@@ -229,8 +229,8 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
           {
             removeOnComplete: true,
             removeOnFail: true,
-            // repeat every once every day
-            repeat: { every: 2 * 60000 },
+            // repeat every two hours
+            repeat: { every: 2 * 60 * 60000 },
             jobId: 'sync_collection_rarity',
           })
       case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
