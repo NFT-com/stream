@@ -401,10 +401,8 @@ export const raritySync = async (job: Job): Promise<void> => {
               updateNFTRarity.push(updatedNFT)
             }
 
-            // console.log('update nft', updateNFTRarity)
             if (updateNFTRarity.length >= 500) {
-              const res = await repositories.nft.saveMany(updateNFTRarity, { chunk: 100 })
-              console.log('res', res)
+              await repositories.nft.saveMany(updateNFTRarity, { chunk: 100 })
               updateNFTRarity = []
             }
 
@@ -415,10 +413,8 @@ export const raritySync = async (job: Job): Promise<void> => {
             }
           }
 
-          console.log(updateNFTRarity)
           if (updateNFTRarity.length) {
-            const res = await repositories.nft.saveMany(updateNFTRarity, { chunk: 100 })
-            console.log('res', res)
+            await repositories.nft.saveMany(updateNFTRarity, { chunk: 100 })
           }
          
           const date = new Date()
