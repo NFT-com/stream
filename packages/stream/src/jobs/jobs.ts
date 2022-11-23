@@ -3,7 +3,7 @@ import Bull from 'bull'
 import { _logger } from '@nftcom/shared'
 
 import { redisConfig } from '../config'
-import { collectionIssuanceDateSync, collectionSyncHandler, spamCollectionSyncHandler } from './collection.handler'
+import { collectionIssuanceDateSync, collectionSyncHandler, raritySync, spamCollectionSyncHandler } from './collection.handler'
 import { getEthereumEvents } from './mint.handler'
 import { nftExternalOrdersOnDemand } from './order.handler'
 import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
@@ -22,6 +22,7 @@ const queuePrefix = 'stream-queue'
 export enum QUEUE_TYPES {
   SYNC_CONTRACTS = 'SYNC_CONTRACTS',
   SYNC_COLLECTIONS = 'SYNC_COLLECTIONS',
+  SYNC_COLLECTION_RARITY = 'SYNC_COLLECTION_RARITY',
   SYNC_SPAM_COLLECTIONS = 'SYNC_SPAM_COLLECTIONS',
   REGISTER_OS_STREAMS = 'REGISTER_OS_STREAMS',
   DEREGISTER_OS_STREAMS = 'DEREGISTER_OS_STREAMS',
@@ -96,6 +97,13 @@ const createQueues = (): Promise<void> => {
     // sync external collections
     queues.set(QUEUE_TYPES.SYNC_COLLECTIONS, new Bull(
       QUEUE_TYPES.SYNC_COLLECTIONS, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
+    // sync collection rarity
+    queues.set(QUEUE_TYPES.SYNC_COLLECTION_RARITY, new Bull(
+      QUEUE_TYPES.SYNC_COLLECTION_RARITY, {
         prefix: queuePrefix,
         redis,
       }))
@@ -212,6 +220,19 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_nfts_streams',
           })
+      case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
+        return queues.get(QUEUE_TYPES.SYNC_COLLECTION_RARITY)
+          .add({
+            SYNC_COLLECTION_RARITY: QUEUE_TYPES.SYNC_COLLECTION_RARITY,
+            chainId: process.env.CHAIN_ID,
+          },
+          {
+            removeOnComplete: true,
+            removeOnFail: true,
+            // repeat every once every day
+            repeat: { every: 2 * 60000 },
+            jobId: 'sync_collection_rarity',
+          })
       case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
         return queues.get(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS)
           .add({
@@ -300,6 +321,9 @@ const listenToJobs = async (): Promise<void> => {
       break
     case QUEUE_TYPES.SYNC_COLLECTIONS:
       queue.process(collectionSyncHandler)
+      break
+    case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
+      queue.process(raritySync)
       break
     case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
       queue.process(spamCollectionSyncHandler)
