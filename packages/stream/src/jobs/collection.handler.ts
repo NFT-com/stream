@@ -2,20 +2,21 @@
 import { AxiosInstance, AxiosResponse } from 'axios'
 import Bull, { Job } from 'bull'
 import { BigNumber } from 'ethers'
-import { In, Not } from 'typeorm'
+import { In, IsNull, Not } from 'typeorm'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import { nftService } from '@nftcom/gql/service'
-import { _logger, db, entity, helper } from '@nftcom/shared'
+import { _logger, db, defs, entity, helper } from '@nftcom/shared'
 
 import { NFTAlchemy } from '../interface'
 import { CollectionType, SyncCollectionInput } from '../middleware/validate'
 import { getAlchemyInterceptor } from '../service/alchemy'
-import { cache, CacheKeys } from '../service/cache'
+import { cache, CacheKeys, removeExpiredTimestampedZsetMembers, ttlForTimestampedZsetMembers } from '../service/cache'
 import { getEtherscanInterceptor } from '../service/etherscan'
+import { retrieveNFTDetailsNFTPort } from '../service/nftPort'
 import { delay } from '../utils'
-import { collectionEntityBuilder, nftEntityBuilder } from '../utils/builder/nftBuilder'
+import { collectionEntityBuilder, nftEntityBuilder, nftTraitBuilder } from '../utils/builder/nftBuilder'
 import { collectionSyncSubqueue } from './jobs'
 
 const logger = _logger.Factory(_logger.Context.Bull)
@@ -117,6 +118,7 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
     // check in progress
     const contractInput: SyncCollectionInput[] = []
     const contractsToBeProcessed: string[] = []
+    const contractsRarityToBeProcessed: any[] = []
     const contractToBeSaved: Promise<Partial<entity.Collection>>[] = []
     const existsInDB: entity.Collection[] = await repositories.collection.find({
       where: {
@@ -153,6 +155,7 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
           if (collectionType && isOfficial || !collectionType) {
             contractInput.push(collections[i])
             contractsToBeProcessed.push(contract + startTokenParam)
+            contractsRarityToBeProcessed.push([1, contract])
           }
         }
 
@@ -171,6 +174,7 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
           if (collectionType && isOfficial || !collectionType) {
             contractInput.push(collections[i])
             contractsToBeProcessed.push(contract + startTokenParam) // full resync (for cases where collections already exist, but we want to fetch all the NFTs)
+            contractsRarityToBeProcessed.push([1, contract])
           }
         }
       }
@@ -226,6 +230,14 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
       // const process = collectionSyncSubqueue.getJobCounts()
       // process subqueues in series; hence concurrency is explicitly set to one for rate limits
       collectionSyncSubqueue.process(1, nftSyncHandler)
+    }
+
+    // rarity process
+    if (contractsRarityToBeProcessed.length) {
+      await cache.zadd(
+        `${CacheKeys.REFRESH_COLLECTION_RARITY}_${chainId}`,
+        ...contractsRarityToBeProcessed,
+      )
     }
     logger.log('completed collection sync')
   } catch (err) {
@@ -331,4 +343,99 @@ export const collectionIssuanceDateSync = async (job: Job): Promise<void> => {
   }
 
   await cache.sadd(CacheKeys.COLLECTION_ISSUANCE_DATE, ...cacheContracts)
+}
+export const raritySync = async (job: Job): Promise<void> => {
+  logger.log('initiated rarity sync')
+  const chainId: string = job.data.chainId || process.env.chainId || '5'
+  try {
+    await removeExpiredTimestampedZsetMembers(
+      `${CacheKeys.REFRESHED_NFT_ORDERS_EXT}_${chainId}`,
+      Date.now(),
+    )
+    const cachedCollections = await cache.zrevrangebyscore(`${CacheKeys.REFRESH_COLLECTION_RARITY}_${chainId}`, '+inf', '(0')
+    const removeCacheCollections = []
+    if(cachedCollections?.length) {
+      // loop
+      for (const collection of cachedCollections) {
+        const collectionNFTs: entity.NFT[] = await repositories.nft.find({
+          where: {
+            contract: collection,
+            rarity: IsNull(),
+          },
+          select: {
+            id: true,
+            tokenId: true,
+            metadata: true,
+          },
+        })
+
+        let rateLimitDelayCounter = 0
+        if (collectionNFTs.length) {
+          let updateNFTRarity: Partial<entity.NFT>[] = []
+          for (const nft of collectionNFTs) {
+            const updatedNFT: Partial<entity.NFT> = { id: nft.id, metadata: nft.metadata }
+            const tokenId: string = nft.tokenId
+            const result = await retrieveNFTDetailsNFTPort(
+              collection,
+              tokenId,
+              chainId,
+              false,
+              ['rarity', 'attributes'],
+            )
+
+            if (result?.nft?.rarity) {
+              updatedNFT.rarity = String(result?.nft?.rarity?.rank)
+            }
+
+            if (result?.nft?.attributes?.length) {
+              const updatedAttributes: defs.Trait[] = nftTraitBuilder(
+                updatedNFT.metadata.traits,
+                result?.nft?.attributes,
+              )
+              if (updatedAttributes.length) {
+                updatedNFT.metadata.traits = updatedAttributes
+              }
+            }
+
+            if (result?.nft?.rarity || result?.nft?.attributes) {
+              updateNFTRarity.push(updatedNFT)
+            }
+
+            if (updateNFTRarity.length >= 500) {
+              await repositories.nft.saveMany(updateNFTRarity, { chunk: 100 })
+              updateNFTRarity = []
+            }
+
+            rateLimitDelayCounter++
+
+            if (rateLimitDelayCounter === 99) {
+              await delay(1000)
+            }
+          }
+
+          if (updateNFTRarity.length) {
+            await repositories.nft.saveMany(updateNFTRarity, { chunk: 100 })
+          }
+         
+          const date = new Date()
+          date.setHours(date.getHours() + 2) // two hours ttl
+          const ttl: number = ttlForTimestampedZsetMembers(date)
+          removeCacheCollections.push([ttl, collection])
+        }
+      }
+
+      await Promise.all([
+        cache.zadd(
+          `${CacheKeys.REFRESHED_COLLECTION_RARITY}_${chainId}`,
+          ...removeCacheCollections,
+        ),
+        cache.zremrangebyscore(`${CacheKeys.REFRESH_COLLECTION_RARITY}_${chainId}`, 1, '+inf'),
+      ])
+    }
+  } catch (err) {
+    console.log('err', err)
+    logger.log(`Error in rarity sync: ${err}`)
+  }
+  logger.log('completed rarity sync')
+  //Promise.resolve()
 }

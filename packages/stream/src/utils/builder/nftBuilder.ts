@@ -4,6 +4,7 @@ import {  alchemyService, nftService } from '@nftcom/gql/service'
 import { defs, entity, helper } from '@nftcom/shared'
 
 import { NFTAlchemy } from '../../interface'
+import { NFTPortRarityAttributes } from '../../service/nftPort'
 
 export const collectionEntityBuilder = async (
   contract: string,
@@ -52,8 +53,30 @@ export const nftEntityBuilder = (
       traits: nftService.getMetadata(nft?.metadata),
     },
     chainId,
-    userId: 'test',
-    walletId: 'test',
-
   } as entity.NFT
+}
+
+export const nftTraitBuilder = (
+  nftAttributes: defs.Trait[],
+  rarityAttributes: NFTPortRarityAttributes[],
+): defs.Trait[] => {
+  const traits: defs.Trait[] = []
+  if (nftAttributes.length) {
+    for (const attribute of nftAttributes) {
+      const traitExists: NFTPortRarityAttributes = rarityAttributes.find(
+        (rarityAttribute: NFTPortRarityAttributes) =>
+          rarityAttribute.trait_type === attribute.type
+          && rarityAttribute.value === attribute.value,
+      )
+      if (traitExists.statistics.prevalence) {
+        traits.push(
+          {
+            ...attribute,
+            rarity: String(traitExists.statistics.prevalence),
+          },
+        )
+      }
+    }
+  }
+  return traits
 }

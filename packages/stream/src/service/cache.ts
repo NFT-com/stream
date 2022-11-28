@@ -8,6 +8,8 @@ const DEFAULT_TTL_MINS = Number(process.env.DEFAULT_TTL_MINS) || 15 // 15 mins
 export enum CacheKeys {
   REFRESH_NFT_ORDERS_EXT = 'refresh_nft_orders_ext',
   REFRESHED_NFT_ORDERS_EXT = 'refreshed_nft_orders_ext',
+  REFRESH_COLLECTION_RARITY= 'refresh_collection_rarity',
+  REFRESHED_COLLECTION_RARITY= 'refreshed_collection_rarity',
   UPDATED_NFTS_PROFILE = 'updated_nfts_profile',
   UPDATE_NFTS_PROFILE = 'update_nfts_profile',
   PROFILES_IN_PROGRESS = 'profiles_in_progress',
