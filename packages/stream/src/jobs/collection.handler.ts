@@ -431,8 +431,6 @@ export const raritySync = async (job: Job): Promise<void> => {
         ),
         cache.zremrangebyscore(`${CacheKeys.REFRESH_COLLECTION_RARITY}_${chainId}`, 1, '+inf'),
       ])
-      
-    //  await cache.zremrangebyscore(`${CacheKeys.REFRESH_COLLECTION_RARITY}_${chainId}`, 1, '+inf')
     }
   } catch (err) {
     console.log('err', err)
