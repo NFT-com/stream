@@ -8,13 +8,22 @@ const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY
 
 export const getEtherscanInterceptor = (chainId: string): AxiosInstance => {
   const baseURL: string = Number(chainId) == 1 ? ETHERSCAN_API_URL : ETHERSCAN_API_URL_GOERLI
-  const authBaseURL = `${baseURL}?apikey=${ETHERSCAN_API_KEY}&`
+  const authBaseURL = `${baseURL}/api`
   const etherscanInstance = axios.create({
     baseURL: authBaseURL,
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
     },
+  })
+
+  //
+  etherscanInstance.interceptors.request.use(config => {
+    config.params = {
+      apikey: ETHERSCAN_API_KEY,
+      ...config.params,
+    }
+    return config
   })
   // retry logic with exponential backoff
   const retryOptions: IAxiosRetryConfig= { retries: 3,

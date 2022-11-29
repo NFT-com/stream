@@ -107,7 +107,14 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
       }))
-
+    
+    // sync collection issuance date
+    queues.set(QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, new Bull(
+      QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, {
+        prefix: queuePrefix,
+        redis,
+      }))
+    
     // sync spam collections
     queues.set(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, new Bull(
       QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, {
