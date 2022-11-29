@@ -17,7 +17,7 @@ export const getEtherscanInterceptor = (chainId: string): AxiosInstance => {
     },
   })
 
-  //
+  // params
   etherscanInstance.interceptors.request.use(config => {
     config.params = {
       apikey: ETHERSCAN_API_KEY,
