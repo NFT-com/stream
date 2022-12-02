@@ -3,7 +3,7 @@ import Bull from 'bull'
 import { _logger } from '@nftcom/shared'
 
 import { redisConfig } from '../config'
-import { collectionIssuanceDateSync, collectionSyncHandler, raritySync, spamCollectionSyncHandler } from './collection.handler'
+import { collectionIssuanceDateSync, collectionSyncHandler, spamCollectionSyncHandler } from './collection.handler'
 import { getEthereumEvents } from './mint.handler'
 import { nftExternalOrdersOnDemand } from './order.handler'
 import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
@@ -227,19 +227,19 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_nfts_streams',
           })
-      case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
-        return queues.get(QUEUE_TYPES.SYNC_COLLECTION_RARITY)
-          .add({
-            SYNC_COLLECTION_RARITY: QUEUE_TYPES.SYNC_COLLECTION_RARITY,
-            chainId: process.env.CHAIN_ID,
-          },
-          {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every two hours
-            repeat: { every: 2 * 60 * 60000 },
-            jobId: 'sync_collection_rarity',
-          })
+      // case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
+      //   return queues.get(QUEUE_TYPES.SYNC_COLLECTION_RARITY)
+      //     .add({
+      //       SYNC_COLLECTION_RARITY: QUEUE_TYPES.SYNC_COLLECTION_RARITY,
+      //       chainId: process.env.CHAIN_ID,
+      //     },
+      //     {
+      //       removeOnComplete: true,
+      //       removeOnFail: true,
+      //       // repeat every two hours
+      //       repeat: { every: 2 * 60 * 60000 },
+      //       jobId: 'sync_collection_rarity',
+      //     })
       case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
         return queues.get(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS)
           .add({
@@ -329,9 +329,9 @@ const listenToJobs = async (): Promise<void> => {
     case QUEUE_TYPES.SYNC_COLLECTIONS:
       queue.process(collectionSyncHandler)
       break
-    case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
-      queue.process(raritySync)
-      break
+    // case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
+    //   queue.process(raritySync)
+    //   break
     case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
       queue.process(spamCollectionSyncHandler)
       break
