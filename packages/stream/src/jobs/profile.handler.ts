@@ -207,6 +207,8 @@ export const saveProfileExpireAt = async (job: Job): Promise<any> => {
     })
     const abi = contracts.NftProfileABI()
     const res = await core.fetchDataUsingMulticall(calls, abi, chainId)
+    logger.info(`multicall response length: ${res.length}`)
+    logger.info(`multicall response: ${res[0]}`)
     for (let i = 0; i < profileChunks.length; i++) {
       const result = res[i][0]
       for (let j = 0; j < profileChunks[i].length; j++) {
