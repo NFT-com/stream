@@ -185,7 +185,7 @@ export const generateCompositeImages = async (job: Job): Promise<any> => {
 
 export const saveProfileExpireAt = async (job: Job): Promise<any> => {
   try {
-    logger.info('Save expireAt for profiles', job.data)
+    logger.info('Save expireAt for profiles')
     const chainId: string =  job.data?.chainId || process.env.CHAIN_ID
     const MAX_PROFILE_COUNTS = 100 * 10
     const profiles = await repositories.profile.find({
