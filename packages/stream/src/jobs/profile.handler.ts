@@ -217,7 +217,7 @@ export const saveProfileExpireAt = async (job: Job): Promise<any> => {
         }
       }
     }
-    logger.info('Saved expireAt for profiles', { counts: slicedProfiles.length })
+    logger.info(`Saved expireAt for ${slicedProfiles.length} profiles`)
   } catch (err) {
     logger.error(`Error in saveProfileExpireAt Job: ${err}`)
   }
