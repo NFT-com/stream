@@ -241,6 +241,21 @@ app.post('/uploadCollections', authMiddleWare, upload.single('file'), async (_re
   // const fileContents: any[] = await readFile((_req as any).file.buffer);
   // res.json(fileContents);
 })
+// remove rarity job and cache
+app.get('/raritySyncCollections', authMiddleWare, async (_req, res) => {
+  try {
+    const cachedCollections = await cache.zrevrangebyscore(`${CacheKeys.REFRESH_COLLECTION_RARITY}_${chainId}`, '+inf', '(0')
+
+    let message = 'No Collections Running!'
+    if (cachedCollections.length) {
+      message = `Sync in progress for ${cachedCollections.join(' ')}`
+    }
+    return res.status(200).send({ message })
+  } catch (error) {
+    logger.error(`Error in rarity sync cache fetch: ${error}`)
+    return res.status(400).send({ message: JSON.stringify(error) })
+  }
+})
 
 // remove rarity job and cache
 app.get('/stopRaritySync', authMiddleWare, async (_req, res) => {
