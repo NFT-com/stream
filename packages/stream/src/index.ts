@@ -242,6 +242,28 @@ app.post('/uploadCollections', authMiddleWare, upload.single('file'), async (_re
   // res.json(fileContents);
 })
 
+// remove rarity job and cache
+app.get('/stopRaritySync', authMiddleWare, async (_req, res) => {
+  try {
+    const rarityQueue = queues.get(QUEUE_TYPES.SYNC_COLLECTION_RARITY)
+    const jobId = 'sync_collection_rarity'
+    const job: Bull.Job = await rarityQueue.getJob(jobId)
+    if (job) {
+      await job.remove()
+    }
+
+    if (rarityQueue) {
+      await rarityQueue.obliterate({ force: true })
+    }
+    await cache.del(`${CacheKeys.REFRESH_COLLECTION_RARITY}_${chainId}`)
+
+    return res.status(200).send({ message: 'Successfully stopped rarity sync' })
+  } catch (error) {
+    logger.error(`Error in remove rarity sync: ${error}`)
+    return res.status(400).send({ message: JSON.stringify(error) })
+  }
+})
+
 // error handler
 const handleError = (err: Error): void => {
   logger.error(`App Error: ${err}`)
