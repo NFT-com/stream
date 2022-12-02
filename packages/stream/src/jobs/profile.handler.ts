@@ -187,7 +187,7 @@ export const saveProfileExpireAt = async (job: Job): Promise<any> => {
   try {
     logger.info('Save expireAt for profiles')
     const chainId: string =  job.data?.chainId || process.env.CHAIN_ID
-    const MAX_PROFILE_COUNTS = 100 * 2
+    const MAX_PROFILE_COUNTS = 100 * 10
     const profiles = await repositories.profile.find({
       where: {
         expireAt: IsNull(),
@@ -205,9 +205,9 @@ export const saveProfileExpireAt = async (job: Job): Promise<any> => {
         params: [urls],
       })
     })
+    logger.info(`multicall call info: ${calls[0].contract}`)
     const abi = contracts.NftProfileABI()
     const res = await core.fetchDataUsingMulticall(calls, abi, chainId)
-    logger.info(`multicall: ${res}`)
     logger.info(`multicall response length: ${res.length}`)
     logger.info(`multicall response: ${res[0]}`)
     for (let i = 0; i < profileChunks.length; i++) {
