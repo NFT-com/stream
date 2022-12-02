@@ -269,8 +269,8 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
           {
             removeOnComplete: true,
             removeOnFail: true,
-            // repeat every 10 min
-            repeat: { every: 10 * 60000 },
+            // repeat every once every day
+            repeat: { every: 24 * 60 * 60000 },
             jobId: 'save_profile_expire_at',
           })
       // case QUEUE_TYPES.REGISTER_OS_STREAMS:
