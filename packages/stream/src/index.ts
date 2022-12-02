@@ -255,9 +255,14 @@ app.get('/stopRaritySync', authMiddleWare, async (_req, res) => {
     if (rarityQueue) {
       await rarityQueue.obliterate({ force: true })
     }
+    const cachedCollections = await cache.zrevrangebyscore(`${CacheKeys.REFRESH_COLLECTION_RARITY}_${chainId}`, '+inf', '(0')
     await cache.del(`${CacheKeys.REFRESH_COLLECTION_RARITY}_${chainId}`)
 
-    return res.status(200).send({ message: 'Successfully stopped rarity sync' })
+    let message = 'Successfully stopped rarity sync'
+    if (cachedCollections.length) {
+      message += `for ${cachedCollections.join(' ')}`
+    }
+    return res.status(200).send({ message })
   } catch (error) {
     logger.error(`Error in remove rarity sync: ${error}`)
     return res.status(400).send({ message: JSON.stringify(error) })
