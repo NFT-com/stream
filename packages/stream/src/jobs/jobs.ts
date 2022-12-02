@@ -7,7 +7,7 @@ import { collectionIssuanceDateSync, collectionSyncHandler, raritySync, spamColl
 import { getEthereumEvents } from './mint.handler'
 import { nftExternalOrdersOnDemand } from './order.handler'
 import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
-import { updateNFTsForProfilesHandler } from './profile.handler'
+import { saveProfileExpireAt, updateNFTsForProfilesHandler } from './profile.handler'
 import { nftExternalOrders } from './sync.handler'
 
 const BULL_MAX_REPEAT_COUNT = parseInt(process.env.BULL_MAX_REPEAT_COUNT) || 250
@@ -30,7 +30,8 @@ export enum QUEUE_TYPES {
   FETCH_EXTERNAL_ORDERS = 'FETCH_EXTERNAL_ORDERS',
   FETCH_EXTERNAL_ORDERS_ON_DEMAND = 'FETCH_EXTERNAL_ORDERS_ON_DEMAND',
   GENERATE_COMPOSITE_IMAGE = 'GENERATE_COMPOSITE_IMAGE',
-  FETCH_COLLECTION_ISSUANCE_DATE = 'FETCH_COLLECTION_ISSUANCE_DATE'
+  FETCH_COLLECTION_ISSUANCE_DATE = 'FETCH_COLLECTION_ISSUANCE_DATE',
+  SAVE_PROFILE_EXPIRE_AT = 'SAVE_PROFILE_EXPIRE_AT',
 }
 
 export const queues = new Map<string, Bull.Queue>()
@@ -81,6 +82,12 @@ const createQueues = (): Promise<void> => {
         redis,
       }))
 
+    queues.set(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, new Bull(
+      QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
     queues.set(QUEUE_TYPES.REGISTER_OS_STREAMS, new Bull(
       QUEUE_TYPES.REGISTER_OS_STREAMS, {
         prefix: queuePrefix,
@@ -107,14 +114,14 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
       }))
-    
+
     // sync collection issuance date
     queues.set(QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, new Bull(
       QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, {
         prefix: queuePrefix,
         redis,
       }))
-    
+
     // sync spam collections
     queues.set(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, new Bull(
       QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, {
@@ -253,6 +260,19 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             repeat: { every: 24 * 60 * 60000 },
             jobId: 'sync_spam_collections',
           })
+      case QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT:
+        return queues.get(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT)
+          .add({
+            SAVE_PROFILE_EXPIRE_AT: QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT,
+            chainId: process.env.CHAIN_ID,
+          },
+          {
+            removeOnComplete: true,
+            removeOnFail: true,
+            // repeat every once every day
+            repeat: { every: 24 * 60 * 60000 },
+            jobId: 'save_profile_expire_at',
+          })
       // case QUEUE_TYPES.REGISTER_OS_STREAMS:
       //   return queues.get(QUEUE_TYPES.REGISTER_OS_STREAMS)
       //     .add({ REGISTER_OS_STREAMS: QUEUE_TYPES.REGISTER_OS_STREAMS }, {
@@ -349,6 +369,9 @@ const listenToJobs = async (): Promise<void> => {
       break
     case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
       queue.process(collectionIssuanceDateSync)
+      break
+    case QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT:
+      queue.process(saveProfileExpireAt)
       break
     default:
       queue.process(getEthereumEvents)

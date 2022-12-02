@@ -435,6 +435,10 @@ const createEcsTaskDefinition = (
               Name: 'CONFIRM_EMAIL_URL',
               Value: process.env.CONFIRM_EMAIL_URL,
             },
+            {
+              Name: 'MULTICALL_CONTRACT',
+              Value: process.env.MULTICALL_CONTRACT,
+            },
           ],
         },
       ]),

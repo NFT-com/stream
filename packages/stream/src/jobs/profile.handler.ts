@@ -1,10 +1,12 @@
 import { Job } from 'bull'
+import { BigNumber } from 'ethers'
+import * as Lodash from 'lodash'
 import { IsNull } from 'typeorm'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import {  core,nftService } from '@nftcom/gql/service'
-import { _logger, db, entity } from '@nftcom/shared'
+import { _logger, contracts, db, entity } from '@nftcom/shared'
 
 import { cache, CacheKeys, removeExpiredTimestampedZsetMembers } from '../service/cache'
 
@@ -178,5 +180,46 @@ export const generateCompositeImages = async (job: Job): Promise<any> => {
     logger.debug('generated composite images for profiles', { counts: MAX_PROFILE_COUNTS })
   } catch (err) {
     logger.error(`Error in generateCompositeImages Job: ${err}`)
+  }
+}
+
+export const saveProfileExpireAt = async (job: Job): Promise<any> => {
+  try {
+    logger.info('Save expireAt for profiles')
+    const chainId: string =  job.data?.chainId || process.env.CHAIN_ID
+    const MAX_PROFILE_COUNTS = 100 * 50
+    const profiles = await repositories.profile.find({
+      where: {
+        expireAt: IsNull(),
+        chainId,
+      },
+    })
+    const slicedProfiles = profiles.slice(0, MAX_PROFILE_COUNTS)
+    const profileChunks = Lodash.chunk(slicedProfiles, 100)
+    const calls = []
+    profileChunks.map((profiles) => {
+      const urls = profiles.map((profile) => profile.url)
+      calls.push({
+        contract: contracts.nftProfileAddress(chainId),
+        name: 'getExpiryTimeline',
+        params: [urls],
+      })
+    })
+    const abi = contracts.NftProfileABI()
+    const res = await core.fetchDataUsingMulticall(calls, abi, chainId)
+    logger.info(`Multicall response length: ${res.length}`)
+    for (let i = 0; i < profileChunks.length; i++) {
+      const result = res[i][0]
+      for (let j = 0; j < profileChunks[i].length; j++) {
+        const timestamp = BigNumber.from(result[j]).toString()
+        if (Number(timestamp) !== 0) {
+          const expireAt = new Date(Number(timestamp) * 1000)
+          await repositories.profile.updateOneById(profileChunks[i][j].id, { expireAt })
+        }
+      }
+    }
+    logger.info(`Saved expireAt for ${slicedProfiles.length} profiles`)
+  } catch (err) {
+    logger.error(`Error in saveProfileExpireAt Job: ${err}`)
   }
 }
