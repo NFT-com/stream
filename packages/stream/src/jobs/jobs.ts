@@ -7,7 +7,7 @@ import { collectionIssuanceDateSync, collectionSyncHandler, spamCollectionSyncHa
 import { getEthereumEvents } from './mint.handler'
 import { nftExternalOrdersOnDemand } from './order.handler'
 import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
-import { updateNFTsForProfilesHandler } from './profile.handler'
+import { saveProfileExpireAt, updateNFTsForProfilesHandler } from './profile.handler'
 import { nftExternalOrders } from './sync.handler'
 import { syncTrading } from './trading.handler'
 
@@ -23,6 +23,7 @@ const queuePrefix = 'stream-queue'
 export enum QUEUE_TYPES {
   SYNC_CONTRACTS = 'SYNC_CONTRACTS',
   SYNC_COLLECTIONS = 'SYNC_COLLECTIONS',
+  SYNC_COLLECTION_RARITY = 'SYNC_COLLECTION_RARITY',
   SYNC_SPAM_COLLECTIONS = 'SYNC_SPAM_COLLECTIONS',
   REGISTER_OS_STREAMS = 'REGISTER_OS_STREAMS',
   DEREGISTER_OS_STREAMS = 'DEREGISTER_OS_STREAMS',
@@ -30,8 +31,9 @@ export enum QUEUE_TYPES {
   FETCH_EXTERNAL_ORDERS = 'FETCH_EXTERNAL_ORDERS',
   FETCH_EXTERNAL_ORDERS_ON_DEMAND = 'FETCH_EXTERNAL_ORDERS_ON_DEMAND',
   GENERATE_COMPOSITE_IMAGE = 'GENERATE_COMPOSITE_IMAGE',
-  SYNC_TRADING = 'SYNC_TRADING',
   FETCH_COLLECTION_ISSUANCE_DATE = 'FETCH_COLLECTION_ISSUANCE_DATE',
+  SAVE_PROFILE_EXPIRE_AT = 'SAVE_PROFILE_EXPIRE_AT',
+  SYNC_TRADING = 'SYNC_TRADING',
 }
 
 export const queues = new Map<string, Bull.Queue>()
@@ -89,6 +91,12 @@ const createQueues = (): Promise<void> => {
         redis,
       }))
 
+    queues.set(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, new Bull(
+      QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
     queues.set(QUEUE_TYPES.REGISTER_OS_STREAMS, new Bull(
       QUEUE_TYPES.REGISTER_OS_STREAMS, {
         prefix: queuePrefix,
@@ -105,6 +113,20 @@ const createQueues = (): Promise<void> => {
     // sync external collections
     queues.set(QUEUE_TYPES.SYNC_COLLECTIONS, new Bull(
       QUEUE_TYPES.SYNC_COLLECTIONS, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
+    // sync collection rarity
+    queues.set(QUEUE_TYPES.SYNC_COLLECTION_RARITY, new Bull(
+      QUEUE_TYPES.SYNC_COLLECTION_RARITY, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
+    // sync collection issuance date
+    queues.set(QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, new Bull(
+      QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, {
         prefix: queuePrefix,
         redis,
       }))
@@ -221,6 +243,19 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_nfts_streams',
           })
+      // case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
+      //   return queues.get(QUEUE_TYPES.SYNC_COLLECTION_RARITY)
+      //     .add({
+      //       SYNC_COLLECTION_RARITY: QUEUE_TYPES.SYNC_COLLECTION_RARITY,
+      //       chainId: process.env.CHAIN_ID,
+      //     },
+      //     {
+      //       removeOnComplete: true,
+      //       removeOnFail: true,
+      //       // repeat every two hours
+      //       repeat: { every: 2 * 60 * 60000 },
+      //       jobId: 'sync_collection_rarity',
+      //     })
       case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
         return queues.get(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS)
           .add({
@@ -233,6 +268,19 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             // repeat every once every day
             repeat: { every: 24 * 60 * 60000 },
             jobId: 'sync_spam_collections',
+          })
+      case QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT:
+        return queues.get(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT)
+          .add({
+            SAVE_PROFILE_EXPIRE_AT: QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT,
+            chainId: process.env.CHAIN_ID,
+          },
+          {
+            removeOnComplete: true,
+            removeOnFail: true,
+            // repeat every once every day
+            repeat: { every: 24 * 60 * 60000 },
+            jobId: 'save_profile_expire_at',
           })
       // case QUEUE_TYPES.REGISTER_OS_STREAMS:
       //   return queues.get(QUEUE_TYPES.REGISTER_OS_STREAMS)
@@ -318,6 +366,9 @@ const listenToJobs = async (): Promise<void> => {
     case QUEUE_TYPES.SYNC_COLLECTIONS:
       queue.process(collectionSyncHandler)
       break
+    // case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
+    //   queue.process(raritySync)
+    //   break
     case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
       queue.process(spamCollectionSyncHandler)
       break
@@ -338,6 +389,9 @@ const listenToJobs = async (): Promise<void> => {
       break
     case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
       queue.process(collectionIssuanceDateSync)
+      break
+    case QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT:
+      queue.process(saveProfileExpireAt)
       break
     default:
       queue.process(getEthereumEvents)

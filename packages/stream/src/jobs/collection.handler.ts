@@ -2,26 +2,25 @@
 import { AxiosInstance, AxiosResponse } from 'axios'
 import Bull, { Job } from 'bull'
 import { BigNumber } from 'ethers'
-import { In, Not } from 'typeorm'
+import { In, IsNull, Not } from 'typeorm'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import { nftService } from '@nftcom/gql/service'
-import { _logger, db, entity, helper } from '@nftcom/shared'
+import { _logger, db, defs, entity, helper } from '@nftcom/shared'
 
 import { NFTAlchemy } from '../interface'
 import { CollectionType, SyncCollectionInput } from '../middleware/validate'
 import { getAlchemyInterceptor } from '../service/alchemy'
-import { cache, CacheKeys } from '../service/cache'
+import { cache, CacheKeys, removeExpiredTimestampedZsetMembers, ttlForTimestampedZsetMembers } from '../service/cache'
 import { getEtherscanInterceptor } from '../service/etherscan'
+import { retrieveNFTDetailsNFTPort } from '../service/nftPort'
 import { delay } from '../utils'
-import { collectionEntityBuilder, nftEntityBuilder } from '../utils/builder/nftBuilder'
+import { collectionEntityBuilder, nftEntityBuilder, nftTraitBuilder } from '../utils/builder/nftBuilder'
 import { collectionSyncSubqueue } from './jobs'
 
 const logger = _logger.Factory(_logger.Context.Bull)
 const repositories = db.newRepositories()
-
-const MAX_BATCH_SIZE = 1000
 
 const subQueueBaseOptions: Bull.JobOptions = {
   attempts: 2,
@@ -117,6 +116,7 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
     // check in progress
     const contractInput: SyncCollectionInput[] = []
     const contractsToBeProcessed: string[] = []
+    const contractsRarityToBeProcessed: any[] = []
     const contractToBeSaved: Promise<Partial<entity.Collection>>[] = []
     const existsInDB: entity.Collection[] = await repositories.collection.find({
       where: {
@@ -153,6 +153,7 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
           if (collectionType && isOfficial || !collectionType) {
             contractInput.push(collections[i])
             contractsToBeProcessed.push(contract + startTokenParam)
+            contractsRarityToBeProcessed.push([1, contract])
           }
         }
 
@@ -171,6 +172,7 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
           if (collectionType && isOfficial || !collectionType) {
             contractInput.push(collections[i])
             contractsToBeProcessed.push(contract + startTokenParam) // full resync (for cases where collections already exist, but we want to fetch all the NFTs)
+            contractsRarityToBeProcessed.push([1, contract])
           }
         }
       }
@@ -227,6 +229,14 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
       // process subqueues in series; hence concurrency is explicitly set to one for rate limits
       collectionSyncSubqueue.process(1, nftSyncHandler)
     }
+
+    // rarity process
+    if (contractsRarityToBeProcessed.length) {
+      await cache.zadd(
+        `${CacheKeys.REFRESH_COLLECTION_RARITY}_${chainId}`,
+        ...contractsRarityToBeProcessed,
+      )
+    }
     logger.log('completed collection sync')
   } catch (err) {
     logger.error(`Error in collectionSyncHandler: ${err}`)
@@ -262,73 +272,182 @@ export const spamCollectionSyncHandler = async (job: Job): Promise<void> => {
 }
 
 export const collectionIssuanceDateSync = async (job: Job): Promise<void> => {
+  logger.log('initiating collection issuance sync')
   const chainId: string = job?.data?.chainId || process.env.CHAIN_ID || '5'
 
-  const processedContracts: string[] = await cache.smembers(
-    CacheKeys.COLLECTION_ISSUANCE_DATE,
-  )
-  const progressContracts: string[] = await cache.smembers(
-    CacheKeys.COLLECTION_ISSUANCE_DATE_IN_PROGRESS,
-  )
-  const cachedContracts: string[] = [...processedContracts, ...progressContracts]
-  // official collection
-  const collections: entity.Collection[] = await repositories.collection.find({
-    where: {
-      issuanceDate: null,
-      chainId,
-      contract: Not(In(cachedContracts)),
-    },
-    select: {
-      id: true,
-      contract: true,
-    },
-  })
-
-  let count = 0
-  const updateContracts: Partial<entity.Collection>[] = []
-  const updatePromiseArray = []
-  const etherscanInterceptor = getEtherscanInterceptor(chainId)
-  for (const collection of collections) {
-    const collectionInCache: number = await cache.sismember(
-      CacheKeys.COLLECTION_ISSUANCE_DATE, collection.contract,
+  try {
+    const processedContracts: string[] = await cache.smembers(
+      CacheKeys.COLLECTION_ISSUANCE_DATE,
     )
-    const collectionInProgressCache: number = await cache.sismember(
-      CacheKeys.COLLECTION_ISSUANCE_DATE_IN_PROGRESS, collection.contract,
+    const progressContracts: string[] = await cache.smembers(
+      CacheKeys.COLLECTION_ISSUANCE_DATE_IN_PROGRESS,
     )
-    // if collection does not have issuance date, process
-    if (!collectionInCache && !collectionInProgressCache) {
-      await cache.sadd(CacheKeys.COLLECTION_ISSUANCE_DATE_IN_PROGRESS, collection.contract)
-      const query = `module=account&action=txlist&address=${collection.contract}&page=1&offset=1&startblock=0&endblock=99999999&sort=asc`
-      const response: AxiosResponse = await etherscanInterceptor.get(query)
-      if (response?.data) {
-        const issuanceDateTimeStamp: string = response?.data?.result?.[0]?.timestamp
-        if (issuanceDateTimeStamp) {
-          const issuanceDate = new Date(Number(issuanceDateTimeStamp) * 1000)
-          updateContracts.push({ ...collection, issuanceDate })
-          await cache.srem(CacheKeys.COLLECTION_ISSUANCE_DATE_IN_PROGRESS, collection.contract)
+    const cachedContracts: string[] = [...processedContracts, ...progressContracts]
+    // official collection
+    const collections: entity.Collection[] = await repositories.collection.find({
+      where: {
+        issuanceDate: null,
+        chainId,
+        contract: Not(In(cachedContracts)),
+      },
+      select: {
+        id: true,
+        contract: true,
+      },
+    })
+  
+    let count = 0
+    const updateContracts: Partial<entity.Collection>[] = []
+    const etherscanInterceptor = getEtherscanInterceptor(chainId)
+    for (const collection of collections) {
+      const collectionInCache: number = await cache.sismember(
+        CacheKeys.COLLECTION_ISSUANCE_DATE, collection.contract,
+      )
+      const collectionInProgressCache: number = await cache.sismember(
+        CacheKeys.COLLECTION_ISSUANCE_DATE_IN_PROGRESS, collection.contract,
+      )
+      // if collection does not have issuance date, process
+      if (!collectionInCache && !collectionInProgressCache) {
+        await cache.sadd(CacheKeys.COLLECTION_ISSUANCE_DATE_IN_PROGRESS, collection.contract)
+        const response: AxiosResponse = await etherscanInterceptor.get('/', {
+          params: {
+            module: 'account',
+            action: 'txlist',
+            address: collection.contract,
+            page: '1',
+            offset: '1',
+            startblock: '0',
+            block: '99999999',
+            sort: 'asc',
+          } })
+        if (response?.data) {
+          const issuanceDateTimeStamp: string = response?.data?.result?.[0]?.timeStamp
+          if (issuanceDateTimeStamp) {
+            const issuanceDate = new Date(Number(issuanceDateTimeStamp) * 1000)
+            updateContracts.push({ ...collection, issuanceDate })
+            await cache.srem(CacheKeys.COLLECTION_ISSUANCE_DATE_IN_PROGRESS, collection.contract)
+          }
+        }
+        count++
+        if (count === 5) {
+          await delay(1000)
         }
       }
-      count++
-      if (count === 5) {
-        await delay(1000)
+  
+      // for efficient memory storage, process persistence in batches of 1000
+      if (updateContracts.length >= 500) {
+        await repositories.collection.saveMany(updateContracts, { chunk: 100 })
+        const cacheContracts: string[] = updateContracts.map(
+          (item: entity.Collection) => item.contract,
+        )
+        await cache.sadd(CacheKeys.COLLECTION_ISSUANCE_DATE, ...cacheContracts)
       }
     }
-
-    // for efficient memory storage, process persistence in batches of 1000
-    if (updateContracts.length === MAX_BATCH_SIZE) {
-      updatePromiseArray.push(repositories.collection.saveMany(updateContracts))
-    }
-  }
-
-  // add to cache
-  const updateResult = await Promise.all(updatePromiseArray)
   
-  const cacheContracts: string[] = []
-  for(const result of updateResult) {
-    for (const item of result) {
-      cacheContracts.push(item?.contract)
+    if (updateContracts.length) {
+      await repositories.collection.saveMany(updateContracts, { chunk: 100 })
+      const cacheContracts: string[] = updateContracts.map(
+        (item: entity.Collection) => item.contract,
+      )
+      await cache.sadd(CacheKeys.COLLECTION_ISSUANCE_DATE, ...cacheContracts)
     }
+  } catch (err) {
+    logger.error(`Error in collection issuance sync: ${err}`)
   }
+  logger.log('completed collection issuance sync')
+}
 
-  await cache.sadd(CacheKeys.COLLECTION_ISSUANCE_DATE, ...cacheContracts)
+export const raritySync = async (job: Job): Promise<void> => {
+  logger.log('initiated rarity sync')
+  const chainId: string = job.data.chainId || process.env.chainId || '5'
+  try {
+    await removeExpiredTimestampedZsetMembers(
+      `${CacheKeys.REFRESHED_NFT_ORDERS_EXT}_${chainId}`,
+      Date.now(),
+    )
+    const cachedCollections = await cache.zrevrangebyscore(`${CacheKeys.REFRESH_COLLECTION_RARITY}_${chainId}`, '+inf', '(0')
+    const removeCacheCollections = []
+    if(cachedCollections?.length) {
+      // loop
+      for (const collection of cachedCollections) {
+        const collectionNFTs: entity.NFT[] = await repositories.nft.find({
+          where: {
+            contract: collection,
+            rarity: IsNull(),
+          },
+          select: {
+            id: true,
+            tokenId: true,
+            metadata: true,
+          },
+        })
+
+        let rateLimitDelayCounter = 0
+        if (collectionNFTs.length) {
+          let updateNFTRarity: Partial<entity.NFT>[] = []
+          for (const nft of collectionNFTs) {
+            const updatedNFT: Partial<entity.NFT> = { id: nft.id, metadata: nft.metadata }
+            const tokenId: string = nft.tokenId
+            const result = await retrieveNFTDetailsNFTPort(
+              collection,
+              tokenId,
+              chainId,
+              false,
+              ['rarity', 'attributes'],
+            )
+
+            if (result?.nft?.rarity) {
+              updatedNFT.rarity = String(result?.nft?.rarity?.rank)
+            }
+
+            if (result?.nft?.attributes?.length) {
+              const updatedAttributes: defs.Trait[] = nftTraitBuilder(
+                updatedNFT.metadata.traits,
+                result?.nft?.attributes,
+              )
+              if (updatedAttributes.length) {
+                updatedNFT.metadata.traits = updatedAttributes
+              }
+            }
+
+            if (result?.nft?.rarity || result?.nft?.attributes) {
+              updateNFTRarity.push(updatedNFT)
+            }
+
+            if (updateNFTRarity.length >= 500) {
+              await repositories.nft.saveMany(updateNFTRarity, { chunk: 100 })
+              updateNFTRarity = []
+            }
+
+            rateLimitDelayCounter++
+
+            if (rateLimitDelayCounter === 99) {
+              await delay(1000)
+            }
+          }
+
+          if (updateNFTRarity.length) {
+            await repositories.nft.saveMany(updateNFTRarity, { chunk: 100 })
+          }
+         
+          const date = new Date()
+          date.setHours(date.getHours() + 2) // two hours ttl
+          const ttl: number = ttlForTimestampedZsetMembers(date)
+          removeCacheCollections.push([ttl, collection])
+        }
+      }
+
+      await Promise.all([
+        cache.zadd(
+          `${CacheKeys.REFRESHED_COLLECTION_RARITY}_${chainId}`,
+          ...removeCacheCollections,
+        ),
+        cache.zremrangebyscore(`${CacheKeys.REFRESH_COLLECTION_RARITY}_${chainId}`, 1, '+inf'),
+      ])
+    }
+  } catch (err) {
+    logger.log(`Error in rarity sync: ${err}`)
+  }
+  logger.log('completed rarity sync')
+  //Promise.resolve()
 }
