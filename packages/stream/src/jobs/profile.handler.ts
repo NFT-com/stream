@@ -219,6 +219,6 @@ export const saveProfileExpireAt = async (job: Job): Promise<any> => {
     }
     logger.info('Saved expireAt for profiles', { counts: slicedProfiles.length })
   } catch (err) {
-    logger.error(`Error in generateCompositeImages Job: ${err}`)
+    logger.error(`Error in saveProfileExpireAt Job: ${err}`)
   }
 }
