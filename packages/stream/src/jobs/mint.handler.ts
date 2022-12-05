@@ -318,9 +318,12 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
         const [profileUrl,extendExpiry] = evt.args
         const profile = await repositories.profile.findByURL(profileUrl, chainId)
         if (profile) {
-          const expireAt = new Date(Number(extendExpiry) * 1000)
-          await repositories.profile.updateOneById(profile.id, { expireAt })
-          logger.debug(`New ExtendExpiry event found. profileURL=${profileUrl} expireAt=${extendExpiry} chainId=${chainId}`)
+          const timestamp = BigNumber.from(extendExpiry).toString()
+          if (Number(timestamp) !== 0) {
+            const expireAt = new Date(Number(timestamp) * 1000)
+            await repositories.profile.updateOneById(profile.id, { expireAt })
+            logger.debug(`New ExtendExpiry event found. profileURL=${profileUrl} expireAt=${timestamp} chainId=${chainId}`)
+          }
         }
       } catch (err) {
         logger.error(err, 'error parsing extend expiry event')
