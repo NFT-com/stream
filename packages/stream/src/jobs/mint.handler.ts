@@ -75,7 +75,7 @@ export const getPastLogs = async (
   if (fromBlock > toBlock) {
     return []
   }
-  
+
   const max_Blocks = maxBlocks ? maxBlocks : MAX_BLOCKS
   try {
     // if there are too many blocks, we will split it up...
@@ -124,6 +124,7 @@ type Log = {
 
 const profileAuctionInterface = new utils.Interface(contracts.profileAuctionABI())
 const nftResolverInterface = new utils.Interface(contracts.NftResolverABI())
+const profileInterface = new utils.Interface(contracts.NftProfileABI())
 
 export const getCachedBlock = async (chainId: number, key: string): Promise<number> => {
   const startBlock = chainId == 5 ? 7128515 :
@@ -149,6 +150,10 @@ export const chainIdToCacheKeyProfile = (chainId: number): string => {
 
 export const chainIdToCacheKeyResolverAssociate = (chainId: number): string => {
   return `resolver_associate_cached_block_${chainId}`
+}
+
+export const chainIdToCacheKeyProfileExtendExpiry = (chainId: number): string => {
+  return `profile_extend_expiry_cached_block_${chainId}`
 }
 
 export const getResolverEvents = async (
@@ -217,12 +222,49 @@ export const getMintedProfileEvents = async (
   }
 }
 
+export const getProfileExtendExpiryEvents = async (
+  topics: any[],
+  chainId: number,
+  provider: ethers.providers.BaseProvider,
+  address: string,
+): Promise<Log> => {
+  const latestBlock = await provider.getBlock('latest')
+  try {
+    const maxBlocks = process.env.MINTED_PROFILE_EVENTS_MAX_BLOCKS
+    const key = chainIdToCacheKeyProfileExtendExpiry(chainId)
+    const cachedBlock = await getCachedBlock(chainId, key)
+    const logs = await getPastLogs(
+      provider,
+      address,
+      topics,
+      cachedBlock,
+      latestBlock.number,
+      Number(maxBlocks),
+    )
+    return {
+      logs: logs,
+      latestBlockNumber: latestBlock.number,
+    }
+  } catch (e) {
+    logger.debug(e)
+    logger.error(`Error in getProfileExtendExpiryEvents: ${e}`)
+    return {
+      logs: [],
+      latestBlockNumber: latestBlock.number,
+    }
+  }
+}
+
 export const nftResolverParseLog = (log: any): any => {
   return nftResolverInterface.parseLog(log)
 }
 
 export const profileAuctionParseLog = (log: any): any => {
   return profileAuctionInterface.parseLog(log)
+}
+
+export const profileParseLog = (log: any): any => {
+  return profileInterface.parseLog(log)
 }
 
 export const getEthereumEvents = async (job: Job): Promise<any> => {
@@ -243,9 +285,14 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
       ],
     ]
 
+    const topics3 = [
+      helper.id('ExtendExpiry(string,uint256)'),
+    ]
+
     const chainProvider = provider(Number(chainId))
     const address = helper.checkSum(contracts.profileAuctionAddress(chainId))
     const nftResolverAddress = helper.checkSum(contracts.nftResolverAddress(chainId))
+    const profileAddress = helper.checkSum(contracts.nftProfileAddress(chainId))
 
     logger.debug(`👾 getting Ethereum Events chainId=${chainId}`)
 
@@ -256,7 +303,29 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
       chainProvider,
       nftResolverAddress,
     )
+    const log3 = await getProfileExtendExpiryEvents(
+      topics3,
+      Number(chainId),
+      chainProvider,
+      profileAddress,
+    )
 
+    logger.debug({ log3: log3.logs.length }, `profile extend expiry events chainId=${chainId}`)
+    log3.logs.map(async (unparsedEvent) => {
+      try {
+        const evt = profileParseLog(unparsedEvent)
+        logger.info(evt.args, `Found event ExtendExpiry with chainId: ${chainId}`)
+        const [profileUrl,extendExpiry] = evt.args
+        const profile = await repositories.profile.findByURL(profileUrl, chainId)
+        if (profile) {
+          const expireAt = new Date(Number(extendExpiry) * 1000)
+          await repositories.profile.updateOneById(profile.id, { expireAt })
+          logger.debug(`New ExtendExpiry event found. profileURL=${profileUrl} expireAt=${extendExpiry} chainId=${chainId}`)
+        }
+      } catch (err) {
+        logger.error(err, 'error parsing extend expiry event')
+      }
+    })
     logger.debug({ log2: log2.logs.length }, `nft resolver outgoing associate events chainId=${chainId}`)
     log2.logs.map(async (unparsedEvent) => {
       let evt
