@@ -3,7 +3,7 @@
 import {  alchemyService, nftService } from '@nftcom/gql/service'
 import { defs, entity, helper } from '@nftcom/shared'
 
-import { NFT_NftPort,NFTAlchemy } from '../../interface'
+import { NFT_NftPort, NFTAlchemy } from '../../interface'
 import { NFTPortRarityAttributes } from '../../service/nftPort'
 
 export const collectionEntityBuilder = async (
