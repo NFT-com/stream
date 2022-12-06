@@ -151,3 +151,31 @@ export interface NFTAlchemy {
     tokenType: string
   }
 }
+
+export interface NftPortTraits {
+  trait_type: string
+  value: string
+  display_type: string | null
+  max_value: string | null
+  trait_count: number
+  order: string | null
+}
+
+export interface NFT_NftPort {
+  chain: string
+  contract_address: string
+  token_id: string
+  metadata_url: string | null
+  metadata: {
+    image_url: string
+    name: string
+    traits: NftPortTraits[]
+  }
+  file_url: string
+  animation_url: string
+  cached_file_url: string
+  cached_animation_url: string
+  creator_address: string
+  updated_date: string
+  owner: string
+}
