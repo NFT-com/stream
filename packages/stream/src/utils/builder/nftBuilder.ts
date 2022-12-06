@@ -3,7 +3,7 @@
 import {  alchemyService, nftService } from '@nftcom/gql/service'
 import { defs, entity, helper } from '@nftcom/shared'
 
-import { NFTAlchemy } from '../../interface'
+import { NFT_NftPort,NFTAlchemy } from '../../interface'
 import { NFTPortRarityAttributes } from '../../service/nftPort'
 
 export const collectionEntityBuilder = async (
@@ -36,6 +36,25 @@ export const collectionEntityBuilder = async (
     isOfficial,
     isSpam,
   }
+}
+
+// for NftPort CryptoPunks specifically
+export const nftEntityBuilderCryptoPunks = (
+  nft: NFT_NftPort,
+  chainId: string,
+): entity.NFT => {
+  return {
+    contract: helper.checkSum(nft.contract_address),
+    tokenId: helper.bigNumberToHex(nft.token_id),
+    type: nftService.getNftType(undefined, nft), // skip alchemy, pass in nftport nft
+    metadata: {
+      name: nft?.metadata?.name,
+      description: '',
+      imageURL: nft?.cached_file_url,
+      traits: nftService.getMetadata(nft),
+    },
+    chainId,
+  } as entity.NFT
 }
 
 export const nftEntityBuilder = (
