@@ -46,7 +46,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
       let processCondition = true
       let startPage = '1'
 
-      let queryParams = `nfts/${contract}&chain=ethereum&page_number=${startPage}&page_size=50&include=metadata&refresh_metadata=false`
+      let queryParams = `nfts/${contract}?chain=ethereum&page_number=${startPage}&page_size=50&include=metadata&refresh_metadata=false`
       while(processCondition) {
         const collectionNFTs: AxiosResponse = await nftPortInstance
           .get(
@@ -80,14 +80,14 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
             }
     
             startPage += 1
-            queryParams = `nfts/${contract}&chain=ethereum&page_number=${startPage}&page_size=50&include=metadata&refresh_metadata=false`
+            queryParams = `nfts/${contract}?chain=ethereum&page_number=${startPage}&page_size=50&include=metadata&refresh_metadata=false`
           } catch (errSave) {
             logger.log(`error while saving nftSyncHandler but continuing ${errSave}...${startPage}...${queryParams}`)
             logger.log(`error nftPromiseArray: ${nftPromiseArray}`)
             logger.log(`error existing: ${existingNFTs}`)
 
             startPage += 1
-            queryParams = `nfts/${contract}&chain=ethereum&page_number=${startPage}&page_size=50&include=metadata&refresh_metadata=false`
+            queryParams = `nfts/${contract}?chain=ethereum&page_number=${startPage}&page_size=50&include=metadata&refresh_metadata=false`
           }
         } else {
           // no nfts found
