@@ -38,29 +38,36 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
   logger.log(`nft sync handler process started for: ${contract}, chainId: ${chainId}`)
   try {
     const alchemyInstance: AxiosInstance = await getAlchemyInterceptor(chainId)
-    const nftPortInstance: AxiosInstance = await getNFTPortInterceptor('https://api.nftport.xyz/v0/')
-    
+    const nftPortInstance: AxiosInstance = await getNFTPortInterceptor('https://api.nftport.xyz/v0')
+  
     // nft port specific sync
     if (contract?.toLowerCase() == CRYPTOPUNK) {
       // process nfts for collection
       let processCondition = true
       let startPage = '1'
 
-      let queryParams = `nfts/${contract}?chain=ethereum&page_number=${startPage}&page_size=50&include=metadata&refresh_metadata=false`
+      let queryParams = `chain=ethereum&page_number=${startPage}&page_size=50&include=metadata&refresh_metadata=false`
       while(processCondition) {
         const collectionNFTs: AxiosResponse = await nftPortInstance
           .get(
-            `/getNFTsForCollection?${queryParams}`)
+            `/nfts/${contract}?${queryParams}`)
+
+        logger.log(`=============== nft sync handler nftport: ${collectionNFTs?.data?.nfts.length}`)
 
         if (collectionNFTs?.data?.nfts.length) {
           const nfts = collectionNFTs?.data?.nfts
           const nftTokenMap: string[] = nfts.map(
             (nft: NFT_NftPort) => BigNumber.from(nft.token_id).toHexString())
+
+          logger.log(`=============== nft sync handler nftTokenMap: ${JSON.stringify(nftTokenMap)}`)
+
           const existingNFTs: entity.NFT[] = await repositories.nft.find(
             { where: { contract: helper.checkSum(contract), tokenId: In(nftTokenMap), chainId } },
           )
           const existingNFTTokenMap: string[] = existingNFTs.map(
             (nft: entity.NFT) => BigNumber.from(nft.tokenId).toHexString())
+
+          logger.log(`=============== nft sync handler existingNFTTokenMap: ${JSON.stringify(existingNFTTokenMap)}`)
             
           const nftPromiseArray: entity.NFT[] = []
           const nftPortNfts: NFT_NftPort[] = nfts
@@ -72,6 +79,8 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
             }
           }
 
+          logger.log(`nftPromiseArray?.length: ${nftPromiseArray?.length}`)
+
           try {
             if (nftPromiseArray?.length > 0) {
               await nftService.indexNFTsOnSearchEngine(nftPromiseArray)
@@ -80,14 +89,14 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
             }
     
             startPage += 1
-            queryParams = `nfts/${contract}?chain=ethereum&page_number=${startPage}&page_size=50&include=metadata&refresh_metadata=false`
+            queryParams = `chain=ethereum&page_number=${startPage}&page_size=50&include=metadata&refresh_metadata=false`
           } catch (errSave) {
             logger.log(`error while saving nftSyncHandler but continuing ${errSave}...${startPage}...${queryParams}`)
             logger.log(`error nftPromiseArray: ${nftPromiseArray}`)
             logger.log(`error existing: ${existingNFTs}`)
 
             startPage += 1
-            queryParams = `nfts/${contract}?chain=ethereum&page_number=${startPage}&page_size=50&include=metadata&refresh_metadata=false`
+            queryParams = `chain=ethereum&page_number=${startPage}&page_size=50&include=metadata&refresh_metadata=false`
           }
         } else {
           // no nfts found

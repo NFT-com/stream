@@ -38,7 +38,7 @@ export const collectionEntityBuilder = async (
   }
 }
 
-// for NftPort CryptoPunks specifically
+// for NftPort CryptoPunk specifically
 export const nftEntityBuilderCryptoPunks = (
   nft: NFT_NftPort,
   chainId: string,
