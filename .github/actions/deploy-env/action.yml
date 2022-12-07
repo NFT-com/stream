@@ -114,6 +114,7 @@ runs:
         OPENSEA_API_KEY: ${{ fromJSON(inputs.secrets).OPENSEA_API_KEY }}
         OPENSEA_ORDERS_API_KEY: ${{ fromJSON(inputs.secrets).OPENSEA_ORDERS_API_KEY }}
         LOOKSRARE_API_KEY: ${{ fromJSON(inputs.secrets).LOOKSRARE_API_KEY }}
+        X2Y2_API_KEY: ${{ fromJSON(inputs.secrets).X2Y2_API_KEY }}
         PROFILE_SCORE_EXPIRE_DURATION: ${{ fromJSON(inputs.secrets).PROFILE_SCORE_EXPIRE_DURATION }}
         NFT_EXTERNAL_ORDER_REFRESH_DURATION: ${{ fromJSON(inputs.secrets).NFT_EXTERNAL_ORDER_REFRESH_DURATION }}
         TEST_DB_HOST: ${{ fromJSON(inputs.secrets).TEST_DB_HOST }}
