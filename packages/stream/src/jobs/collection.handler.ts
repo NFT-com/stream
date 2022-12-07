@@ -52,7 +52,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
     if (contract?.toLowerCase() == CRYPTOPUNK) {
       // process nfts for collection
       let processCondition = true
-      let startPage = '1'
+      let startPage = 1
 
       let queryParams = `chain=ethereum&page_number=${startPage}&page_size=50&include=metadata&refresh_metadata=false`
       while(processCondition) {
