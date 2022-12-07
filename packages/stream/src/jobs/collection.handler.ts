@@ -135,7 +135,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
 
           try {
             if (nftPromiseArray?.length > 0) {
-              await nftService.indexNFTsOnSearchEngine(nftPromiseArray)
+              // await nftService.indexNFTsOnSearchEngine(nftPromiseArray)
               await repositories.nft.saveMany(nftPromiseArray, { chunk: 50 }) // temp chunk
               logger.log(`saved ${queryParams}`)
             }
@@ -148,7 +148,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
             }
           } catch (errSave) {
             logger.log(`error while saving nftSyncHandler but continuing ${errSave}...${startToken}...${queryParams}`)
-            logger.log(`error nftPromiseArray: ${nftPromiseArray}`)
+            // logger.log(`error nftPromiseArray: ${nftPromiseArray}`)
             logger.log(`error existing: ${existingNFTs}`)
 
             if (!collectionNFTs?.data?.nextToken) {
