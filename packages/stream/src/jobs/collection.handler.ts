@@ -143,7 +143,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
 
           try {
             if (nftPromiseArray?.length > 0) {
-              // await nftService.indexNFTsOnSearchEngine(nftPromiseArray)
+              await nftService.indexNFTsOnSearchEngine(nftPromiseArray)
               await repositories.nft.saveMany(nftPromiseArray, { chunk: 50 }) // temp chunk
               logger.log(`saved ${queryParams}`)
             }
