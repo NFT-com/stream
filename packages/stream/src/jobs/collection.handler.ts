@@ -2,7 +2,7 @@
 import { AxiosInstance, AxiosResponse } from 'axios'
 import Bull, { Job } from 'bull'
 import { BigNumber } from 'ethers'
-import { In, IsNull, Not } from 'typeorm'
+import { ILike, In, IsNull, Not } from 'typeorm'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -17,10 +17,18 @@ import { getEtherscanInterceptor } from '../service/etherscan'
 import { retrieveNFTDetailsNFTPort } from '../service/nftPort'
 import { delay } from '../utils'
 import { collectionEntityBuilder, nftEntityBuilder, nftTraitBuilder } from '../utils/builder/nftBuilder'
+import { uploadImageToS3 } from '../utils/uploader'
 import { collectionSyncSubqueue } from './jobs'
 
 const logger = _logger.Factory(_logger.Context.Bull)
 const repositories = db.newRepositories()
+
+const exceptionBannerUrls: string[] = [
+  'https://cdn.nft.com/collections/1/%banner.png',
+  'https://cdn.nft.com/collections/1/%banner.jpg',
+  'https://cdn.nft.com/collections/1/%banner.jpeg',
+  'https://cdn.nft.com/collectionBanner_default.png',
+]
 
 const subQueueBaseOptions: Bull.JobOptions = {
   attempts: 2,
@@ -451,3 +459,91 @@ export const raritySync = async (job: Job): Promise<void> => {
   logger.log('completed rarity sync')
   //Promise.resolve()
 }
+
+// collection image sync
+export const collectionBannerImageSync = async (job: Job): Promise<void> => {
+  logger.log('initiated collection banner image sync')
+  const chainId: string = job.data.chainId || process.env.chainId || '5'
+  const queryFilters = exceptionBannerUrls.map((exceptionBannerUrl: string) =>
+    ({ bannerUrl: ILike(exceptionBannerUrl) }))
+  try {
+    const collections: Partial<entity.Collection>[] = await repositories.collection.find(
+      {
+        where:[
+          { bannerUrl: IsNull() },
+          ...queryFilters,
+        ],
+        select: {
+          id: true,
+          contract: true,
+          bannerUrl: true,
+          chainId: true,
+        },
+      })
+
+    for (const collection of collections) {
+      try {
+        const contractNFT: Partial<entity.NFT> = await repositories.nft.findOne({
+          where: {
+            contract: collection?.contract,
+            chainId: collection.chainId || chainId,
+          },
+          select: {
+            tokenId: true,
+            metadata: {
+              imageURL: true,
+            },
+          },
+        })
+
+        if (collection?.contract && contractNFT?.tokenId) {
+          let result
+          try {
+            result = await retrieveNFTDetailsNFTPort(
+              collection.contract,
+              contractNFT.tokenId,
+              chainId,
+              false,
+              [],
+            )
+          } catch (err) {
+            logger.error(`Error while fetching NFT details from NFT Port for contract: 
+                  ${collection.contract} and tokenId: ${contractNFT.tokenId}`)
+          }
+  
+          let bannerUrl: string = null
+          const uploadPath = `collections/${chainId}/`
+          //  NFT Port Collection Image
+          if (result?.contract?.metadata?.cached_banner_url) {
+            bannerUrl = result.contract.metadata.cached_banner_url
+          } else if (result?.nft?.cached_file_url) {
+            bannerUrl = result.nft.cached_file_url
+          } else if (contractNFT?.metadata?.imageURL) {
+            bannerUrl = contractNFT.metadata.imageURL
+          }
+  
+          if (bannerUrl) {
+            const filename = bannerUrl.split('/').pop()
+            const banner = await uploadImageToS3(
+              bannerUrl,
+              filename,
+              chainId,
+              collection.contract,
+              uploadPath,
+            )
+            bannerUrl = banner ? banner : bannerUrl
+            await repositories.collection.updateOneById(collection.id, {
+              bannerUrl,
+            })
+          }
+        }
+      } catch (err) {
+        logger.error(`Error occured while fetching contract NFT for ${collection.contract}: ${err}`)
+      }
+    }
+  } catch (err) {
+    logger.log(`Error in collection banner image sync: ${err}`)
+  }
+  logger.log('completed collection banner image sync')
+}
+

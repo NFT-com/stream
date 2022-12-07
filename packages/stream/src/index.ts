@@ -284,6 +284,58 @@ app.get('/stopRaritySync', authMiddleWare, async (_req, res) => {
   }
 })
 
+// sync collection images - authenticated
+app.get('/syncCollectionBannerImages', authMiddleWare, async (_req, res) => {
+  try {
+    const jobId = 'sync_collection_images'
+    const collectionBannerImageQueue = queues.get(QUEUE_TYPES.SYNC_COLLECTION_IMAGES)
+    const job: Bull.Job = await collectionBannerImageQueue.getJob(jobId)
+    if (job && (job.isFailed() || job.isPaused() || job.isStuck() || job.isDelayed())) {
+      await job.remove()
+    }
+
+    if(!job) {
+      collectionBannerImageQueue
+        .add({
+          SYNC_CONTRACTS: QUEUE_TYPES.SYNC_COLLECTION_IMAGES,
+          chainId: process.env.CHAIN_ID,
+        }, {
+          attempts: 1,
+          removeOnComplete: true,
+          removeOnFail: true,
+          jobId: 'sync_collection_images',
+        })
+      return res.status(200).send({ message: 'Sync Started!' })
+    }
+
+    return res.status(200).send({ message: 'Sync In Progress Already!' })
+  } catch (error) {
+    logger.error(`err: ${error}`)
+    return res.status(400).send(error)
+  }
+})
+
+// sync collection images - authenticated
+app.get('/stopSyncCollectionBannerImages', authMiddleWare, async (_req, res) => {
+  try {
+    const jobId = 'sync_collection_images'
+    const collectionBannerImageQueue = queues.get(QUEUE_TYPES.SYNC_COLLECTION_IMAGES)
+    const job: Bull.Job = await collectionBannerImageQueue.getJob(jobId)
+    if (job) {
+      await job.moveToFailed(new Error('Abort Triggered!'), true)
+      await job.discard()
+      await job.remove()
+      // await killProcess(job.data.pid)
+      return res.status(200).send({ message: 'Stopped Sync!' })
+    }
+
+    return res.status(200).send({ message: 'No Sync In Progress!' })
+  } catch (error) {
+    logger.error(`err: ${error}`)
+    return res.status(400).send(error)
+  }
+})
+
 // error handler
 const handleError = (err: Error): void => {
   logger.error(`App Error: ${err}`)

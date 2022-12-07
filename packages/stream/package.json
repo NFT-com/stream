@@ -13,6 +13,7 @@
     },
     "dependencies": {
         "@alch/alchemy-web3": "^1.4.6",
+        "@aws-sdk/lib-storage": "^3.135.0",
         "@babel/runtime": "^7.18.3",
         "@nftcom/gql": "file:../../../NFT-backend/packages/gql",
         "@nftcom/shared": "file:../../../NFT-backend/packages/shared",
