@@ -13,7 +13,7 @@ export const streamOrderEntityBuilder = async (
   if (!allowedEvents.includes(eventType)) {
     return {}
   }
-  console.log(seaportEventPayload)
+  
   let orderType: defs.ActivityType
     
   const orderHash: string = seaportEventPayload.order_hash
