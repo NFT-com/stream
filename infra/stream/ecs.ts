@@ -360,6 +360,10 @@ const createEcsTaskDefinition = (
               Value: process.env.LOOKSRARE_API_KEY,
             },
             {
+              Name: 'X2Y2_API_KEY',
+              Value: process.env.X2Y2_API_KEY,
+            },
+            {
               Name: 'PROFILE_SCORE_EXPIRE_DURATION',
               Value: process.env.PROFILE_SCORE_EXPIRE_DURATION,
             },

@@ -22,7 +22,7 @@ const repositories = db.newRepositories()
  * @param timestampFromSource - event creation timestamp of activity
  * @param expirationFromSource - expiration or null for on-chain
  */
-const activityBuilder = async (
+export const activityBuilder = async (
   activityType: defs.ActivityType,
   activityHash: string,
   walletAddress: string,

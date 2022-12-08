@@ -40,6 +40,18 @@ export interface PaymentToken {
   usd_price: string
 }
 
+export interface SeaportOffer {
+  itemType: number
+  token: string
+  identifierOrCriteria: string
+  startAmount: string
+  endAmount: string
+}
+
+export interface SeaportConsideration extends SeaportOffer {
+  recipient: string
+}
+
 export interface OSListingEventPayload {
   event_timestamp: string
   collection: Collection
@@ -54,6 +66,23 @@ export interface OSListingEventPayload {
   payment_token: PaymentToken
   quantity: number
   taker: Taker | null
+  protocol_data: {
+    parameters: {
+      offerer: string
+      offer: SeaportOffer[]
+      consideration: SeaportConsideration[]
+      startTime: string
+      endTime: string
+      orderType: number
+      zone: string
+      zoneHash: string
+      salt: string
+      conduitKey: string
+      totalOriginalConsiderationItems: number
+      counter: number
+    }
+    signature: string
+  }
 }
 
 export interface OSOfferEventPayload {
@@ -68,6 +97,23 @@ export interface OSOfferEventPayload {
   payment_token: PaymentToken
   quantity: number
   taker: Taker | null
+  protocol_data: {
+    parameters: {
+      offerer: string
+      offer: SeaportOffer[]
+      consideration: SeaportConsideration[]
+      startTime: string
+      endTime: string
+      orderType: number
+      zone: string
+      zoneHash: string
+      salt: string
+      conduitKey: string
+      totalOriginalConsiderationItems: number
+      counter: number
+    }
+    signature: string
+  }
 }
 
 export type OSEventPayload = OSListingEventPayload | OSOfferEventPayload
