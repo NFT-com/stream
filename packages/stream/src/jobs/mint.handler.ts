@@ -350,10 +350,15 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                   logger.info(`Something's wrong with Transfer event from=${from} url=${profile.url}`)
                 }
               }
-              const imageUrl = await core.generateCompositeImage(
-                profile.url,
-                core.DEFAULT_NFT_IMAGE,
-              )
+              let imageUrl = profile.photoURL
+              const bannerUrl = profile.bannerURL
+              const description = profile.description
+              if (!imageUrl) {
+                imageUrl = await core.generateCompositeImage(
+                  profile.url,
+                  core.DEFAULT_NFT_IMAGE,
+                )
+              }
               const toWallet = await repositories.wallet.findByChainAddress(
                 chainId,
                 ethers.utils.getAddress(to),
@@ -363,16 +368,16 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                   ownerUserId: null,
                   ownerWalletId: null,
                   photoURL: imageUrl,
-                  bannerURL: 'https://cdn.nft.com/profile-banner-default-logo-key.png',
-                  description: `NFT.com profile for ${profile.url}`,
+                  bannerURL: bannerUrl ?? 'https://cdn.nft.com/profile-banner-default-logo-key.png',
+                  description: description ?? `NFT.com profile for ${profile.url}`,
                 })
               } else {
                 await repositories.profile.updateOneById(profile.id, {
                   ownerUserId: toWallet.userId,
                   ownerWalletId: toWallet.id,
                   photoURL: imageUrl,
-                  bannerURL: 'https://cdn.nft.com/profile-banner-default-logo-key.png',
-                  description: `NFT.com profile for ${profile.url}`,
+                  bannerURL: bannerUrl ?? 'https://cdn.nft.com/profile-banner-default-logo-key.png',
+                  description: description ?? `NFT.com profile for ${profile.url}`,
                 })
               }
               logger.debug(`New profile transfer event found. profileURL=${profile.url} from=${from} to=${to} chainId=${chainId}`)
@@ -381,7 +386,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
         }
         await cache.set(chainIdToCacheKeyProfile(chainId), log3.latestBlockNumber)
       } catch (err) {
-        logger.error(err, 'error parsing extend expiry event')
+        logger.error(err, 'error parsing profile event')
       }
     })
     logger.debug({ log2: log2.logs.length }, `nft resolver outgoing associate events chainId=${chainId}`)

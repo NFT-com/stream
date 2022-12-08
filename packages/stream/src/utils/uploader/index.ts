@@ -47,7 +47,7 @@ export const uploadImageToS3 = async (
     } else {
       imageUrl = core.processIPFSURL(imageUrl)
       ext = core.extensionFromFilename(filename)
-  
+
       if (!ext) {
         if (imageUrl.includes('https://metadata.ens.domains/')) {
           // this image is svg so we skip it
@@ -62,14 +62,14 @@ export const uploadImageToS3 = async (
       } else {
         imageKey = uploadPath + Date.now() + '-' + filename
       }
-  
+
       // get buffer from imageURL, timeout is set to 60 seconds
       const res = await core.fetchWithTimeout(imageUrl, { timeout: 1000 * 60 })
       buffer = await res.buffer()
     }
-  
+
     if (!buffer) return undefined
-  
+
     const contentType = core.contentTypeFromExt(ext)
     if (!contentType) return undefined
     const s3config = await core.getAWSConfig()
@@ -83,7 +83,7 @@ export const uploadImageToS3 = async (
       },
     })
     await upload.done()
-  
+
     logger.info(`finished uploading in uploadImageToS3: ${imageUrl}`)
     return core.s3ToCdn(`https://${assetBucket.name}.s3.amazonaws.com/${imageKey}`)
   } catch (err) {
