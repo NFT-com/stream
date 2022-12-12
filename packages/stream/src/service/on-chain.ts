@@ -718,13 +718,9 @@ const keepAlive = ({
     }
 
     provider.on(x2y2Filter, async (e) => {
-      console.log('e', e)
       const evt = x2y2Interface.parseLog(e)
-      console.log('evt', evt)
       if(evt.name === X2Y2EventName.EvCancel) {
         const [orderHash] = evt.args
-        console.log('evt', X2Y2EventName.EvCancel)
-        console.log('order hash', orderHash)
         try {
           const order: entity.TxOrder = await repositories.txOrder.findOne({
             relations: ['activity'],
@@ -765,7 +761,6 @@ const keepAlive = ({
           logger.error(`Evt: ${X2Y2EventName.EvCancel} -- Err: ${err}`)
         }
       } else if (evt.name === X2Y2EventName.EvInventory) {
-        console.log('evt', X2Y2EventName.EvInventory)
         const [
           orderHash,
           maker,
@@ -777,17 +772,6 @@ const keepAlive = ({
           deadline,
           currency,
           data] = evt.args
-        console.log('orderHash', orderHash)
-        console.log('maker', maker)
-        console.log('taker', taker)
-        console.log('orderSalt', orderSalt)
-        console.log('settleSalt', settleSalt)
-
-        console.log('intent', intent)
-        console.log('delegateType', delegateType)
-        console.log('deadline', deadline)
-        console.log('currency', currency)
-        console.log('data', data)
         try {
           const order: entity.TxOrder = await repositories.txOrder.findOne({
             relations: ['activity'],
