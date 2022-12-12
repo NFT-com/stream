@@ -485,6 +485,8 @@ const listenMatchEvents = async (
               },
               auctionType,
               salt: -1,
+              start: 0,
+              end: -1,
             },
             makeAsset: [],
             takeAsset: [],
@@ -645,6 +647,8 @@ const listenMatchTwoAEvents = async (
               s: '',
             },
             salt,
+            start,
+            end,
           },
           makerAddress,
           takerAddress,
@@ -667,6 +671,8 @@ const listenMatchTwoAEvents = async (
           protocolData: {
             ...txListingOrder.protocolData,
             salt,
+            start,
+            end,
           },
         })
 
@@ -760,6 +766,8 @@ const listenMatchTwoBEvents = async (
               s: '',
             },
             salt: -1,
+            start: 0,
+            end: -1,
           },
           makerAddress: '0x',
           takerAddress: '0x',
@@ -853,6 +861,8 @@ const listenMatchThreeAEvents = async (
               s: '',
             },
             salt,
+            start,
+            end,
           },
           makerAddress,
           takerAddress,
@@ -875,6 +885,8 @@ const listenMatchThreeAEvents = async (
           protocolData: {
             ...txBidOrder.protocolData,
             salt,
+            start,
+            end,
           },
         })
 
@@ -968,6 +980,8 @@ const listenMatchThreeBEvents = async (
               s: '',
             },
             salt: -1,
+            start: 0,
+            end: -1,
           },
           makerAddress: '0x',
           takerAddress: '0x',
