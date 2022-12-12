@@ -49,21 +49,6 @@ enum X2Y2EventName {
   EvCancel = 'EvCancel'
 }
 
-// event EvInventory(
-//   bytes32 indexed itemHash,
-//   address maker,
-//   address taker,
-//   uint256 orderSalt,
-//   uint256 settleSalt,
-//   uint256 intent,
-//   uint256 delegateType,
-//   uint256 deadline,
-//   IERC20Upgradeable currency,
-//   bytes dataMask,
-//   Market.OrderItem item,
-//   Market.SettleDetail detail
-// )
-
 const keepAlive = ({
   provider,
   chainId,
