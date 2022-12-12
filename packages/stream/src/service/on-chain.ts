@@ -732,7 +732,7 @@ const keepAlive = ({
               order.activity.nftContract,
               order.activity.nftId,
               order.makerAddress,
-              defs.ExchangeType.OpenSea,
+              defs.ExchangeType.X2Y2,
               order.orderType as defs.CancelActivityType,
               order.id,
             )
@@ -796,7 +796,7 @@ const keepAlive = ({
                 currency,
                 data,
               },
-              OSSeaportEventName.OrderFulfilled,
+              X2Y2EventName.EvInventory,
             )
             await repositories.txTransaction.save(newTx)
 
