@@ -803,7 +803,7 @@ const keepAlive = ({
             // update NFT ownership
             const contract: string = helper.checkSum(order.activity.nftContract)
             const tokenId: string = helper.bigNumberToHex(
-              order.protocolData?.parameters?.offer?.[0]?.identifierOrCriteria,
+              order.protocolData?.tokenId,
             )
             const obj = {
               contract: {
