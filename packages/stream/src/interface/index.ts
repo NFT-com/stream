@@ -40,6 +40,18 @@ export interface PaymentToken {
   usd_price: string
 }
 
+export interface SeaportOffer {
+  itemType: number
+  token: string
+  identifierOrCriteria: string
+  startAmount: string
+  endAmount: string
+}
+
+export interface SeaportConsideration extends SeaportOffer {
+  recipient: string
+}
+
 export interface OSListingEventPayload {
   event_timestamp: string
   collection: Collection
@@ -54,6 +66,23 @@ export interface OSListingEventPayload {
   payment_token: PaymentToken
   quantity: number
   taker: Taker | null
+  protocol_data: {
+    parameters: {
+      offerer: string
+      offer: SeaportOffer[]
+      consideration: SeaportConsideration[]
+      startTime: string
+      endTime: string
+      orderType: number
+      zone: string
+      zoneHash: string
+      salt: string
+      conduitKey: string
+      totalOriginalConsiderationItems: number
+      counter: number
+    }
+    signature: string
+  }
 }
 
 export interface OSOfferEventPayload {
@@ -68,6 +97,23 @@ export interface OSOfferEventPayload {
   payment_token: PaymentToken
   quantity: number
   taker: Taker | null
+  protocol_data: {
+    parameters: {
+      offerer: string
+      offer: SeaportOffer[]
+      consideration: SeaportConsideration[]
+      startTime: string
+      endTime: string
+      orderType: number
+      zone: string
+      zoneHash: string
+      salt: string
+      conduitKey: string
+      totalOriginalConsiderationItems: number
+      counter: number
+    }
+    signature: string
+  }
 }
 
 export type OSEventPayload = OSListingEventPayload | OSOfferEventPayload
@@ -150,4 +196,32 @@ export interface NFTAlchemy {
     totalSupply: string
     tokenType: string
   }
+}
+
+export interface NftPortTraits {
+  trait_type: string
+  value: string
+  display_type: string | null
+  max_value: string | null
+  trait_count: number
+  order: string | null
+}
+
+export interface NFT_NftPort {
+  chain: string
+  contract_address: string
+  token_id: string
+  metadata_url: string | null
+  metadata: {
+    image_url: string
+    name: string
+    traits: NftPortTraits[]
+  }
+  file_url: string
+  animation_url: string
+  cached_file_url: string
+  cached_animation_url: string
+  creator_address: string
+  updated_date: string
+  owner: string
 }

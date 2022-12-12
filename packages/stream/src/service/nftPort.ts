@@ -50,6 +50,7 @@ export interface NFTPortNFT {
     type?: string
     metadata: {
       description?: string
+      banner_url?: string
       cached_thumbnail_url?: string
       cached_banner_url?: string
     }

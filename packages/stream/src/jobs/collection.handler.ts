@@ -2,25 +2,34 @@
 import { AxiosInstance, AxiosResponse } from 'axios'
 import Bull, { Job } from 'bull'
 import { BigNumber } from 'ethers'
-import { In, IsNull, Not } from 'typeorm'
+import { ILike, In, IsNull, Not } from 'typeorm'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import { nftService } from '@nftcom/gql/service'
 import { _logger, db, defs, entity, helper } from '@nftcom/shared'
 
-import { NFTAlchemy } from '../interface'
+import { NFT_NftPort, NFTAlchemy } from '../interface'
 import { CollectionType, SyncCollectionInput } from '../middleware/validate'
 import { getAlchemyInterceptor } from '../service/alchemy'
 import { cache, CacheKeys, removeExpiredTimestampedZsetMembers, ttlForTimestampedZsetMembers } from '../service/cache'
 import { getEtherscanInterceptor } from '../service/etherscan'
-import { retrieveNFTDetailsNFTPort } from '../service/nftPort'
+import { getNFTPortInterceptor, retrieveNFTDetailsNFTPort } from '../service/nftPort'
 import { delay } from '../utils'
-import { collectionEntityBuilder, nftEntityBuilder, nftTraitBuilder } from '../utils/builder/nftBuilder'
+import { collectionEntityBuilder, nftEntityBuilder, nftEntityBuilderCryptoPunks, nftTraitBuilder } from '../utils/builder/nftBuilder'
+import { uploadImageToS3 } from '../utils/uploader'
 import { collectionSyncSubqueue } from './jobs'
 
 const logger = _logger.Factory(_logger.Context.Bull)
 const repositories = db.newRepositories()
+const CRYPTOPUNK = '0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb'
+
+const exceptionBannerUrls: string[] = [
+  'https://cdn.nft.com/collections/1/%banner.png',
+  'https://cdn.nft.com/collections/1/%banner.jpg',
+  'https://cdn.nft.com/collections/1/%banner.jpeg',
+  'https://cdn.nft.com/collectionBanner_default.png',
+]
 
 const subQueueBaseOptions: Bull.JobOptions = {
   attempts: 2,
@@ -37,59 +46,125 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
   logger.log(`nft sync handler process started for: ${contract}, chainId: ${chainId}`)
   try {
     const alchemyInstance: AxiosInstance = await getAlchemyInterceptor(chainId)
-
-    // process nfts for collection
-    let processCondition = true
-    let startToken = Number(startTokenParam) || ''
-    let queryParams = `contractAddress=${contract}&withMetadata=true&startToken=${startToken}&limit=100`
-    while(processCondition) {
-      const collectionNFTs: AxiosResponse = await alchemyInstance
-        .get(
-          `/getNFTsForCollection?${queryParams}`)
-
-      if (collectionNFTs?.data?.nfts.length) {
-        const nfts = collectionNFTs?.data?.nfts
-        const nftTokenMap: string[] = nfts.map(
-          (nft: NFTAlchemy) => BigNumber.from(nft.id.tokenId).toHexString())
-        const existingNFTs: entity.NFT[] = await repositories.nft.find(
-          { where: { contract: helper.checkSum(contract), tokenId: In(nftTokenMap), chainId } },
-        )
-        const existingNFTTokenMap: string[] = existingNFTs.map(
-          (nft: entity.NFT) => BigNumber.from(nft.tokenId).toHexString())
-          
-        const nftPromiseArray: entity.NFT[] = []
-        const alchemyNFTs: NFTAlchemy[] = nfts
-
-        for (const nft of alchemyNFTs) {
-          // create if not exist, update if does
-          if (!existingNFTTokenMap.includes(BigNumber.from(nft.id.tokenId).toHexString())) {
-            nftPromiseArray.push(nftEntityBuilder(nft, chainId))
-          }
-        }
-
-        try {
-          if (nftPromiseArray?.length > 0) {
-            await nftService.indexNFTsOnSearchEngine(nftPromiseArray)
-            await repositories.nft.saveMany(nftPromiseArray, { chunk: 50 }) // temp chunk
-            logger.log(`saved ${queryParams}`)
-          }
+    const nftPortInstance: AxiosInstance = await getNFTPortInterceptor('https://api.nftport.xyz/v0')
   
-          if (!collectionNFTs?.data?.nextToken) {
-            processCondition = false
-          } else {
-            startToken = collectionNFTs?.data?.nextToken
-            queryParams = `contractAddress=${contract}&withMetadata=true&startToken=${startToken}&limit=100`
-          }
-        } catch (errSave) {
-          logger.log(`error while saving nftSyncHandler but continuing ${errSave}...${startToken}...${queryParams}`)
-          logger.log(`error nftPromiseArray: ${nftPromiseArray}`)
-          logger.log(`error existing: ${existingNFTs}`)
+    // nft port specific sync
+    if (contract?.toLowerCase() == CRYPTOPUNK) {
+      // process nfts for collection
+      let processCondition = true
+      let startPage = 1
 
-          if (!collectionNFTs?.data?.nextToken) {
-            processCondition = false
-          } else {
-            startToken = collectionNFTs?.data?.nextToken
-            queryParams = `contractAddress=${contract}&withMetadata=true&startToken=${startToken}&limit=100`
+      let queryParams = `chain=ethereum&page_number=${startPage}&page_size=50&include=metadata&refresh_metadata=false`
+      while(processCondition) {
+        const collectionNFTs: AxiosResponse = await nftPortInstance
+          .get(
+            `/nfts/${contract}?${queryParams}`)
+
+        logger.log(`=============== nft sync handler nftport: ${collectionNFTs?.data?.nfts.length}`)
+
+        if (collectionNFTs?.data?.nfts.length) {
+          const nfts = collectionNFTs?.data?.nfts
+          const nftTokenMap: string[] = nfts.map(
+            (nft: NFT_NftPort) => BigNumber.from(nft.token_id).toHexString())
+
+          logger.log(`=============== nft sync handler nftTokenMap: ${JSON.stringify(nftTokenMap)}`)
+
+          const existingNFTs: entity.NFT[] = await repositories.nft.find(
+            { where: { contract: helper.checkSum(contract), tokenId: In(nftTokenMap), chainId } },
+          )
+          const existingNFTTokenMap: string[] = existingNFTs.map(
+            (nft: entity.NFT) => BigNumber.from(nft.tokenId).toHexString())
+
+          logger.log(`=============== nft sync handler existingNFTTokenMap: ${JSON.stringify(existingNFTTokenMap)}`)
+            
+          const nftPromiseArray: entity.NFT[] = []
+          const nftPortNfts: NFT_NftPort[] = nfts
+
+          for (const nft of nftPortNfts) {
+            // create if not exist, update if does
+            if (!existingNFTTokenMap.includes(BigNumber.from(nft.token_id).toHexString())) {
+              nftPromiseArray.push(nftEntityBuilderCryptoPunks(nft, chainId))
+            }
+          }
+
+          logger.log(`nftPromiseArray?.length: ${nftPromiseArray?.length}`)
+
+          try {
+            if (nftPromiseArray?.length > 0) {
+              await nftService.indexNFTsOnSearchEngine(nftPromiseArray)
+              await repositories.nft.saveMany(nftPromiseArray, { chunk: 50 }) // temp chunk
+              logger.log(`saved ${queryParams}`)
+            }
+    
+            startPage += 1
+            queryParams = `chain=ethereum&page_number=${startPage}&page_size=50&include=metadata&refresh_metadata=false`
+          } catch (errSave) {
+            logger.log(`error while saving nftSyncHandler but continuing ${errSave}...${startPage}...${queryParams}`)
+            logger.log(`error nftPromiseArray: ${nftPromiseArray}`)
+            logger.log(`error existing: ${existingNFTs}`)
+
+            startPage += 1
+            queryParams = `chain=ethereum&page_number=${startPage}&page_size=50&include=metadata&refresh_metadata=false`
+          }
+        } else {
+          // no nfts found
+          processCondition = false
+        }
+      }
+    } else {
+      // process nfts for collection
+      let processCondition = true
+      let startToken = Number(startTokenParam) || ''
+      let queryParams = `contractAddress=${contract}&withMetadata=true&startToken=${startToken}&limit=100`
+      while(processCondition) {
+        const collectionNFTs: AxiosResponse = await alchemyInstance
+          .get(
+            `/getNFTsForCollection?${queryParams}`)
+
+        if (collectionNFTs?.data?.nfts.length) {
+          const nfts = collectionNFTs?.data?.nfts
+          const nftTokenMap: string[] = nfts.map(
+            (nft: NFTAlchemy) => BigNumber.from(nft.id.tokenId).toHexString())
+          const existingNFTs: entity.NFT[] = await repositories.nft.find(
+            { where: { contract: helper.checkSum(contract), tokenId: In(nftTokenMap), chainId } },
+          )
+          const existingNFTTokenMap: string[] = existingNFTs.map(
+            (nft: entity.NFT) => BigNumber.from(nft.tokenId).toHexString())
+            
+          const nftPromiseArray: entity.NFT[] = []
+          const alchemyNFTs: NFTAlchemy[] = nfts
+
+          for (const nft of alchemyNFTs) {
+            // create if not exist, update if does
+            if (!existingNFTTokenMap.includes(BigNumber.from(nft.id.tokenId).toHexString())) {
+              nftPromiseArray.push(nftEntityBuilder(nft, chainId))
+            }
+          }
+
+          try {
+            if (nftPromiseArray?.length > 0) {
+              await nftService.indexNFTsOnSearchEngine(nftPromiseArray)
+              await repositories.nft.saveMany(nftPromiseArray, { chunk: 50 }) // temp chunk
+              logger.log(`saved ${queryParams}`)
+            }
+    
+            if (!collectionNFTs?.data?.nextToken) {
+              processCondition = false
+            } else {
+              startToken = collectionNFTs?.data?.nextToken
+              queryParams = `contractAddress=${contract}&withMetadata=true&startToken=${startToken}&limit=100`
+            }
+          } catch (errSave) {
+            logger.log(`error while saving nftSyncHandler but continuing ${errSave}...${startToken}...${queryParams}`)
+            // logger.log(`error nftPromiseArray: ${nftPromiseArray}`)
+            logger.log(`error existing: ${existingNFTs}`)
+
+            if (!collectionNFTs?.data?.nextToken) {
+              processCondition = false
+            } else {
+              startToken = collectionNFTs?.data?.nextToken
+              queryParams = `contractAddress=${contract}&withMetadata=true&startToken=${startToken}&limit=100`
+            }
           }
         }
       }
@@ -451,3 +526,91 @@ export const raritySync = async (job: Job): Promise<void> => {
   logger.log('completed rarity sync')
   //Promise.resolve()
 }
+
+// collection image sync
+export const collectionBannerImageSync = async (job: Job): Promise<void> => {
+  logger.log('initiated collection banner image sync')
+  const chainId: string = job.data.chainId || process.env.chainId || '5'
+  const queryFilters = exceptionBannerUrls.map((exceptionBannerUrl: string) =>
+    ({ bannerUrl: ILike(exceptionBannerUrl) }))
+  try {
+    const collections: Partial<entity.Collection>[] = await repositories.collection.find(
+      {
+        where:[
+          { bannerUrl: IsNull() },
+          ...queryFilters,
+        ],
+        select: {
+          id: true,
+          contract: true,
+          bannerUrl: true,
+          chainId: true,
+        },
+      })
+
+    for (const collection of collections) {
+      try {
+        const contractNFT: Partial<entity.NFT> = await repositories.nft.findOne({
+          where: {
+            contract: collection?.contract,
+            chainId: collection.chainId || chainId,
+          },
+          select: {
+            tokenId: true,
+            metadata: {
+              imageURL: true,
+            },
+          },
+        })
+
+        if (collection?.contract && contractNFT?.tokenId) {
+          let result
+          try {
+            result = await retrieveNFTDetailsNFTPort(
+              collection.contract,
+              contractNFT.tokenId,
+              chainId,
+              false,
+              [],
+            )
+          } catch (err) {
+            logger.error(`Error while fetching NFT details from NFT Port for contract: 
+                  ${collection.contract} and tokenId: ${contractNFT.tokenId}`)
+          }
+  
+          let bannerUrl: string = null
+          const uploadPath = `collections/${chainId}/`
+          //  NFT Port Collection Image
+          if (result?.contract?.metadata?.cached_banner_url) {
+            bannerUrl = result.contract.metadata.cached_banner_url
+          } else if (result?.nft?.cached_file_url) {
+            bannerUrl = result.nft.cached_file_url
+          } else if (contractNFT?.metadata?.imageURL) {
+            bannerUrl = contractNFT.metadata.imageURL
+          }
+  
+          if (bannerUrl) {
+            const filename = bannerUrl.split('/').pop()
+            const banner = await uploadImageToS3(
+              bannerUrl,
+              filename,
+              chainId,
+              collection.contract,
+              uploadPath,
+            )
+            bannerUrl = banner ? banner : bannerUrl
+            await repositories.collection.updateOneById(collection.id, {
+              bannerUrl,
+            })
+          }
+        }
+      } catch (err) {
+        logger.error(`Error occured while fetching contract NFT for ${collection.contract}: ${err}`)
+      }
+    }
+  } catch (err) {
+    logger.log(`Error in collection banner image sync: ${err}`)
+  }
+  logger.log('completed collection banner image sync')
+}
+

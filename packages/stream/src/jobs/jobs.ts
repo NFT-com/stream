@@ -3,7 +3,7 @@ import Bull from 'bull'
 import { _logger } from '@nftcom/shared'
 
 import { redisConfig } from '../config'
-import { collectionIssuanceDateSync, collectionSyncHandler, spamCollectionSyncHandler } from './collection.handler'
+import { collectionBannerImageSync, collectionIssuanceDateSync, collectionSyncHandler, spamCollectionSyncHandler } from './collection.handler'
 import { getEthereumEvents } from './mint.handler'
 import { nftExternalOrdersOnDemand } from './order.handler'
 import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
@@ -23,6 +23,7 @@ const queuePrefix = 'stream-queue'
 export enum QUEUE_TYPES {
   SYNC_CONTRACTS = 'SYNC_CONTRACTS',
   SYNC_COLLECTIONS = 'SYNC_COLLECTIONS',
+  SYNC_COLLECTION_IMAGES = 'SYNC_COLLECTION_IMAGES',
   SYNC_COLLECTION_RARITY = 'SYNC_COLLECTION_RARITY',
   SYNC_SPAM_COLLECTIONS = 'SYNC_SPAM_COLLECTIONS',
   REGISTER_OS_STREAMS = 'REGISTER_OS_STREAMS',
@@ -87,6 +88,13 @@ const createQueues = (): Promise<void> => {
     // add composite image generation job to queue...
     queues.set(QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, new Bull(
       QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
+    // sync collection images...
+    queues.set(QUEUE_TYPES.SYNC_COLLECTION_IMAGES, new Bull(
+      QUEUE_TYPES.SYNC_COLLECTION_IMAGES, {
         prefix: queuePrefix,
         redis,
       }))
@@ -362,6 +370,9 @@ const listenToJobs = async (): Promise<void> => {
     switch (queue.name) {
     case QUEUE_TYPES.SYNC_CONTRACTS:
       queue.process(nftExternalOrders)
+      break
+    case QUEUE_TYPES.SYNC_COLLECTION_IMAGES:
+      queue.process(collectionBannerImageSync)
       break
     case QUEUE_TYPES.SYNC_COLLECTIONS:
       queue.process(collectionSyncHandler)

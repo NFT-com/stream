@@ -13,10 +13,12 @@
     },
     "dependencies": {
         "@alch/alchemy-web3": "^1.4.6",
+        "@aws-sdk/lib-storage": "^3.135.0",
         "@babel/runtime": "^7.18.3",
         "@nftcom/gql": "file:../../../NFT-backend/packages/gql",
         "@nftcom/shared": "file:../../../NFT-backend/packages/shared",
         "@opensea/stream-js": "^0.0.20",
+        "aws-sdk": "^2.1269.0",
         "axios": "^0.27.2",
         "axios-retry": "^3.3.1",
         "bull": "^4.2.0",
