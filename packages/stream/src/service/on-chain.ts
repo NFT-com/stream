@@ -12,6 +12,7 @@ const repositories = db.newRepositories()
 const nftResolverInterface = new utils.Interface(contracts.NftResolverABI())
 const looksrareExchangeInterface = new utils.Interface(contracts.looksrareExchangeABI())
 const openseaSeaportInterface = new utils.Interface(contracts.openseaSeaportABI())
+const x2y2Interface = new utils.Interface(contracts.x2y2ABI())
 const logger = _logger.Factory(_logger.Context.WebsocketProvider)
 
 type KeepAliveParams = {
@@ -42,6 +43,26 @@ enum OSSeaportEventName {
   CounterIncremented = 'CounterIncremented',
   OrderFulfilled = 'OrderFulfilled'
 }
+
+enum X2Y2EventName {
+  EvInventory = 'EvInventory',
+  EvCancel = 'EvCancel'
+}
+
+// event EvInventory(
+//   bytes32 indexed itemHash,
+//   address maker,
+//   address taker,
+//   uint256 orderSalt,
+//   uint256 settleSalt,
+//   uint256 intent,
+//   uint256 delegateType,
+//   uint256 deadline,
+//   IERC20Upgradeable currency,
+//   bytes dataMask,
+//   Market.OrderItem item,
+//   Market.SettleDetail detail
+// )
 
 const keepAlive = ({
   provider,
@@ -670,6 +691,174 @@ const keepAlive = ({
           }
         } catch (err) {
           logger.error(`Evt: ${OSSeaportEventName.OrderFulfilled} -- Err: ${err}`)
+        }
+      } else {
+        // not relevant in our search space
+        logger.error('topic hash not covered: ', e.transactionHash)
+      }
+    })
+
+    const x2y2Address = helper.checkSum(
+      contracts.x2y2Address(chainId.toString()),
+    )
+
+    logger.debug(`x2y2Address: ${x2y2Address}, chainId: ${chainId}`)
+
+    // logic for listening to Seaport on-chain events and parsing via WSS
+    const x2y2TopicFilter = [
+      [
+        helper.id('EvCancel(bytes32)'),
+        helper.id('EvInventory(bytes32,address,address,uint256,uint256,uint256,uint256,uint256,IERC20Upgradeable,bytes,Market.OrderItem,Market.SettleDetail detail)'),
+      ],
+    ]
+
+    const x2y2Filter = {
+      address: utils.getAddress(x2y2Address),
+      topics: x2y2TopicFilter,
+    }
+
+    provider.on(x2y2Filter, async (e) => {
+      console.log('e', e)
+      const evt = x2y2Interface.parseLog(e)
+      console.log('evt', evt)
+      if(evt.name === X2Y2EventName.EvCancel) {
+        const [orderHash] = evt.args
+        console.log('evt', X2Y2EventName.EvCancel)
+        console.log('order hash', orderHash)
+        try {
+          const order: entity.TxOrder = await repositories.txOrder.findOne({
+            relations: ['activity'],
+            where: {
+              chainId: String(chainId),
+              id: orderHash,
+              exchange: defs.ExchangeType.X2Y2,
+              protocol: defs.ProtocolType.X2Y2,
+              activity: {
+                status: defs.ActivityStatus.Valid,
+              },
+            },
+          })
+      
+          if (order) {
+            order.activity.status = defs.ActivityStatus.Cancelled
+            await repositories.txOrder.save(order)
+
+            const cancelledEntity: Partial<entity.TxCancel> = await cancelEntityBuilder(
+              defs.ActivityType.Cancel,
+              `${e.transactionHash}:${orderHash}`,
+              e.blockNumber,
+              chainId.toString(),
+              order.activity.nftContract,
+              order.activity.nftId,
+              order.makerAddress,
+              defs.ExchangeType.OpenSea,
+              order.orderType as defs.CancelActivityType,
+              order.id,
+            )
+
+            await repositories.txCancel.save(cancelledEntity)
+            logger.log(`
+                Evt Saved: ${X2Y2EventName.EvCancel} for orderHash ${orderHash}
+            `)
+          }
+        } catch (err) {
+          logger.error(`Evt: ${X2Y2EventName.EvCancel} -- Err: ${err}`)
+        }
+      } else if (evt.name === X2Y2EventName.EvInventory) {
+        console.log('evt', X2Y2EventName.EvInventory)
+        const [
+          orderHash,
+          maker,
+          taker,
+          orderSalt,
+          settleSalt,
+          intent,
+          delegateType,
+          deadline,
+          currency,
+          data] = evt.args
+        console.log('orderHash', orderHash)
+        console.log('maker', maker)
+        console.log('taker', taker)
+        console.log('orderSalt', orderSalt)
+        console.log('settleSalt', settleSalt)
+
+        console.log('intent', intent)
+        console.log('delegateType', delegateType)
+        console.log('deadline', deadline)
+        console.log('currency', currency)
+        console.log('data', data)
+        try {
+          const order: entity.TxOrder = await repositories.txOrder.findOne({
+            relations: ['activity'],
+            where: {
+              chainId: String(chainId),
+              id: orderHash,
+              makerAddress: helper.checkSum(maker),
+              exchange: defs.ExchangeType.X2Y2,
+              protocol: defs.ProtocolType.X2Y2,
+              activity: {
+                status: defs.ActivityStatus.Valid,
+              },
+            },
+          })
+          if (order) {
+            order.activity.status = defs.ActivityStatus.Executed
+            order.takerAddress = helper.checkSum(taker)
+            await repositories.txOrder.save(order)
+            // new transaction
+            const newTx: Partial<entity.TxTransaction> = await txEntityBuilder(
+              defs.ActivityType.Sale,
+              `${e.transactionHash}:${orderHash}`,
+              e.blockNumber,
+              chainId.toString(),
+              order.activity.nftContract,
+              order.protocolData?.tokenId,
+              maker,
+              taker,
+              defs.ExchangeType.X2Y2,
+              order.protocol,
+              {
+                orderSalt,
+                settleSalt,
+                intent,
+                delegateType,
+                deadline,
+                currency,
+                data,
+              },
+              OSSeaportEventName.OrderFulfilled,
+            )
+            await repositories.txTransaction.save(newTx)
+
+            // update NFT ownership
+            const contract: string = helper.checkSum(order.activity.nftContract)
+            const tokenId: string = helper.bigNumberToHex(
+              order.protocolData?.parameters?.offer?.[0]?.identifierOrCriteria,
+            )
+            const obj = {
+              contract: {
+                address: contract,
+              },
+              id: {
+                tokenId,
+              },
+            }
+    
+            const wallet = await nftService.getUserWalletFromNFT(
+              contract, tokenId, chainId.toString(),
+            )
+            if (wallet) {
+              await nftService.updateNFTOwnershipAndMetadata(
+                obj, wallet.userId, wallet.id, chainId.toString(),
+              )
+            }
+            logger.log(`
+            Evt Saved: ${X2Y2EventName.EvInventory} for orderHash ${orderHash}
+        `)
+          }
+        } catch (err) {
+          logger.error(`Evt: ${X2Y2EventName.EvInventory} -- Err: ${err}`)
         }
       } else {
         // not relevant in our search space
