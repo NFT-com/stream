@@ -4,6 +4,7 @@ import { BaseStreamMessage, EventType } from '@opensea/stream-js'
 import { Chain, DistinctContract, OSChainTypes, OSEventPayload, OSListingEventPayload, OSOfferEventPayload } from './interface'
 import { cache, CacheKeys }from './service/cache'
 import { client, retrieveSlugsForContracts } from './service/opensea'
+import { queues, QUEUE_TYPES } from './jobs/jobs'
 
 const logger = _logger.Factory(_logger.Context.Opensea)
 export const allowedEvents: EventType[] = [
@@ -228,7 +229,14 @@ const initializeStreamsForAllSlugs = (): void => {
 
                         await repositories.txOrder.save(newOrder)
                         logger.log(`order with orderHash: ${orderHash} for ${nftId} is saved successfully`)
-                                            
+
+                        //update search engine
+                        queues
+                          .get(QUEUE_TYPES.SEARCH_LISTING_INDEX)
+                          .add({
+                            listings: [newOrder]
+                          })
+
                         // force refresh to store protocol data
                         const nftCacheId = `${helper.checkSum(contract)}:${helper.bigNumberToHex(token)}:force`
                         cache.zadd(`${CacheKeys.REFRESH_NFT_ORDERS_EXT}_${chainId}`, 'INCR', 1, nftCacheId)
