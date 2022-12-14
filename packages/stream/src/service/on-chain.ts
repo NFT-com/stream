@@ -6,6 +6,7 @@ import { In, LessThan } from 'typeorm'
 import {  nftService } from '@nftcom/gql/service'
 import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
+import { delay } from '../utils'
 import { cancelEntityBuilder,txEntityBuilder } from '../utils/builder/orderBuilder'
 
 const repositories = db.newRepositories()
@@ -45,6 +46,7 @@ enum OSSeaportEventName {
 }
 
 enum X2Y2EventName {
+  EvProfit = 'EvProfit',
   EvInventory = 'EvInventory',
   EvCancel = 'EvCancel'
 }
@@ -688,12 +690,15 @@ const keepAlive = ({
     )
 
     logger.debug(`x2y2Address: ${x2y2Address}, chainId: ${chainId}`)
-
+    const orderItemParamType = '(uint256,bytes)'
+    const feeParamType = '(uint256,address)'
+    const settleDetailParamType = `(uint8,uint256,uint256,uint256,bytes32,address,bytes,uint256,uint256,uint256,${feeParamType}[])`
     // logic for listening to Seaport on-chain events and parsing via WSS
     const x2y2TopicFilter = [
       [
         helper.id('EvCancel(bytes32)'),
-        helper.id('EvInventory(bytes32,address,address,uint256,uint256,uint256,uint256,uint256,IERC20Upgradeable,bytes,Market.OrderItem,Market.SettleDetail detail)'),
+        helper.id('EvProfit(bytes32,address,address,uint256)'),
+        helper.id(`EvInventory(bytes32,address,address,uint256,uint256,uint256,uint256,uint256,address,bytes,${orderItemParamType},${settleDetailParamType})`),
       ],
     ]
 
@@ -745,6 +750,108 @@ const keepAlive = ({
         } catch (err) {
           logger.error(`Evt: ${X2Y2EventName.EvCancel} -- Err: ${err}`)
         }
+      } else if (evt.name === X2Y2EventName.EvProfit) {
+        const [orderHash, currency, to, amount] = evt.args
+  
+        try {
+          const order: entity.TxOrder = await repositories.txOrder.findOne({
+            relations: ['activity'],
+            where: {
+              chainId: String(chainId),
+              id: orderHash,
+              exchange: defs.ExchangeType.X2Y2,
+              protocol: defs.ProtocolType.X2Y2,
+              activity: {
+                status: defs.ActivityStatus.Valid,
+              },
+            },
+          })
+
+          if (order) {
+            order.activity.status = defs.ActivityStatus.Executed
+            order.takerAddress = helper.checkSum(to)
+            await repositories.txOrder.save(order)
+
+            // new transaction
+            const newTx: Partial<entity.TxTransaction> = await txEntityBuilder(
+              defs.ActivityType.Sale,
+              `${e.transactionHash}:${orderHash}`,
+              e.blockNumber,
+              chainId.toString(),
+              order.activity.nftContract,
+              order.protocolData?.tokenId,
+              order.makerAddress,
+              to,
+              defs.ExchangeType.X2Y2,
+              order.protocol,
+              {
+                currency,
+                amount,
+              },
+              X2Y2EventName.EvProfit,
+            )
+            await repositories.txTransaction.save(newTx)
+
+            // update NFT ownership
+            const contract: string = helper.checkSum(order.activity.nftContract)
+            const tokenId: string = helper.bigNumberToHex(
+              order.protocolData?.tokenId,
+            )
+            const obj = {
+              contract: {
+                address: contract,
+              },
+              id: {
+                tokenId,
+              },
+            }
+
+            const wallet = await nftService.getUserWalletFromNFT(
+              contract, tokenId, chainId.toString(),
+            )
+            if (wallet) {
+              await nftService.updateNFTOwnershipAndMetadata(
+                obj, wallet.userId, wallet.id, chainId.toString(),
+              )
+            }
+
+            logger.log(`
+                  Evt Saved: ${X2Y2EventName.EvProfit} for orderHash ${orderHash}
+                  and ownership updated
+              `)
+          }
+
+          // allow 5s for other event to propagate before updating tx
+          await delay(5000)
+
+          // check for existing tx and update protocol data
+          const transactionId = `${e.transactionHash}:${orderHash}`
+
+          const existingTx: Partial<entity.TxTransaction> = await repositories.txTransaction
+            .findOne({
+              relations: ['activity'],
+              where: {
+                chainId: String(chainId),
+                id: transactionId,
+                exchange: defs.ExchangeType.X2Y2,
+                protocol: defs.ProtocolType.X2Y2,
+              },
+            })
+
+          if (existingTx) {
+            // update protocol data if tx exists
+            await repositories.txTransaction.updateOneById(
+              transactionId,
+              { protocolData: { ...existingTx.protocolData, amount },
+              })
+
+            logger.log(`
+                  Evt Updated: ${X2Y2EventName.EvProfit} for orderHash ${orderHash}
+              `)
+          }
+        } catch (err) {
+          logger.error(`Evt: ${X2Y2EventName.EvProfit} -- Err: ${err}`)
+        }
       } else if (evt.name === X2Y2EventName.EvInventory) {
         const [
           orderHash,
@@ -771,10 +878,22 @@ const keepAlive = ({
               },
             },
           })
+
+          const protocolData =  {
+            orderSalt,
+            settleSalt,
+            intent,
+            delegateType,
+            deadline,
+            currency,
+            data,
+          }
+
           if (order) {
             order.activity.status = defs.ActivityStatus.Executed
             order.takerAddress = helper.checkSum(taker)
             await repositories.txOrder.save(order)
+
             // new transaction
             const newTx: Partial<entity.TxTransaction> = await txEntityBuilder(
               defs.ActivityType.Sale,
@@ -787,15 +906,7 @@ const keepAlive = ({
               taker,
               defs.ExchangeType.X2Y2,
               order.protocol,
-              {
-                orderSalt,
-                settleSalt,
-                intent,
-                delegateType,
-                deadline,
-                currency,
-                data,
-              },
+              protocolData,
               X2Y2EventName.EvInventory,
             )
             await repositories.txTransaction.save(newTx)
@@ -813,7 +924,7 @@ const keepAlive = ({
                 tokenId,
               },
             }
-    
+
             const wallet = await nftService.getUserWalletFromNFT(
               contract, tokenId, chainId.toString(),
             )
@@ -823,8 +934,38 @@ const keepAlive = ({
               )
             }
             logger.log(`
-            Evt Saved: ${X2Y2EventName.EvInventory} for orderHash ${orderHash}
-        `)
+              Evt Saved: ${X2Y2EventName.EvInventory} for orderHash ${orderHash}
+              and ownership updated
+              `)
+          }
+
+          // allow 5s for other event to propagate before updating
+          await delay(5000)
+
+          // check for existing tx and update protocol data
+          const transactionId = `${e.transactionHash}:${orderHash}`
+
+          const existingTx: Partial<entity.TxTransaction> = await repositories.txTransaction
+            .findOne({
+              relations: ['activity'],
+              where: {
+                chainId: String(chainId),
+                id: transactionId,
+                exchange: defs.ExchangeType.X2Y2,
+                protocol: defs.ProtocolType.X2Y2,
+              },
+            })
+
+          if (existingTx) {
+            // update protocol data if tx exists
+            await repositories.txTransaction.updateOneById(
+              transactionId,
+              { protocolData: { ...existingTx.protocolData, ...protocolData },
+              })
+
+            logger.log(`
+                  Evt Updated: ${X2Y2EventName.EvProfit} for orderHash ${orderHash}
+              `)
           }
         } catch (err) {
           logger.error(`Evt: ${X2Y2EventName.EvInventory} -- Err: ${err}`)
