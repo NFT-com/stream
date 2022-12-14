@@ -8,6 +8,7 @@ import { getEthereumEvents } from './mint.handler'
 import { nftExternalOrdersOnDemand } from './order.handler'
 import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
 import { saveProfileExpireAt, updateNFTsForProfilesHandler } from './profile.handler'
+import { searchListingIndexHandler } from './search.handler'
 import { nftExternalOrders } from './sync.handler'
 
 const BULL_MAX_REPEAT_COUNT = parseInt(process.env.BULL_MAX_REPEAT_COUNT) || 250
@@ -179,6 +180,13 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
       }))
+
+    queues.set(QUEUE_TYPES.SEARCH_LISTING_INDEX, new Bull(
+      QUEUE_TYPES.SEARCH_LISTING_INDEX, {
+        prefix: queuePrefix,
+        redis,
+      }
+    ))
 
     resolve()
   })
@@ -384,6 +392,9 @@ const listenToJobs = async (): Promise<void> => {
       break
     case QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT:
       queue.process(saveProfileExpireAt)
+      break
+    case QUEUE_TYPES.SEARCH_LISTING_INDEX:
+      queue.process(searchListingIndexHandler)
       break
     default:
       queue.process(getEthereumEvents)
