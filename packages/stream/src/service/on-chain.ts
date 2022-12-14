@@ -964,7 +964,7 @@ const keepAlive = ({
               })
 
             logger.log(`
-                  Evt Updated: ${X2Y2EventName.EvProfit} for orderHash ${orderHash}
+                  Evt Updated: ${X2Y2EventName.EvInventory} for orderHash ${orderHash}
               `)
           }
         } catch (err) {
