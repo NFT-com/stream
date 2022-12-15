@@ -87,11 +87,11 @@ export const nftTraitBuilder = (
           rarityAttribute.trait_type === attribute.type
           && rarityAttribute.value === attribute.value,
       )
-      if (traitExists.statistics.prevalence) {
+      if (traitExists?.statistics?.prevalence) {
         traits.push(
           {
             ...attribute,
-            rarity: String(traitExists.statistics.prevalence),
+            rarity: String(traitExists?.statistics?.prevalence || '0'),
           },
         )
       }
