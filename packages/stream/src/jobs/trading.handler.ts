@@ -377,7 +377,7 @@ const listenMatchEvents = async (
   cachedBlock: number,
   latestBlock: number,
 ): Promise<void> => {
-  const address = contracts.nftMarketplaceAddress(chainId)
+  const address = contracts.marketplaceEventAddress(chainId)
   const topics = [
     utils.id('Match(bytes32,bytes32,uint8,(uint8,bytes32,bytes32),(uint8,bytes32,bytes32),bool)'),
   ]
@@ -593,7 +593,7 @@ const listenMatchTwoAEvents = async (
   cachedBlock: number,
   latestBlock: number,
 ): Promise<void[]> => {
-  const address = contracts.nftMarketplaceAddress(chainId)
+  const address = contracts.marketplaceEventAddress(chainId)
   const topics = [
     utils.id('Match2A(bytes32,address,address,uint256,uint256,uint256,uint256)'),
   ]
@@ -602,84 +602,92 @@ const listenMatchTwoAEvents = async (
 
     logger.info('Match2A logs', logs.length)
 
-    const promises = logs.map(async (log) => {
-      const event = eventIface.parseLog(log)
-      const makerHash = log.topics[1]
-      const makerAddress = utils.getAddress(event.args.makerAddress)
-      const takerAddress = utils.getAddress(event.args.takerAddress)
-      const start = Number(event.args.start)
-      const end = Number(event.args.end)
-      const nonce = Number(event.args.nonce)
-      const salt = Number(event.args.salt)
+    await Promise.allSettled(
+      logs.map(async (log) => {
+        const event = eventIface.parseLog(log)
+        const makerHash = log.topics[1]
+        const makerAddress = utils.getAddress(event.args.makerAddress)
+        const takerAddress = utils.getAddress(event.args.takerAddress)
+        const start = Number(event.args.start)
+        const end = Number(event.args.end)
+        const nonce = Number(event.args.nonce)
+        const salt = Number(event.args.salt)
 
-      let txListingOrder = await repositories.txOrder.findOne({
-        where: {
-          orderHash: makerHash,
-          exchange: defs.ExchangeType.NFTCOM,
-          orderType: defs.ActivityType.Listing,
-          protocol: defs.ProtocolType.NFTCOM,
-          chainId: chainId.toString(),
-        },
-      })
-      if (!txListingOrder) {
-        const activity = await activityBuilder(
-          defs.ActivityType.Listing,
-          makerHash,
-          makerAddress,
-          chainId.toString(),
-          [],
-          '0x',
-          start,
-          end,
-        )
-        txListingOrder = await repositories.txOrder.save({
-          activity,
-          orderHash: makerHash,
-          exchange: defs.ExchangeType.NFTCOM,
-          orderType: defs.ActivityType.Listing,
-          protocol: defs.ProtocolType.NFTCOM,
-          nonce,
-          protocolData: {
-            auctionType: defs.AuctionType.FixedPrice,
-            signature: {
-              v: -1,
-              r: '',
-              s: '',
+        let txListingOrder = await repositories.txOrder.findOne({
+          where: {
+            orderHash: makerHash,
+            exchange: defs.ExchangeType.NFTCOM,
+            orderType: defs.ActivityType.Listing,
+            protocol: defs.ProtocolType.NFTCOM,
+            chainId: chainId.toString(),
+          },
+        })
+        if (!txListingOrder) {
+          const activity = await activityBuilder(
+            defs.ActivityType.Listing,
+            makerHash,
+            makerAddress,
+            chainId.toString(),
+            [],
+            '0x',
+            start,
+            end,
+          )
+          txListingOrder = await repositories.txOrder.save({
+            activity,
+            orderHash: makerHash,
+            exchange: defs.ExchangeType.NFTCOM,
+            orderType: defs.ActivityType.Listing,
+            protocol: defs.ProtocolType.NFTCOM,
+            nonce,
+            protocolData: {
+              auctionType: defs.AuctionType.FixedPrice,
+              signature: {
+                v: -1,
+                r: '',
+                s: '',
+              },
+              salt,
+              start,
+              end,
             },
-            salt,
-            start,
-            end,
-          },
-          makerAddress,
-          takerAddress,
-          makeAsset: [],
-          takeAsset: [],
-          chainId: chainId.toString(),
-          createdInternally: true,
-        })
-        logger.info('created new listing order from Match2A ', txListingOrder.id)
-      } else {
-        await repositories.txActivity.updateOneById(txListingOrder.activity.id, {
-          timestamp: new Date(start * 1000),
-          expiration: new Date(end * 1000),
-        })
+            makerAddress,
+            takerAddress,
+            makeAsset: [],
+            takeAsset: [],
+            chainId: chainId.toString(),
+            createdInternally: true,
+          })
+          logger.info('created new listing order from Match2A ', txListingOrder.id)
+        } else {
+          const activity = await repositories.txActivity.findOne({
+            where: {
+              activityTypeId: makerHash,
+            },
+          })
+          if (activity) {
+            await repositories.txActivity.updateOneById(activity.id, {
+              timestamp: new Date(start * 1000),
+              expiration: new Date(end * 1000),
+            })
+          }
 
-        await repositories.txOrder.updateOneById(txListingOrder.id, {
-          makerAddress,
-          takerAddress,
-          nonce,
-          protocolData: {
-            ...txListingOrder.protocolData,
-            salt,
-            start,
-            end,
-          },
-        })
+          await repositories.txOrder.updateOneById(txListingOrder.id, {
+            makerAddress,
+            takerAddress,
+            nonce,
+            protocolData: {
+              ...txListingOrder.protocolData,
+              salt,
+              start,
+              end,
+            },
+          })
 
-        logger.info('updated existing listing order from Match2A ', txListingOrder.id)
-      }
-    })
-    await Promise.allSettled(promises)
+          logger.info('updated existing listing order from Match2A ', txListingOrder.id)
+        }
+      }),
+    )
   } catch (e) {
     logger.error(`Error in listenMatchTwoAEvents: ${e}`)
   }
@@ -699,7 +707,7 @@ const listenMatchTwoBEvents = async (
   cachedBlock: number,
   latestBlock: number,
 ): Promise<void[]> => {
-  const address = contracts.nftMarketplaceAddress(chainId)
+  const address = contracts.marketplaceEventAddress(chainId)
   const topics = [
     utils.id('Match2B(bytes32,bytes[],bytes[],bytes4[],bytes[],bytes[],bytes4[])'),
   ]
@@ -807,7 +815,7 @@ const listenMatchThreeAEvents = async (
   cachedBlock: number,
   latestBlock: number,
 ): Promise<void[]> => {
-  const address = contracts.nftMarketplaceAddress(chainId)
+  const address = contracts.marketplaceEventAddress(chainId)
   const topics = [
     utils.id('Match3A(bytes32,address,address,uint256,uint256,uint256,uint256)'),
   ]
@@ -873,10 +881,17 @@ const listenMatchThreeAEvents = async (
         })
         logger.info('created new bid order from Match3A ', txBidOrder.id)
       } else {
-        await repositories.txActivity.updateOneById(txBidOrder.activity.id, {
-          timestamp: new Date(start * 1000),
-          expiration: new Date(end * 1000),
+        const activity = await repositories.txActivity.findOne({
+          where: {
+            activityTypeId: takerHash,
+          },
         })
+        if (activity) {
+          await repositories.txActivity.updateOneById(activity.id, {
+            timestamp: new Date(start * 1000),
+            expiration: new Date(end * 1000),
+          })
+        }
 
         await repositories.txOrder.updateOneById(txBidOrder.id, {
           makerAddress,
@@ -914,7 +929,7 @@ const listenMatchThreeBEvents = async (
   cachedBlock: number,
   latestBlock: number,
 ): Promise<void[]> => {
-  const address = contracts.nftMarketplaceAddress(chainId)
+  const address = contracts.marketplaceEventAddress(chainId)
   const topics = [
     utils.id('Match3B(bytes32,bytes[],bytes[],bytes4[],bytes[],bytes[],bytes4[])'),
   ]
@@ -1021,7 +1036,7 @@ const listenBuyNowInfoEvents = async (
   cachedBlock: number,
   latestBlock: number,
 ): Promise<void[]> => {
-  const address = contracts.nftMarketplaceAddress(chainId)
+  const address = contracts.marketplaceEventAddress(chainId)
   const topics = [
     utils.id('BuyNowInfo(bytes32,address)'),
   ]
