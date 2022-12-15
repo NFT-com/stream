@@ -58,17 +58,17 @@ const listenApprovalEvents = async (
         where: {
           orderHash: structHash,
           makerAddress,
-          exchange: defs.ExchangeType.Marketplace,
+          exchange: defs.ExchangeType.NFTCOM,
           orderType: defs.ActivityType.Listing,
-          protocol: defs.ProtocolType.Marketplace,
+          protocol: defs.ProtocolType.NFTCOM,
         },
       })
       if (txOrder) {
         const txTransaction = await repositories.txTransaction.findOne({
           where: {
-            exchange: defs.ExchangeType.Marketplace,
+            exchange: defs.ExchangeType.NFTCOM,
             transactionType: defs.ActivityType.Listing,
-            protocol: defs.ProtocolType.Marketplace,
+            protocol: defs.ProtocolType.NFTCOM,
             maker: makerAddress,
             transactionHash: log.transactionHash,
             chainId: chainId.toString(),
@@ -77,9 +77,9 @@ const listenApprovalEvents = async (
         if (!txTransaction) {
           await repositories.txTransaction.save({
             activity: txOrder.activity,
-            exchange: defs.ExchangeType.Marketplace,
+            exchange: defs.ExchangeType.NFTCOM,
             transactionType: defs.ActivityType.Listing,
-            protocol: defs.ProtocolType.Marketplace,
+            protocol: defs.ProtocolType.NFTCOM,
             transactionHash: log.transactionHash,
             blockNumber: log.blockNumber.toString(),
             nftContractAddress: '0x',
@@ -94,17 +94,17 @@ const listenApprovalEvents = async (
           where: {
             orderHash: structHash,
             makerAddress,
-            exchange: defs.ExchangeType.Marketplace,
+            exchange: defs.ExchangeType.NFTCOM,
             orderType: defs.ActivityType.Bid,
-            protocol: defs.ProtocolType.Marketplace,
+            protocol: defs.ProtocolType.NFTCOM,
           },
         })
         if (txOrder) {
           const txTransaction = await repositories.txTransaction.findOne({
             where: {
-              exchange: defs.ExchangeType.Marketplace,
+              exchange: defs.ExchangeType.NFTCOM,
               transactionType: defs.ActivityType.Bid,
-              protocol: defs.ProtocolType.Marketplace,
+              protocol: defs.ProtocolType.NFTCOM,
               maker: makerAddress,
               transactionHash: log.transactionHash,
               chainId: chainId.toString(),
@@ -113,9 +113,9 @@ const listenApprovalEvents = async (
           if (!txTransaction) {
             await repositories.txTransaction.save({
               activity: txOrder.activity,
-              exchange: defs.ExchangeType.Marketplace,
+              exchange: defs.ExchangeType.NFTCOM,
               transactionType: defs.ActivityType.Bid,
-              protocol: defs.ProtocolType.Marketplace,
+              protocol: defs.ProtocolType.NFTCOM,
               transactionHash: log.transactionHash,
               blockNumber: log.blockNumber.toString(),
               nftContractAddress: '0x',
@@ -236,15 +236,15 @@ const listenCancelEvents = async (
         where: {
           orderHash: structHash,
           makerAddress,
-          exchange: defs.ExchangeType.Marketplace,
+          exchange: defs.ExchangeType.NFTCOM,
           orderType: defs.ActivityType.Listing,
-          protocol: defs.ProtocolType.Marketplace,
+          protocol: defs.ProtocolType.NFTCOM,
         },
       })
       if (txOrder) {
         const txCancel = await repositories.txCancel.findOne({
           where: {
-            exchange: defs.ExchangeType.Marketplace,
+            exchange: defs.ExchangeType.NFTCOM,
             foreignType: defs.CancelActivities[0],
             foreignKeyId: txOrder.orderHash,
             transactionHash: log.transactionHash,
@@ -254,7 +254,7 @@ const listenCancelEvents = async (
         if (!txCancel) {
           await repositories.txCancel.save({
             activity: txOrder.activity,
-            exchange: defs.ExchangeType.Marketplace,
+            exchange: defs.ExchangeType.NFTCOM,
             foreignType: defs.CancelActivities[0],
             foreignKeyId: txOrder.orderHash,
             transactionHash: log.transactionHash,
@@ -267,15 +267,15 @@ const listenCancelEvents = async (
           where: {
             orderHash: structHash,
             makerAddress,
-            exchange: defs.ExchangeType.Marketplace,
+            exchange: defs.ExchangeType.NFTCOM,
             orderType: defs.ActivityType.Bid,
-            protocol: defs.ProtocolType.Marketplace,
+            protocol: defs.ProtocolType.NFTCOM,
           },
         })
         if (txOrder) {
           const txCancel = await repositories.txCancel.findOne({
             where: {
-              exchange: defs.ExchangeType.Marketplace,
+              exchange: defs.ExchangeType.NFTCOM,
               foreignKeyId: txOrder.orderHash,
               foreignType: defs.CancelActivities[1],
               transactionHash: log.transactionHash,
@@ -285,7 +285,7 @@ const listenCancelEvents = async (
           if (!txCancel) {
             await repositories.txCancel.save({
               activity: txOrder.activity,
-              exchange: defs.ExchangeType.Marketplace,
+              exchange: defs.ExchangeType.NFTCOM,
               foreignType: defs.CancelActivities[1],
               foreignKeyId: txOrder.orderHash,
               transactionHash: log.transactionHash,
@@ -405,18 +405,18 @@ const listenMatchEvents = async (
         txListingOrder = await repositories.txOrder.findOne({
           where: {
             orderHash: makerHash,
-            exchange: defs.ExchangeType.Marketplace,
+            exchange: defs.ExchangeType.NFTCOM,
             orderType: defs.ActivityType.Listing,
-            protocol: defs.ProtocolType.Marketplace,
+            protocol: defs.ProtocolType.NFTCOM,
             chainId: chainId.toString(),
           },
         })
         txBidOrder = await repositories.txOrder.findOne({
           where: {
             orderHash: takerHash,
-            exchange: defs.ExchangeType.Marketplace,
+            exchange: defs.ExchangeType.NFTCOM,
             orderType: defs.ActivityType.Bid,
-            protocol: defs.ProtocolType.Marketplace,
+            protocol: defs.ProtocolType.NFTCOM,
             chainId: chainId.toString(),
           },
         })
@@ -435,9 +435,9 @@ const listenMatchEvents = async (
           txListingOrder = await repositories.txOrder.save({
             activity,
             orderHash: makerHash,
-            exchange: defs.ExchangeType.Marketplace,
+            exchange: defs.ExchangeType.NFTCOM,
             orderType: defs.ActivityType.Listing,
-            protocol: defs.ProtocolType.Marketplace,
+            protocol: defs.ProtocolType.NFTCOM,
             makerAddress: '0x',
             takerAddress: '0x',
             nonce: -1,
@@ -471,9 +471,9 @@ const listenMatchEvents = async (
           txBidOrder = await repositories.txOrder.save({
             activity,
             orderHash: takerHash,
-            exchange: defs.ExchangeType.Marketplace,
+            exchange: defs.ExchangeType.NFTCOM,
             orderType: defs.ActivityType.Bid,
-            protocol: defs.ProtocolType.Marketplace,
+            protocol: defs.ProtocolType.NFTCOM,
             makerAddress: '0x',
             takerAddress: '0x',
             nonce: -1,
@@ -499,9 +499,9 @@ const listenMatchEvents = async (
 
         let txSwapTransaction = await repositories.txTransaction.findOne({
           where: {
-            exchange: defs.ExchangeType.Marketplace,
+            exchange: defs.ExchangeType.NFTCOM,
             transactionType: defs.ActivityType.Swap,
-            protocol: defs.ProtocolType.Marketplace,
+            protocol: defs.ProtocolType.NFTCOM,
             transactionHash: log.transactionHash,
             listingOrderId: txListingOrder.id,
             bidOrderId: txBidOrder ? txBidOrder.id : IsNull(),
@@ -522,9 +522,9 @@ const listenMatchEvents = async (
           )
           txSwapTransaction = await repositories.txTransaction.save({
             activity: activity,
-            exchange: defs.ExchangeType.Marketplace,
+            exchange: defs.ExchangeType.NFTCOM,
             transactionType: defs.ActivityType.Swap,
-            protocol: defs.ProtocolType.Marketplace,
+            protocol: defs.ProtocolType.NFTCOM,
             protocolData: {
               private: helper.parseBoolean(privateSale),
             },
@@ -615,9 +615,9 @@ const listenMatchTwoAEvents = async (
       let txListingOrder = await repositories.txOrder.findOne({
         where: {
           orderHash: makerHash,
-          exchange: defs.ExchangeType.Marketplace,
+          exchange: defs.ExchangeType.NFTCOM,
           orderType: defs.ActivityType.Listing,
-          protocol: defs.ProtocolType.Marketplace,
+          protocol: defs.ProtocolType.NFTCOM,
           chainId: chainId.toString(),
         },
       })
@@ -635,9 +635,9 @@ const listenMatchTwoAEvents = async (
         txListingOrder = await repositories.txOrder.save({
           activity,
           orderHash: makerHash,
-          exchange: defs.ExchangeType.Marketplace,
+          exchange: defs.ExchangeType.NFTCOM,
           orderType: defs.ActivityType.Listing,
-          protocol: defs.ProtocolType.Marketplace,
+          protocol: defs.ProtocolType.NFTCOM,
           nonce,
           protocolData: {
             auctionType: defs.AuctionType.FixedPrice,
@@ -734,9 +734,9 @@ const listenMatchTwoBEvents = async (
       let txListingOrder = await repositories.txOrder.findOne({
         where: {
           orderHash: makerHash,
-          exchange: defs.ExchangeType.Marketplace,
+          exchange: defs.ExchangeType.NFTCOM,
           orderType: defs.ActivityType.Listing,
-          protocol: defs.ProtocolType.Marketplace,
+          protocol: defs.ProtocolType.NFTCOM,
           chainId: chainId.toString(),
         },
       })
@@ -754,9 +754,9 @@ const listenMatchTwoBEvents = async (
         txListingOrder = await repositories.txOrder.save({
           activity,
           orderHash: makerHash,
-          exchange: defs.ExchangeType.Marketplace,
+          exchange: defs.ExchangeType.NFTCOM,
           orderType: defs.ActivityType.Listing,
-          protocol: defs.ProtocolType.Marketplace,
+          protocol: defs.ProtocolType.NFTCOM,
           nonce: -1,
           protocolData: {
             auctionType: defs.AuctionType.FixedPrice,
@@ -829,9 +829,9 @@ const listenMatchThreeAEvents = async (
       let txBidOrder = await repositories.txOrder.findOne({
         where: {
           orderHash: takerHash,
-          exchange: defs.ExchangeType.Marketplace,
+          exchange: defs.ExchangeType.NFTCOM,
           orderType: defs.ActivityType.Bid,
-          protocol: defs.ProtocolType.Marketplace,
+          protocol: defs.ProtocolType.NFTCOM,
           chainId: chainId.toString(),
         },
       })
@@ -849,9 +849,9 @@ const listenMatchThreeAEvents = async (
         txBidOrder = await repositories.txOrder.save({
           activity,
           orderHash: takerHash,
-          exchange: defs.ExchangeType.Marketplace,
+          exchange: defs.ExchangeType.NFTCOM,
           orderType: defs.ActivityType.Bid,
-          protocol: defs.ProtocolType.Marketplace,
+          protocol: defs.ProtocolType.NFTCOM,
           nonce,
           protocolData: {
             auctionType: defs.AuctionType.FixedPrice,
@@ -948,9 +948,9 @@ const listenMatchThreeBEvents = async (
       let txBidOrder = await repositories.txOrder.findOne({
         where: {
           orderHash: takerHash,
-          exchange: defs.ExchangeType.Marketplace,
+          exchange: defs.ExchangeType.NFTCOM,
           orderType: defs.ActivityType.Bid,
-          protocol: defs.ProtocolType.Marketplace,
+          protocol: defs.ProtocolType.NFTCOM,
           chainId: chainId.toString(),
         },
       })
@@ -968,9 +968,9 @@ const listenMatchThreeBEvents = async (
         txBidOrder = await repositories.txOrder.save({
           activity,
           orderHash: takerHash,
-          exchange: defs.ExchangeType.Marketplace,
+          exchange: defs.ExchangeType.NFTCOM,
           orderType: defs.ActivityType.Bid,
-          protocol: defs.ProtocolType.Marketplace,
+          protocol: defs.ProtocolType.NFTCOM,
           nonce: -1,
           protocolData: {
             auctionType: defs.AuctionType.FixedPrice,
@@ -1039,9 +1039,9 @@ const listenBuyNowInfoEvents = async (
       const txOrder = await repositories.txOrder.findOne({
         where: {
           orderHash: makerHash,
-          exchange: defs.ExchangeType.Marketplace,
+          exchange: defs.ExchangeType.NFTCOM,
           orderType: defs.ActivityType.Listing,
-          protocol: defs.ProtocolType.Marketplace,
+          protocol: defs.ProtocolType.NFTCOM,
         },
       })
       if (txOrder) {
