@@ -115,6 +115,8 @@ enum EventName {
   AssociateSelfWithUser = 'AssociateSelfWithUser',
   RemovedAssociateProfile = 'RemovedAssociateProfile',
   SetAssociatedContract = 'SetAssociatedContract',
+  ExtendExpiry = 'ExtendExpiry',
+  Transfer = 'Transfer',
 }
 
 type Log = {
@@ -144,7 +146,7 @@ export const getCachedBlock = async (chainId: number, key: string): Promise<numb
   }
 }
 
-export const chainIdToCacheKeyProfile = (chainId: number): string => {
+export const chainIdToCacheKeyProfileAuction = (chainId: number): string => {
   return `minted_profile_cached_block_${chainId}`
 }
 
@@ -152,8 +154,8 @@ export const chainIdToCacheKeyResolverAssociate = (chainId: number): string => {
   return `resolver_associate_cached_block_${chainId}`
 }
 
-export const chainIdToCacheKeyProfileExtendExpiry = (chainId: number): string => {
-  return `profile_extend_expiry_cached_block_${chainId}`
+export const chainIdToCacheKeyProfile = (chainId: number): string => {
+  return `profile_cached_block_${chainId}`
 }
 
 export const getResolverEvents = async (
@@ -198,7 +200,7 @@ export const getMintedProfileEvents = async (
   const latestBlock = await provider.getBlock('latest')
   try {
     const maxBlocks = process.env.MINTED_PROFILE_EVENTS_MAX_BLOCKS
-    const key = chainIdToCacheKeyProfile(chainId)
+    const key = chainIdToCacheKeyProfileAuction(chainId)
     const cachedBlock = await getCachedBlock(chainId, key)
     const logs = await getPastLogs(
       provider,
@@ -222,7 +224,7 @@ export const getMintedProfileEvents = async (
   }
 }
 
-export const getProfileExtendExpiryEvents = async (
+export const getProfileEvents = async (
   topics: any[],
   chainId: number,
   provider: ethers.providers.BaseProvider,
@@ -231,7 +233,7 @@ export const getProfileExtendExpiryEvents = async (
   const latestBlock = await provider.getBlock('latest')
   try {
     const maxBlocks = process.env.MINTED_PROFILE_EVENTS_MAX_BLOCKS
-    const key = chainIdToCacheKeyProfileExtendExpiry(chainId)
+    const key = chainIdToCacheKeyProfile(chainId)
     const cachedBlock = await getCachedBlock(chainId, key)
     const logs = await getPastLogs(
       provider,
@@ -247,7 +249,7 @@ export const getProfileExtendExpiryEvents = async (
     }
   } catch (e) {
     logger.debug(e)
-    logger.error(`Error in getProfileExtendExpiryEvents: ${e}`)
+    logger.error(`Error in getProfileEvents: ${e}`)
     return {
       logs: [],
       latestBlockNumber: latestBlock.number,
@@ -286,7 +288,10 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
     ]
 
     const topics3 = [
-      helper.id('ExtendExpiry(string,uint256)'),
+      [
+        helper.id('ExtendExpiry(string,uint256)'),
+        helper.id('Transfer(address,address,uint256)'),
+      ],
     ]
 
     const chainProvider = provider(Number(chainId))
@@ -303,7 +308,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
       chainProvider,
       nftResolverAddress,
     )
-    const log3 = await getProfileExtendExpiryEvents(
+    const log3 = await getProfileEvents(
       topics3,
       Number(chainId),
       chainProvider,
@@ -314,19 +319,74 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
     log3.logs.map(async (unparsedEvent) => {
       try {
         const evt = profileParseLog(unparsedEvent)
-        logger.info(evt.args, `Found event ExtendExpiry with chainId: ${chainId}`)
-        const [profileUrl,extendExpiry] = evt.args
-        const profile = await repositories.profile.findByURL(profileUrl, chainId)
-        if (profile) {
-          const timestamp = BigNumber.from(extendExpiry).toString()
-          if (Number(timestamp) !== 0) {
-            const expireAt = new Date(Number(timestamp) * 1000)
-            await repositories.profile.updateOneById(profile.id, { expireAt })
-            logger.debug(`New ExtendExpiry event found. profileURL=${profileUrl} expireAt=${timestamp} chainId=${chainId}`)
+        logger.info(evt.args, `Found event ${evt.name} with chainId: ${chainId}`)
+        if (evt.name === EventName.ExtendExpiry) {
+          const [profileUrl,extendExpiry] = evt.args
+          const profile = await repositories.profile.findByURL(profileUrl, chainId)
+          if (profile) {
+            const timestamp = BigNumber.from(extendExpiry).toString()
+            if (Number(timestamp) !== 0) {
+              const expireAt = new Date(Number(timestamp) * 1000)
+              await repositories.profile.updateOneById(profile.id, { expireAt })
+              logger.debug(`New ExtendExpiry event found. profileURL=${profileUrl} expireAt=${timestamp} chainId=${chainId}`)
+            }
+          }
+        } else if (evt.name === EventName.Transfer) {
+          const [from, to, tokenIdBN] = evt.args
+          const tokenId = BigNumber.from(tokenIdBN).toString()
+          if (from !== helper.AddressZero() && to !== helper.AddressZero() &&
+            ethers.utils.getAddress(from) !== ethers.utils.getAddress(to)
+          ) {
+            const profile = await repositories.profile.findOne({
+              where: {
+                tokenId,
+                chainId,
+              },
+            })
+            if (profile) {
+              if (profile.ownerWalletId) {
+                const wallet = await repositories.wallet.findById(profile.ownerWalletId)
+                if (ethers.utils.getAddress(from) !== ethers.utils.getAddress(wallet.address)) {
+                  logger.info(`Something's wrong with Transfer event from=${from} url=${profile.url}`)
+                }
+              }
+              let imageUrl = profile.photoURL
+              const bannerUrl = profile.bannerURL
+              const description = profile.description
+              if (!imageUrl) {
+                imageUrl = await core.generateCompositeImage(
+                  profile.url,
+                  core.DEFAULT_NFT_IMAGE,
+                )
+              }
+              const toWallet = await repositories.wallet.findByChainAddress(
+                chainId,
+                ethers.utils.getAddress(to),
+              )
+              if (!toWallet) {
+                await repositories.profile.updateOneById(profile.id, {
+                  ownerUserId: null,
+                  ownerWalletId: null,
+                  photoURL: imageUrl,
+                  bannerURL: bannerUrl ?? 'https://cdn.nft.com/profile-banner-default-logo-key.png',
+                  description: description ?? `NFT.com profile for ${profile.url}`,
+                })
+              } else {
+                await repositories.profile.updateOneById(profile.id, {
+                  ownerUserId: toWallet.userId,
+                  ownerWalletId: toWallet.id,
+                  photoURL: imageUrl,
+                  bannerURL: bannerUrl ?? 'https://cdn.nft.com/profile-banner-default-logo-key.png',
+                  description: description ?? `NFT.com profile for ${profile.url}`,
+                })
+              }
+              logger.debug(`New profile transfer event found. profileURL=${profile.url} from=${from} to=${to} chainId=${chainId}`)
+            }
           }
         }
+        await cache.set(chainIdToCacheKeyProfile(chainId), log3.latestBlockNumber)
       } catch (err) {
-        logger.error(err, 'error parsing extend expiry event')
+        logger.error(err, 'error parsing profile event')
       }
     })
     logger.debug({ log2: log2.logs.length }, `nft resolver outgoing associate events chainId=${chainId}`)
@@ -490,6 +550,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
             await repositories.profile.updateOneById(profile.id, { associatedContract })
           }
         }
+        await cache.set(chainIdToCacheKeyResolverAssociate(chainId), log2.latestBlockNumber)
       } catch (err) {
         if (err.code != 'BUFFER_OVERRUN' && err.code != 'INVALID_ARGUMENT') { // error parsing old event on goerli, and chainId mismatch
           logger.error(err, 'error parsing resolver')
@@ -578,7 +639,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
             }
           }
         }
-        await cache.set(chainIdToCacheKeyProfile(chainId), log.latestBlockNumber)
+        await cache.set(chainIdToCacheKeyProfileAuction(chainId), log.latestBlockNumber)
         logger.debug({ counts: log.logs.length }, 'saved all minted profiles and their events')
       } catch (err) {
         logger.error(err, 'error parsing minted profiles: ')
