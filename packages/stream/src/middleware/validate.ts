@@ -25,6 +25,13 @@ export const collectionSyncSchema = z.object({
   }),
 })
 
+export const collectionNameSyncSchema = z.object({
+  query: z.object({
+    contract: z.string().optional(),
+    official: z.string().optional(),
+  }),
+})
+
 export const validate = (schema: AnyZodObject) =>
   async (req: Request, res: Response, next: NextFunction) => {
     try {

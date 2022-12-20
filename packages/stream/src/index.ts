@@ -8,7 +8,7 @@ import { _logger, db, fp, helper } from '@nftcom/shared'
 import { dbConfig } from './config'
 import { nftOrderSubqueue, QUEUE_TYPES, queues, startAndListen, stopAndDisconnect } from './jobs/jobs'
 import { authMiddleWare } from './middleware/auth'
-import { collectionSyncSchema, SyncCollectionInput, validate } from './middleware/validate'
+import { collectionNameSyncSchema, collectionSyncSchema, SyncCollectionInput, validate } from './middleware/validate'
 import { initiateStreaming } from './pipeline'
 import { cache, CacheKeys } from './service/cache'
 //import { startAndListen } from './jobs/jobs'
@@ -330,6 +330,61 @@ app.get('/stopSyncCollectionBannerImages', authMiddleWare, async (_req, res) => 
     }
 
     return res.status(200).send({ message: 'No Sync In Progress!' })
+  } catch (error) {
+    logger.error(`err: ${error}`)
+    return res.status(400).send(error)
+  }
+})
+
+// sync collection name - authenticated
+app.get('/syncCollectionName', authMiddleWare, validate(collectionNameSyncSchema), async (_req, res) => {
+  const { official, contract } = _req.query
+  try {
+    const jobId = 'sync_collection_name'
+    const collectionNameQueue = queues.get(QUEUE_TYPES.SYNC_COLLECTION_NAME)
+    const job: Bull.Job = await collectionNameQueue.getJob(jobId)
+    if (job && (job.isFailed() || job.isPaused() || job.isStuck() || job.isDelayed())) {
+      await job.remove()
+    }
+
+    if(!job) {
+      collectionNameQueue
+        .add({
+          SYNC_CONTRACTS: QUEUE_TYPES.SYNC_COLLECTION_NAME,
+          chainId: process.env.CHAIN_ID,
+          contract,
+          official,
+        }, {
+          attempts: 1,
+          removeOnComplete: true,
+          removeOnFail: true,
+          jobId: 'sync_collection_name',
+        })
+      return res.status(200).send({ message: 'Collection Name Sync Started!' })
+    }
+
+    return res.status(200).send({ message: 'Collection Name Sync In Progress Already!' })
+  } catch (error) {
+    logger.error(`err: ${error}`)
+    return res.status(400).send(error)
+  }
+})
+
+// stop sync collection name - authenticated
+app.get('/stopSyncCollectionName', authMiddleWare, async (_req, res) => {
+  try {
+    const jobId = 'sync_collection_name'
+    const collectionNameQueue = queues.get(QUEUE_TYPES.SYNC_COLLECTION_NAME)
+    const job: Bull.Job = await collectionNameQueue.getJob(jobId)
+    if (job) {
+      await job.moveToFailed(new Error('Abort Triggered!'), true)
+      await job.discard()
+      await job.remove()
+      // await killProcess(job.data.pid)
+      return res.status(200).send({ message: 'Stopped Collection Sync!' })
+    }
+
+    return res.status(200).send({ message: 'No Collection Name Sync In Progress!' })
   } catch (error) {
     logger.error(`err: ${error}`)
     return res.status(400).send(error)

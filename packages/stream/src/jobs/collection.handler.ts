@@ -2,7 +2,7 @@
 import { AxiosInstance, AxiosResponse } from 'axios'
 import Bull, { Job } from 'bull'
 import { BigNumber } from 'ethers'
-import { ILike, In, IsNull, Not } from 'typeorm'
+import { FindOptionsWhere,ILike, In, IsNull, Not } from 'typeorm'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -612,5 +612,70 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
     logger.log(`Error in collection banner image sync: ${err}`)
   }
   logger.log('completed collection banner image sync')
+}
+
+// collection image sync
+export const collectionNameSync = async (job: Job): Promise<void> => {
+  logger.log('initiated collection name sync')
+  const chainId: string = job.data.chainId
+  const contract: string = job.data.contract
+  const official: string = job.data.official
+  try {
+    let filters: FindOptionsWhere<any> = {
+      isSpam: false,
+      chainId,
+    }
+  
+    if (contract !== undefined && contract !== null) {
+      filters = { ...filters, contract: helper.checkSum(contract) }
+    }
+  
+    if (official !== undefined && official !== null) {
+      filters = { ...filters, isOfficial: Boolean(official) }
+    }
+  
+    const collections: entity.Collection[] = await repositories.collection.find({
+      where: {
+        ...filters,
+      },
+    })
+
+    // initiate web3
+    nftService.initiateWeb3(chainId)
+    let updatedCollections: entity.Collection[] = []
+
+    for (const collection of collections) {
+      // get collection info
+      let collectionName = await nftService.getCollectionNameFromDataProvider(
+        collection.contract,
+        chainId,
+        defs.NFTType.ERC721,
+      )
+
+      if (collectionName === 'Unknown Name') {
+        collectionName = await nftService.getCollectionNameFromDataProvider(
+          collection.contract,
+          chainId,
+          defs.NFTType.ERC1155,
+        )
+      }
+      collection.name = collectionName
+      updatedCollections.push(collection)
+
+      if (updatedCollections.length >= 100) {
+        await repositories.collection.saveMany(updatedCollections, { chunk: 100 })
+        await nftService.indexCollectionsOnSearchEngine(updatedCollections)
+        updatedCollections = []
+      }
+    }
+
+    if (updatedCollections.length) {
+      await repositories.collection.saveMany(updatedCollections, { chunk: 100 })
+      await nftService.indexCollectionsOnSearchEngine(updatedCollections)
+    }
+  } catch (err) {
+    logger.log(`Error in collection name sync: ${err}`)
+  }
+  logger.log('completed collection name sync')
 }
 
