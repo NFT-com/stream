@@ -7,7 +7,7 @@ import { looksrareService, openseaService, x2y2Service } from '@nftcom/gql/servi
 import { _logger, db, entity, helper } from '@nftcom/shared'
 
 import { cache, CacheKeys, removeExpiredTimestampedZsetMembers, ttlForTimestampedZsetMembers } from '../service/cache'
-import { queues, QUEUE_TYPES } from './jobs'
+import { QUEUE_TYPES,queues } from './jobs'
 
 // exported for tests
 export const repositories = db.newRepositories()
@@ -232,7 +232,7 @@ export const nftExternalOrdersOnDemand = async (job: Job): Promise<void> => {
         queues
           .get(QUEUE_TYPES.SEARCH_LISTING_INDEX)
           .add({
-            listings
+            listings,
           })
       }
 

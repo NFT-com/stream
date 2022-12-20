@@ -185,7 +185,7 @@ const createQueues = (): Promise<void> => {
       QUEUE_TYPES.SEARCH_LISTING_INDEX, {
         prefix: queuePrefix,
         redis,
-      }
+      },
     ))
 
     resolve()
