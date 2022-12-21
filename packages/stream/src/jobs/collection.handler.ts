@@ -259,8 +259,8 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
             }
            
             contractInput.push(collections[i])
-            // contractsToBeProcessed.push(contract + startTokenParam) // full resync (for cases where collections already exist, but we want to fetch all the NFTs)
-            // contractsRarityToBeProcessed.push([1, contract])
+            contractsToBeProcessed.push(contract + startTokenParam) // full resync (for cases where collections already exist, but we want to fetch all the NFTs)
+            contractsRarityToBeProcessed.push([1, contract])
           }
         }
       }
