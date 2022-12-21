@@ -147,7 +147,7 @@ app.post('/collectionSync', authMiddleWare, validate(collectionSyncSchema), asyn
         jobId,
       })
     
-    // response msg:
+    // response msg
     const responseMsg = []
 
     if (validCollections.length) {
