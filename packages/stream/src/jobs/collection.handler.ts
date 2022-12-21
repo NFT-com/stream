@@ -215,6 +215,7 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
       const contractExistsInDB: entity.Collection = existsInDB.filter(
         (collection: entity.Collection) => collection.contract === contract,
       )?.[0]
+
       const collectionType: string = collections[i].type
       const isSpamFromInput: boolean = collectionType === CollectionType.SPAM
       const isSpamFromCache: number = await cache.sismember(
@@ -241,22 +242,32 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
       } else {
         if (isSpam) {
           await repositories.collection.updateOneById(contractExistsInDB.id,
-            { ...contractExistsInDB, isSpam: true },
+            { ...contractExistsInDB, isSpam: true, isOfficial: false },
           )
         } else {
           if (collectionType && isOfficial || !collectionType) {
+            if (collectionType) {
+              if (isOfficial) {
+                await repositories.collection.updateOneById(contractExistsInDB.id,
+                  { ...contractExistsInDB, isSpam: false, isOfficial: true },
+                )
+              } else {
+                await repositories.collection.updateOneById(contractExistsInDB.id,
+                  { ...contractExistsInDB, isSpam: false, isOfficial: false },
+                )
+              }
+            }
+           
             contractInput.push(collections[i])
-            contractsToBeProcessed.push(contract + startTokenParam) // full resync (for cases where collections already exist, but we want to fetch all the NFTs)
-            contractsRarityToBeProcessed.push([1, contract])
+            // contractsToBeProcessed.push(contract + startTokenParam) // full resync (for cases where collections already exist, but we want to fetch all the NFTs)
+            // contractsRarityToBeProcessed.push([1, contract])
           }
         }
       }
     }
 
-    if (contractsToBeProcessed.length) {
-      // move to in progress cache
-      await cache.sadd(CacheKeys.SYNC_IN_PROGRESS, ...contractsToBeProcessed)
-      Promise.all(contractToBeSaved)
+    if (contractToBeSaved.length) {
+      await Promise.all(contractToBeSaved)
         .then(
           (collections: entity.Collection[]) =>
             repositories.collection.saveMany(collections),
@@ -268,6 +279,10 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
             )
             logger.log(`Collections Saved: ${collections.join(', ')}`)
           })
+    }
+    if (contractsToBeProcessed.length) {
+      // move to in progress cache
+      await cache.sadd(CacheKeys.SYNC_IN_PROGRESS, ...contractsToBeProcessed)
       // run process
       for (let i = 0; i < contractInput.length; i++) {
         const contract: string = contractInput?.[i]?.address
