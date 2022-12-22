@@ -10,9 +10,6 @@
       ],
       "@nftcom/gql/*": [
         "../../../NFT-backend/packages/gql/src/*"
-      ],
-      "@nftcom/search-engine": [
-        "../../../NFT-backend/packages/search-engine/src/index.ts"
       ]
     }
   },

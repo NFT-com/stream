@@ -11,7 +11,6 @@ COPY NFT-backend/tsconfig.base.json ./NFT-backend/tsconfig.base.json
 COPY stream/packages/stream/package*.json ./stream/packages/stream/
 COPY NFT-backend/packages/shared/package*.json ./NFT-backend/packages/shared/
 COPY NFT-backend/packages/gql/package*.json ./NFT-backend/packages/gql/
-COPY NFT-backend/packages/search-engine/package*.json ./NFT-backend/packages/search-engine/
 
 # add tools for native dependencies (node-gpy)
 RUN apk add --no-cache --virtual .gyp python3 make g++ \
@@ -43,9 +42,6 @@ WORKDIR /app/NFT-backend/packages/gql
 RUN npm install
 RUN npm run build
 
-WORKDIR /app/NFT-backend/packages/search-engine
-RUN npm run build
-
 WORKDIR /app/stream/packages/stream
 RUN npm run build
 
@@ -65,9 +61,6 @@ COPY --from=build /app/NFT-backend/packages/shared/dist ./NFT-backend/packages/s
 
 COPY --from=build /app/NFT-backend/packages/gql/package.json ./NFT-backend/packages/gql/package.json
 COPY --from=build /app/NFT-backend/packages/gql/dist ./NFT-backend/packages/gql/dist
-
-COPY --from=build /app/NFT-backend/packages/search-engine/package.json ./NFT-backend/packages/search-engine/package.json
-COPY --from=build /app/NFT-backend/packages/search-engine/dist ./NFT-backend/packages/search-engine/dist
 
 COPY --from=build /app/stream/packages/stream/package.json ./stream/packages/stream/package.json
 COPY --from=build /app/stream/packages/stream/dist ./stream/packages/stream/dist

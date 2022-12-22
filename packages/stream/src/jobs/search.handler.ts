@@ -1,10 +1,12 @@
 import { Job } from 'bull'
 
-import { SearchEngineService } from '@nftcom/search-engine'
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import { searchEngineService } from '@nftcom/gql/service'
 import { _logger,entity, utils } from '@nftcom/shared'
 
 const logger = _logger.Factory('search.handler', _logger.Context.Bull)
-const seService = SearchEngineService()
+const seService = searchEngineService.SearchEngineService()
 
 export const searchListingIndexHandler = async (job: Job): Promise<boolean> => {
   try {
