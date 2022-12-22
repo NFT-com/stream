@@ -1,7 +1,8 @@
-import { _logger, db, entity, helper } from '@nftcom/shared'
+import { _logger, db, defs, entity, helper } from '@nftcom/shared'
 import { BaseStreamMessage, EventType } from '@opensea/stream-js'
 
 import { Chain, DistinctContract, OSChainTypes, OSEventPayload } from './interface'
+import { QUEUE_TYPES, queues } from './jobs/jobs'
 import { cache, CacheKeys }from './service/cache'
 import { client, retrieveSlugsForContracts } from './service/opensea'
 import { streamOrderEntityBuilder } from './utils/builder/streamOrderBuilder'
@@ -127,6 +128,14 @@ const initializeStreamsForAllSlugs = (): void => {
 
                         await repositories.txOrder.save(newOrder)
                         logger.log(`order with orderHash: ${orderHash} for ${nftId} is saved successfully`)
+                        //update search engine
+                        if (newOrder.orderType === defs.ActivityType.Listing) {
+                          queues
+                            .get(QUEUE_TYPES.SEARCH_LISTING_INDEX)
+                            .add({
+                              listings: [newOrder],
+                            })
+                        }
                       } catch (err) {
                         logger.log(JSON.stringify(err), 'Save order error')
                       }

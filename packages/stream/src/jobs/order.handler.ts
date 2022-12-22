@@ -7,6 +7,7 @@ import { looksrareService, openseaService, x2y2Service } from '@nftcom/gql/servi
 import { _logger, db, entity, helper } from '@nftcom/shared'
 
 import { cache, CacheKeys, removeExpiredTimestampedZsetMembers, ttlForTimestampedZsetMembers } from '../service/cache'
+import { QUEUE_TYPES,queues } from './jobs'
 
 // exported for tests
 export const repositories = db.newRepositories()
@@ -227,6 +228,12 @@ export const nftExternalOrdersOnDemand = async (job: Job): Promise<void> => {
       // save listings
       if (listings.length) {
         persistActivity.push(repositories.txOrder.saveMany(listings, { chunk: MAX_CHUNK_SIZE }))
+        //update search engine
+        queues
+          .get(QUEUE_TYPES.SEARCH_LISTING_INDEX)
+          .add({
+            listings,
+          })
       }
 
       // save bids
