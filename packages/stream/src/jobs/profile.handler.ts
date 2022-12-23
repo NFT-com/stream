@@ -130,6 +130,7 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
             try {
               // keep profile to cache, so we won't repeat profiles in progress
               await cache.zadd(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, 'INCR', 1, profile.id)
+              nftService.initiateWeb3(chainId)
               await nftService.checkNFTContractAddresses(
                 profile.ownerUserId,
                 wallet.id,
