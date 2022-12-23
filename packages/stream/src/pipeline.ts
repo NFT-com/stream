@@ -129,7 +129,8 @@ const initializeStreamsForAllSlugs = (): void => {
                         await repositories.txOrder.save(newOrder)
                         logger.log(`order with orderHash: ${orderHash} for ${nftId} is saved successfully`)
                         //update search engine
-                        if (newOrder.orderType === defs.ActivityType.Listing) {
+                        if (newOrder.orderType === defs.ActivityType.Listing
+                          && newOrder.activity.expiration.getTime() > new Date().getTime()) {
                           queues
                             .get(QUEUE_TYPES.SEARCH_LISTING_INDEX)
                             .add({

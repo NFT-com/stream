@@ -11,8 +11,10 @@ const seService = searchEngineService.SearchEngineService()
 export const searchListingIndexHandler = async (job: Job): Promise<boolean> => {
   try {
     const { listings }: { listings: entity.TxOrder[] } = job.data
-    const nftsWithListingUpdates = await utils.getNFTsFromTxOrders(listings)
-    seService.indexNFTs(nftsWithListingUpdates)
+    if (listings) {
+      const nftsWithListingUpdates = await utils.getNFTsFromTxOrders(listings)
+      seService.indexNFTs(nftsWithListingUpdates)
+    }
     return Promise.resolve(true)
   } catch (err) {
     logger.error(err)

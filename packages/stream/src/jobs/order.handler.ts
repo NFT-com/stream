@@ -232,7 +232,9 @@ export const nftExternalOrdersOnDemand = async (job: Job): Promise<void> => {
         queues
           .get(QUEUE_TYPES.SEARCH_LISTING_INDEX)
           .add({
-            listings,
+            listings: listings.filter((l) => {
+              return l.activity.expiration.getTime() > new Date().getTime()
+            }),
           })
       }
 
