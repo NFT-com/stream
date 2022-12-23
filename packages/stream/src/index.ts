@@ -315,7 +315,7 @@ app.get('/syncCollectionBannerImages', authMiddleWare, async (_req, res) => {
   }
 })
 
-// sync collection images- authenticated
+// sync collection images - authenticated
 app.get('/stopSyncCollectionBannerImages', authMiddleWare, async (_req, res) => {
   try {
     const jobId = 'sync_collection_images'
