@@ -89,7 +89,6 @@ const initializeStreamsForAllSlugs = (): void => {
             if (nftId) {
               const chainId: string = process.env.CHAIN_ID || '4'
               const [network, contract, token] = nftId.split('/')
-              logger.log(`nftId: ${nftId} - network: ${network}`)
               if (contract && token) {
                 try {
                   nft = await repositories.nft.findOne({
@@ -127,7 +126,7 @@ const initializeStreamsForAllSlugs = (): void => {
                         )
 
                         await repositories.txOrder.save(newOrder)
-                        logger.log(`order with orderHash: ${orderHash} for ${nftId} is saved successfully`)
+                        logger.log(`order with orderHash: ${orderHash} for ${nftId} is saved successfully on ${network} network`)
                         //update search engine
                         if (newOrder.orderType === defs.ActivityType.Listing) {
                           queues
