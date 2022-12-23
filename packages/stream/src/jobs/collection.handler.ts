@@ -248,13 +248,21 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
           if (collectionType && isOfficial || !collectionType) {
             if (collectionType) {
               if (isOfficial) {
+                const updatedCollection: Partial<entity.Collection> = {
+                  ...contractExistsInDB, isSpam: false, isOfficial: true,
+                }
                 await repositories.collection.updateOneById(contractExistsInDB.id,
-                  { ...contractExistsInDB, isSpam: false, isOfficial: true },
+                  { ...updatedCollection },
                 )
+                await nftService.indexCollectionsOnSearchEngine([updatedCollection])
               } else {
+                const updatedCollection: Partial<entity.Collection> = {
+                  ...contractExistsInDB, isSpam: false, isOfficial: false,
+                }
                 await repositories.collection.updateOneById(contractExistsInDB.id,
-                  { ...contractExistsInDB, isSpam: false, isOfficial: false },
+                  { ...updatedCollection },
                 )
+                await nftService.indexCollectionsOnSearchEngine([updatedCollection])
               }
             }
            
@@ -267,10 +275,10 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
     }
 
     if (contractToBeSaved.length) {
-      await Promise.all(contractToBeSaved)
+      Promise.all(contractToBeSaved)
         .then(
           (collections: entity.Collection[]) =>
-            repositories.collection.saveMany(collections),
+            repositories.collection.saveMany(collections, { chunk: 100 }),
         )
         .then(
           (savedCollections: entity.Collection[]) => {
@@ -278,7 +286,10 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
               (savedCollection: entity.Collection) => savedCollection.id,
             )
             logger.log(`Collections Saved: ${collections.join(', ')}`)
+            nftService.indexCollectionsOnSearchEngine(savedCollections)
           })
+        .then(() => logger.log('Collections Indexed!'))
+        .catch(err => logger.error(err, 'Collection Sync error while saving or indexing collections'))
     }
     if (contractsToBeProcessed.length) {
       // move to in progress cache
@@ -387,7 +398,7 @@ export const collectionIssuanceDateSync = async (job: Job): Promise<void> => {
     })
   
     let count = 0
-    const updateContracts: Partial<entity.Collection>[] = []
+    const updatedCollections: Partial<entity.Collection>[] = []
     const etherscanInterceptor = getEtherscanInterceptor(chainId)
     for (const collection of collections) {
       const collectionInCache: number = await cache.sismember(
@@ -414,7 +425,7 @@ export const collectionIssuanceDateSync = async (job: Job): Promise<void> => {
           const issuanceDateTimeStamp: string = response?.data?.result?.[0]?.timeStamp
           if (issuanceDateTimeStamp) {
             const issuanceDate = new Date(Number(issuanceDateTimeStamp) * 1000)
-            updateContracts.push({ ...collection, issuanceDate })
+            updatedCollections.push({ ...collection, issuanceDate })
             await cache.srem(CacheKeys.COLLECTION_ISSUANCE_DATE_IN_PROGRESS, collection.contract)
           }
         }
@@ -425,18 +436,20 @@ export const collectionIssuanceDateSync = async (job: Job): Promise<void> => {
       }
   
       // for efficient memory storage, process persistence in batches of 1000
-      if (updateContracts.length >= 500) {
-        await repositories.collection.saveMany(updateContracts, { chunk: 100 })
-        const cacheContracts: string[] = updateContracts.map(
+      if (updatedCollections.length >= 500) {
+        await repositories.collection.saveMany(updatedCollections, { chunk: 100 })
+        await nftService.indexCollectionsOnSearchEngine(updatedCollections)
+        const cacheContracts: string[] = updatedCollections.map(
           (item: entity.Collection) => item.contract,
         )
         await cache.sadd(CacheKeys.COLLECTION_ISSUANCE_DATE, ...cacheContracts)
       }
     }
   
-    if (updateContracts.length) {
-      await repositories.collection.saveMany(updateContracts, { chunk: 100 })
-      const cacheContracts: string[] = updateContracts.map(
+    if (updatedCollections.length) {
+      await repositories.collection.saveMany(updatedCollections, { chunk: 100 })
+      await nftService.indexCollectionsOnSearchEngine(updatedCollections)
+      const cacheContracts: string[] = updatedCollections.map(
         (item: entity.Collection) => item.contract,
       )
       await cache.sadd(CacheKeys.COLLECTION_ISSUANCE_DATE, ...cacheContracts)
@@ -506,6 +519,7 @@ export const raritySync = async (job: Job): Promise<void> => {
 
             if (updateNFTRarity.length >= 500) {
               await repositories.nft.saveMany(updateNFTRarity, { chunk: 100 })
+              await nftService.indexNFTsOnSearchEngine(updateNFTRarity)
               updateNFTRarity = []
             }
 
@@ -518,6 +532,7 @@ export const raritySync = async (job: Job): Promise<void> => {
 
           if (updateNFTRarity.length) {
             await repositories.nft.saveMany(updateNFTRarity, { chunk: 100 })
+            await nftService.indexNFTsOnSearchEngine(updateNFTRarity)
           }
          
           const date = new Date()
