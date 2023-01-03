@@ -11,10 +11,9 @@ const repos = db.newRepositories()
 
 export const searchListingIndexHandler = async (job: Job): Promise<boolean> => {
   try {
-    const { listings }: { listings: entity.TxOrder[] } = repos
+    const { listings }: { listings: entity.TxActivity[] } = repos
       .txActivity
       .findActivitiesNotExpired(defs.ActivityType.Listing, new Date(job.timestamp))
-      .map((txActivity) => txActivity.order)
     if (listings) {
       const nftsWithListingUpdates = await utils.getNFTsFromTxActivities(listings)
       seService.indexNFTs(nftsWithListingUpdates)
