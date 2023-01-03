@@ -8,6 +8,7 @@ import { getEthereumEvents } from './mint.handler'
 import { nftExternalOrdersOnDemand } from './order.handler'
 import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
 import { saveProfileExpireAt, updateNFTsForProfilesHandler } from './profile.handler'
+import { searchListingIndexHandler } from './search.handler'
 import { nftExternalOrders } from './sync.handler'
 
 const BULL_MAX_REPEAT_COUNT = parseInt(process.env.BULL_MAX_REPEAT_COUNT) || 250
@@ -33,7 +34,8 @@ export enum QUEUE_TYPES {
   FETCH_EXTERNAL_ORDERS_ON_DEMAND = 'FETCH_EXTERNAL_ORDERS_ON_DEMAND',
   GENERATE_COMPOSITE_IMAGE = 'GENERATE_COMPOSITE_IMAGE',
   FETCH_COLLECTION_ISSUANCE_DATE = 'FETCH_COLLECTION_ISSUANCE_DATE',
-  SAVE_PROFILE_EXPIRE_AT = 'SAVE_PROFILE_EXPIRE_AT'
+  SAVE_PROFILE_EXPIRE_AT = 'SAVE_PROFILE_EXPIRE_AT',
+  SEARCH_ENGINE_LISTINGS_UPDATE = 'SEARCH_ENGINE_LISTINGS_UPDATE'
 }
 
 export const queues = new Map<string, Bull.Queue>()
@@ -183,6 +185,12 @@ const createQueues = (): Promise<void> => {
     // external orders on demand
     queues.set(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, new Bull(
       QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
+    queues.set(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, new Bull(
+      QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, {
         prefix: queuePrefix,
         redis,
       }))
@@ -341,6 +349,14 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             repeat: { every: 12 * 60 * 60000 },
             jobId: 'fetch_collection_issuance_date',
           })
+      case QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE:
+        return queues.get(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE)
+          .add({}, {
+            removeOnComplete: true,
+            removeOnFail: true,
+            repeat: { every: 10 * 60000 },
+            jobId: 'search_engine_listings_update',
+          })
       default:
         return queues.get(chainId).add({ chainId }, {
           removeOnComplete: true,
@@ -394,6 +410,9 @@ const listenToJobs = async (): Promise<void> => {
       break
     case QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT:
       queue.process(saveProfileExpireAt)
+      break
+    case QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE:
+      queue.process(searchListingIndexHandler)
       break
     default:
       queue.process(getEthereumEvents)
