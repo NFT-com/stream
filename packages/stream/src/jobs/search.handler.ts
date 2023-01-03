@@ -11,7 +11,7 @@ const repos = db.newRepositories()
 
 export const searchListingIndexHandler = async (job: Job): Promise<boolean> => {
   try {
-    const { listings }: { listings: entity.TxActivity[] } = repos
+    const listings: entity.TxActivity[] = repos
       .txActivity
       .findActivitiesNotExpired(defs.ActivityType.Listing, new Date(job.timestamp))
     if (listings) {
