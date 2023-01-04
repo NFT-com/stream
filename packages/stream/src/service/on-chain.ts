@@ -7,7 +7,7 @@ import {  nftService } from '@nftcom/gql/service'
 import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
 import { delay } from '../utils'
-import { cancelEntityBuilder, txEntityBuilder } from '../utils/builder/orderBuilder'
+import { cancelEntityBuilder, txEntityBuilder, txX2Y2ProtocolDataParser } from '../utils/builder/orderBuilder'
 
 const repositories = db.newRepositories()
 const nftResolverInterface = new utils.Interface(contracts.NftResolverABI())
@@ -840,9 +840,11 @@ const keepAlive = ({
 
           if (existingTx) {
             // update protocol data if tx exists
+            const updatedProtocolData = { ...existingTx.protocolData, amount }
+            const protocolDataFormatted = txX2Y2ProtocolDataParser(updatedProtocolData)
             await repositories.txTransaction.updateOneById(
               transactionId,
-              { protocolData: { ...existingTx.protocolData, amount },
+              { protocolData: { ...protocolDataFormatted },
               })
 
             logger.log(`
@@ -958,9 +960,11 @@ const keepAlive = ({
 
           if (existingTx) {
             // update protocol data if tx exists
+            const updatedProtocolData = { ...existingTx.protocolData, ...protocolData }
+            const protocolDataFormatted = txX2Y2ProtocolDataParser(updatedProtocolData)
             await repositories.txTransaction.updateOneById(
               transactionId,
-              { protocolData: { ...existingTx.protocolData, ...protocolData },
+              { protocolData: { ...protocolDataFormatted },
               })
 
             logger.log(`
