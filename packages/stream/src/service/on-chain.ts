@@ -7,7 +7,7 @@ import {  nftService } from '@nftcom/gql/service'
 import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
 import { delay } from '../utils'
-import { cancelEntityBuilder,txEntityBuilder } from '../utils/builder/orderBuilder'
+import { cancelEntityBuilder, txEntityBuilder } from '../utils/builder/orderBuilder'
 
 const repositories = db.newRepositories()
 const nftResolverInterface = new utils.Interface(contracts.NftResolverABI())
