@@ -2,13 +2,13 @@ import { BigNumber } from 'ethers'
 
 import { db, defs, entity, helper } from '@nftcom/shared'
 
-import { SeaportConsideration,TxLooksrareProtocolData, TxSeaportProtocolData } from '../../interface'
+import { SeaportConsideration, TxLooksrareProtocolData, TxSeaportProtocolData, TxX2Y2ProtocolData } from '../../interface'
 import { LooksRareOrder } from '../../service/looksrare'
 import { SeaportOffer, SeaportOrder } from '../../service/opensea'
 
 type Order = SeaportOrder | LooksRareOrder
 
-type TxProtocolData = TxSeaportProtocolData | TxLooksrareProtocolData
+type TxProtocolData = TxSeaportProtocolData | TxLooksrareProtocolData | TxX2Y2ProtocolData
 
 const repositories = db.newRepositories()
 
@@ -221,6 +221,36 @@ export const txSeaportProcotolDataParser = (protocolData: any): TxSeaportProtoco
   return  { offer: txOffer, consideration: txConsideration }
 }
 
+export const txX2Y2ProtocolDataParser = (protocolData: any): TxX2Y2ProtocolData => {
+  const {
+    data,
+    amount,
+    intent,
+    currency,
+    deadline,
+    orderSalt,
+    settleSalt,
+    delegateType } = protocolData
+  return {
+    data,
+    currency,
+    amount: amount? amount.hex ? String(helper.bigNumberToNumber(amount.hex))
+      : String(helper.bigNumberToNumber(amount))
+      : null,
+    intent: intent && intent.hex ? String(helper.bigNumberToNumber(intent.hex))
+      : null,
+    delegateType: delegateType && delegateType.hex
+      ? String(helper.bigNumberToNumber(delegateType.hex))
+      : null,
+    orderSalt:  orderSalt && orderSalt.hex ? String(helper.bigNumberToNumber(orderSalt.hex))
+      : null,
+    settleSalt:  settleSalt && settleSalt.hex ? String(helper.bigNumberToNumber(settleSalt.hex))
+      : null,
+    deadline:  deadline && deadline.hex ? String(helper.bigNumberToNumber(deadline.hex))
+      : null,
+  }
+}
+
 /**
  * transactionEntityBuilder 
  * @param txType
@@ -265,6 +295,8 @@ export const txEntityBuilder = async (
 
   if (protocol === defs.ProtocolType.Seaport) {
     txProtocolData =  txSeaportProcotolDataParser(protocolData)
+  } else if (protocol === defs.ProtocolType.X2Y2) {
+    txProtocolData = txX2Y2ProtocolDataParser(protocolData)
   }
   return {
     id: txHash,

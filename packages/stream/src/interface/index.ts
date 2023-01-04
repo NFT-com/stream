@@ -157,6 +157,46 @@ export interface TxLooksrareProtocolData {
   collection: string
 }
 
+// interface TxX2Y2OrderItem {
+//   price: [string]
+//   data: string
+// }
+
+// interface TxX2Y2Fee {
+//   percentage: string
+//   to: string
+// }
+
+// interface TxX2Y2SettleDetail {
+//   op: [string]
+//   orderIdx: [string]
+//   itemIdx: [string]
+//   price: [string]
+//   itemHash: string
+//   executionDelegate: string
+//   dataReplacement: string
+//   bidIncentivePct: [string]
+//   aucMinIncrementPct: [string]
+//   aucIncDurationSecs: [string]
+//   fees: [TxX2Y2Fee]
+// }
+
+export interface TxX2Y2ProtocolItem {
+  type: string
+  hex: string
+}
+
+export interface TxX2Y2ProtocolData {
+  currency: string
+  amount: string
+  orderSalt: string
+  settleSalt: string
+  intent: string
+  delegateType: string
+  deadline: string
+  data: string
+}
+
 export interface NFTAlchemyMedia {
   raw: string
   gateway: string
