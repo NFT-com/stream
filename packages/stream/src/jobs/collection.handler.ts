@@ -215,6 +215,7 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
       const contractExistsInDB: entity.Collection = existsInDB.filter(
         (collection: entity.Collection) => collection.contract === contract,
       )?.[0]
+
       const collectionType: string = collections[i].type
       const isSpamFromInput: boolean = collectionType === CollectionType.SPAM
       const isSpamFromCache: number = await cache.sismember(
@@ -241,10 +242,30 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
       } else {
         if (isSpam) {
           await repositories.collection.updateOneById(contractExistsInDB.id,
-            { ...contractExistsInDB, isSpam: true },
+            { ...contractExistsInDB, isSpam: true, isOfficial: false },
           )
         } else {
           if (collectionType && isOfficial || !collectionType) {
+            if (collectionType) {
+              if (isOfficial) {
+                const updatedCollection: Partial<entity.Collection> = {
+                  ...contractExistsInDB, isSpam: false, isOfficial: true,
+                }
+                await repositories.collection.updateOneById(contractExistsInDB.id,
+                  { ...updatedCollection },
+                )
+                await nftService.indexCollectionsOnSearchEngine([updatedCollection])
+              } else {
+                const updatedCollection: Partial<entity.Collection> = {
+                  ...contractExistsInDB, isSpam: false, isOfficial: false,
+                }
+                await repositories.collection.updateOneById(contractExistsInDB.id,
+                  { ...updatedCollection },
+                )
+                await nftService.indexCollectionsOnSearchEngine([updatedCollection])
+              }
+            }
+           
             contractInput.push(collections[i])
             contractsToBeProcessed.push(contract + startTokenParam) // full resync (for cases where collections already exist, but we want to fetch all the NFTs)
             contractsRarityToBeProcessed.push([1, contract])
@@ -253,13 +274,11 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
       }
     }
 
-    if (contractsToBeProcessed.length) {
-      // move to in progress cache
-      await cache.sadd(CacheKeys.SYNC_IN_PROGRESS, ...contractsToBeProcessed)
+    if (contractToBeSaved.length) {
       Promise.all(contractToBeSaved)
         .then(
           (collections: entity.Collection[]) =>
-            repositories.collection.saveMany(collections),
+            repositories.collection.saveMany(collections, { chunk: 100 }),
         )
         .then(
           (savedCollections: entity.Collection[]) => {
@@ -267,7 +286,14 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
               (savedCollection: entity.Collection) => savedCollection.id,
             )
             logger.log(`Collections Saved: ${collections.join(', ')}`)
+            nftService.indexCollectionsOnSearchEngine(savedCollections)
           })
+        .then(() => logger.log('Collections Indexed!'))
+        .catch(err => logger.error(err, 'Collection Sync error while saving or indexing collections'))
+    }
+    if (contractsToBeProcessed.length) {
+      // move to in progress cache
+      await cache.sadd(CacheKeys.SYNC_IN_PROGRESS, ...contractsToBeProcessed)
       // run process
       for (let i = 0; i < contractInput.length; i++) {
         const contract: string = contractInput?.[i]?.address
@@ -372,7 +398,7 @@ export const collectionIssuanceDateSync = async (job: Job): Promise<void> => {
     })
   
     let count = 0
-    const updateContracts: Partial<entity.Collection>[] = []
+    const updatedCollections: Partial<entity.Collection>[] = []
     const etherscanInterceptor = getEtherscanInterceptor(chainId)
     for (const collection of collections) {
       const collectionInCache: number = await cache.sismember(
@@ -399,7 +425,7 @@ export const collectionIssuanceDateSync = async (job: Job): Promise<void> => {
           const issuanceDateTimeStamp: string = response?.data?.result?.[0]?.timeStamp
           if (issuanceDateTimeStamp) {
             const issuanceDate = new Date(Number(issuanceDateTimeStamp) * 1000)
-            updateContracts.push({ ...collection, issuanceDate })
+            updatedCollections.push({ ...collection, issuanceDate })
             await cache.srem(CacheKeys.COLLECTION_ISSUANCE_DATE_IN_PROGRESS, collection.contract)
           }
         }
@@ -410,18 +436,20 @@ export const collectionIssuanceDateSync = async (job: Job): Promise<void> => {
       }
   
       // for efficient memory storage, process persistence in batches of 1000
-      if (updateContracts.length >= 500) {
-        await repositories.collection.saveMany(updateContracts, { chunk: 100 })
-        const cacheContracts: string[] = updateContracts.map(
+      if (updatedCollections.length >= 500) {
+        await repositories.collection.saveMany(updatedCollections, { chunk: 100 })
+        await nftService.indexCollectionsOnSearchEngine(updatedCollections)
+        const cacheContracts: string[] = updatedCollections.map(
           (item: entity.Collection) => item.contract,
         )
         await cache.sadd(CacheKeys.COLLECTION_ISSUANCE_DATE, ...cacheContracts)
       }
     }
   
-    if (updateContracts.length) {
-      await repositories.collection.saveMany(updateContracts, { chunk: 100 })
-      const cacheContracts: string[] = updateContracts.map(
+    if (updatedCollections.length) {
+      await repositories.collection.saveMany(updatedCollections, { chunk: 100 })
+      await nftService.indexCollectionsOnSearchEngine(updatedCollections)
+      const cacheContracts: string[] = updatedCollections.map(
         (item: entity.Collection) => item.contract,
       )
       await cache.sadd(CacheKeys.COLLECTION_ISSUANCE_DATE, ...cacheContracts)
@@ -491,6 +519,7 @@ export const raritySync = async (job: Job): Promise<void> => {
 
             if (updateNFTRarity.length >= 500) {
               await repositories.nft.saveMany(updateNFTRarity, { chunk: 100 })
+              await nftService.indexNFTsOnSearchEngine(updateNFTRarity)
               updateNFTRarity = []
             }
 
@@ -503,6 +532,7 @@ export const raritySync = async (job: Job): Promise<void> => {
 
           if (updateNFTRarity.length) {
             await repositories.nft.saveMany(updateNFTRarity, { chunk: 100 })
+            await nftService.indexNFTsOnSearchEngine(updateNFTRarity)
           }
          
           const date = new Date()
