@@ -13,7 +13,7 @@ type TxProtocolData = TxSeaportProtocolData | TxLooksrareProtocolData | TxX2Y2Pr
 const repositories = db.newRepositories()
 
 /**
- * activityBuilder 
+ * activityBuilder
  * @param activityType - type of activity
  * @param activityHash - orderHash for off-chain, txHash for on-chain
  * @param walletId - maker address
@@ -38,11 +38,11 @@ export const activityBuilder = async (
     if (activity) {
       activity.updatedAt = new Date()
       // in case contract is not present for default contracts
-      activity.nftContract = helper.checkSum(contract)
+      activity.nftContract = contract === '0x' ? '0x' : helper.checkSum(contract)
       return activity
     }
   }
-  
+
   // new activity
   activity = new entity.TxActivity()
   activity.activityType = activityType
@@ -50,9 +50,9 @@ export const activityBuilder = async (
   activity.read = false
   activity.timestamp = new Date(timestampFromSource * 1000) // convert to ms
   activity.expiration = expirationFromSource ? new Date(expirationFromSource * 1000) : null // conver to ms
-  activity.walletAddress = helper.checkSum(walletAddress)
+  activity.walletAddress = walletAddress === '0x' ? '0x' : helper.checkSum(walletAddress)
   activity.chainId = chainId
-  activity.nftContract = helper.checkSum(contract)
+  activity.nftContract = contract === '0x' ? '0x' : helper.checkSum(contract)
   activity.nftId = [...nftIds]
   activity.status = defs.ActivityStatus.Valid
 
@@ -60,7 +60,7 @@ export const activityBuilder = async (
 }
 
 /**
- * seaportOrderBuilder 
+ * seaportOrderBuilder
  * @param order
  */
 const seaportOrderBuilder = (
@@ -71,7 +71,7 @@ const seaportOrderBuilder = (
     makerAddress: order.maker?.address ? helper.checkSum(order.maker?.address): null,
     takerAddress: order.taker?.address ? helper.checkSum(order.taker?.address): null,
     nonce: order.protocol_data?.parameters?.counter, // counter is mapped to nonce for OS
-    zone: order.protocol_data?.parameters?.zone, // only mapped for OS 
+    zone: order.protocol_data?.parameters?.zone, // only mapped for OS
     protocolData: {
       ...order.protocol_data,
     },
@@ -79,7 +79,7 @@ const seaportOrderBuilder = (
 }
 
 /**
- * looksrareOrderBuilder 
+ * looksrareOrderBuilder
  * @param order
  */
 
@@ -113,7 +113,7 @@ const looksrareOrderBuilder = (
 }
 
 /**
- * orderEntityBuilder 
+ * orderEntityBuilder
  * @param protocol
  * @param orderType
  * @param order
@@ -135,7 +135,7 @@ export const orderEntityBuilder = async (
     nftIds: string[],
     timestampFromSource: number,
     expirationFromSource: number
-  
+
   let seaportOrder: SeaportOrder
   let looksrareOrder: LooksRareOrder
   const checksumContract: string = helper.checkSum(contract)
@@ -165,7 +165,7 @@ export const orderEntityBuilder = async (
   default:
     break
   }
-  
+
   const activity: entity.TxActivity = await activityBuilder(
     orderType,
     orderHash,
@@ -176,7 +176,7 @@ export const orderEntityBuilder = async (
     timestampFromSource,
     expirationFromSource,
   )
-  
+
   return {
     id: orderHash,
     activity,
@@ -189,7 +189,7 @@ export const orderEntityBuilder = async (
 }
 
 /**
- * txSeaportProcotolDataParser 
+ * txSeaportProcotolDataParser
  * @param protocolData
  */
 
@@ -252,7 +252,7 @@ export const txX2Y2ProtocolDataParser = (protocolData: any): TxX2Y2ProtocolData 
 }
 
 /**
- * transactionEntityBuilder 
+ * transactionEntityBuilder
  * @param txType
  * @param txHash
  * @param chainId
@@ -317,7 +317,7 @@ export const txEntityBuilder = async (
 }
 
 /**
- * cancelEntityBuilder 
+ * cancelEntityBuilder
  * @param txType
  * @param txHash
  * @param chainId
