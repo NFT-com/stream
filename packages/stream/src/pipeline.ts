@@ -84,11 +84,9 @@ const initializeStreamsForAllSlugs = (): void => {
             const nftId: string = eventPayload.item.nft_id
                     
             let nft: entity.NFT
-            //logger.log('nftId', nftId)
             if (nftId) {
               const chainId: string = process.env.CHAIN_ID || '4'
               const [network, contract, token] = nftId.split('/')
-              logger.log(`nftId: ${nftId} - network: ${network}`)
               if (contract && token) {
                 try {
                   nft = await repositories.nft.findOne({
@@ -99,7 +97,7 @@ const initializeStreamsForAllSlugs = (): void => {
                     },
                   })
                 } catch (err) {
-                  logger.log('nft err', err)
+                  logger.error('nft err', err)
                 }
                     
                 if (nft) {
@@ -114,7 +112,7 @@ const initializeStreamsForAllSlugs = (): void => {
                         },
                       })
                     } catch (err) {
-                      logger.log('order err', err)
+                      logger.error('order err', err)
                     }
                                                                 
                     if (!order) {
@@ -126,23 +124,23 @@ const initializeStreamsForAllSlugs = (): void => {
                         )
 
                         await repositories.txOrder.save(newOrder)
-                        logger.log(`order with orderHash: ${orderHash} for ${nftId} is saved successfully`)
+                        logger.log(`order with orderHash: ${orderHash} for ${nftId} is saved successfully on ${network} network`)
                       } catch (err) {
-                        logger.log(JSON.stringify(err), 'Save order error')
+                        logger.error(JSON.stringify(err), 'Save order error')
                       }
                     }
                   }
                 }
               }
             }  else {
-              logger.log('nftId undefined', nftId)
+              logger.error('nftId undefined', nftId)
               logger.log('event type', eventType)
               logger.log('event payload', eventPayload)
             }
           }
         }
       } catch (err) {
-        logger.log('Err:', JSON.stringify(err))
+        logger.error('Err:', JSON.stringify(err))
       }
     })
 }

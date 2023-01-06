@@ -3,11 +3,12 @@ import Bull from 'bull'
 import { _logger } from '@nftcom/shared'
 
 import { redisConfig } from '../config'
-import { collectionBannerImageSync, collectionIssuanceDateSync, collectionSyncHandler, spamCollectionSyncHandler } from './collection.handler'
+import { collectionBannerImageSync, collectionIssuanceDateSync, collectionNameSync, collectionSyncHandler, spamCollectionSyncHandler } from './collection.handler'
 import { getEthereumEvents } from './mint.handler'
 import { nftExternalOrdersOnDemand } from './order.handler'
 import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
 import { saveProfileExpireAt, updateNFTsForProfilesHandler } from './profile.handler'
+import { searchListingIndexHandler } from './search.handler'
 import { nftExternalOrders } from './sync.handler'
 import { syncTrading } from './trading.handler'
 
@@ -24,6 +25,7 @@ export enum QUEUE_TYPES {
   SYNC_CONTRACTS = 'SYNC_CONTRACTS',
   SYNC_COLLECTIONS = 'SYNC_COLLECTIONS',
   SYNC_COLLECTION_IMAGES = 'SYNC_COLLECTION_IMAGES',
+  SYNC_COLLECTION_NAME = 'SYNC_COLLECTION_NAME',
   SYNC_COLLECTION_RARITY = 'SYNC_COLLECTION_RARITY',
   SYNC_SPAM_COLLECTIONS = 'SYNC_SPAM_COLLECTIONS',
   REGISTER_OS_STREAMS = 'REGISTER_OS_STREAMS',
@@ -35,6 +37,7 @@ export enum QUEUE_TYPES {
   FETCH_COLLECTION_ISSUANCE_DATE = 'FETCH_COLLECTION_ISSUANCE_DATE',
   SAVE_PROFILE_EXPIRE_AT = 'SAVE_PROFILE_EXPIRE_AT',
   SYNC_TRADING = 'SYNC_TRADING',
+  SEARCH_ENGINE_LISTINGS_UPDATE = 'SEARCH_ENGINE_LISTINGS_UPDATE'
 }
 
 export const queues = new Map<string, Bull.Queue>()
@@ -95,6 +98,13 @@ const createQueues = (): Promise<void> => {
     // sync collection images...
     queues.set(QUEUE_TYPES.SYNC_COLLECTION_IMAGES, new Bull(
       QUEUE_TYPES.SYNC_COLLECTION_IMAGES, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
+    // sync collection images...
+    queues.set(QUEUE_TYPES.SYNC_COLLECTION_NAME, new Bull(
+      QUEUE_TYPES.SYNC_COLLECTION_NAME, {
         prefix: queuePrefix,
         redis,
       }))
@@ -184,6 +194,12 @@ const createQueues = (): Promise<void> => {
     // external orders on demand
     queues.set(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, new Bull(
       QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
+    queues.set(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, new Bull(
+      QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, {
         prefix: queuePrefix,
         redis,
       }))
@@ -350,6 +366,14 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             repeat: { every: 12 * 60 * 60000 },
             jobId: 'fetch_collection_issuance_date',
           })
+      case QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE:
+        return queues.get(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE)
+          .add({}, {
+            removeOnComplete: true,
+            removeOnFail: true,
+            repeat: { every: 10 * 60000 },
+            jobId: 'search_engine_listings_update',
+          })
       default:
         return queues.get(chainId).add({ chainId }, {
           removeOnComplete: true,
@@ -373,6 +397,9 @@ const listenToJobs = async (): Promise<void> => {
       break
     case QUEUE_TYPES.SYNC_COLLECTION_IMAGES:
       queue.process(collectionBannerImageSync)
+      break
+    case QUEUE_TYPES.SYNC_COLLECTION_NAME:
+      queue.process(collectionNameSync)
       break
     case QUEUE_TYPES.SYNC_COLLECTIONS:
       queue.process(collectionSyncHandler)
@@ -403,6 +430,9 @@ const listenToJobs = async (): Promise<void> => {
       break
     case QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT:
       queue.process(saveProfileExpireAt)
+      break
+    case QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE:
+      queue.process(searchListingIndexHandler)
       break
     default:
       queue.process(getEthereumEvents)
