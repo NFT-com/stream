@@ -1078,12 +1078,13 @@ const listenBuyNowInfoEvents = async (
 
 export const syncTrading = async (job: Job): Promise<any> => {
   try {
-    logger.debug('marketplace sync job', job.data)
+    logger.info('marketplace sync job')
 
     const chainId = Number(job.data.chainId)
     const chainProvider = provider(chainId)
     const latestBlock = await chainProvider.getBlock('latest')
     const cachedBlock = await getCachedBlock(chainId, `marketplace_cached_block_${chainId}`)
+    logger.info(`Marketplace_Cached_Block: ${cachedBlock} - LatestBlock: ${latestBlock.number}`)
 
     await listenApprovalEvents(chainId, chainProvider, cachedBlock, latestBlock.number)
     // await listenNonceIncrementedEvents(chainId, chainProvider, cachedBlock, latestBlock.number)
@@ -1097,6 +1098,6 @@ export const syncTrading = async (job: Job): Promise<any> => {
     // update cached block number to the latest block number
     await cache.set(`marketplace_cached_block_${chainId}`, latestBlock.number)
   } catch (err) {
-    logger.error(`Error in syncMarketplace: ${err}`)
+    logger.error(`Error in syncTrading: ${err}`)
   }
 }
