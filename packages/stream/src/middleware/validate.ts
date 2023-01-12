@@ -19,9 +19,24 @@ export const collectionSyncSchema = z.object({
         },
       ),
       startToken: z.string().optional(),
+      type: z.string().optional(),
     })).nonempty({
       message: 'No collection to sync! Please send in an array of collection addresses',
     }),
+  }),
+})
+
+export const nftRaritySyncSchema = z.object({
+  body: z.object({
+    address: z.string(
+      {
+        required_error: 'address is required',
+        invalid_type_error: 'address must be a string',
+      },
+    ),
+    tokenIds: z.array(z.string({
+      invalid_type_error: 'tokenId must be a string',
+    })).optional(),
   }),
 })
 

@@ -75,6 +75,7 @@ export const nftEntityBuilder = (
   } as entity.NFT
 }
 
+// traits with rarity
 export const nftTraitBuilder = (
   nftAttributes: defs.Trait[],
   rarityAttributes: NFTPortRarityAttributes[],
@@ -83,18 +84,33 @@ export const nftTraitBuilder = (
   if (nftAttributes.length) {
     for (const attribute of nftAttributes) {
       const traitExists: NFTPortRarityAttributes = rarityAttributes.find(
-        (rarityAttribute: NFTPortRarityAttributes) =>
-          rarityAttribute.trait_type === attribute.type
-          && rarityAttribute.value === attribute.value,
+        (rarityAttribute: NFTPortRarityAttributes) => {
+          if (rarityAttribute.trait_type === attribute.type
+            && rarityAttribute.value.trim() === attribute.value.trim()) {
+            return rarityAttribute
+          }
+        },
       )
-      if (traitExists?.statistics?.prevalence) {
-        traits.push(
-          {
-            ...attribute,
-            rarity: String(traitExists?.statistics?.prevalence || '0'),
-          },
-        )
+      let traitsToBePushed: defs.Trait = {
+        ...attribute,
       }
+
+      if (traitExists) {
+        traitsToBePushed = {
+          type: traitExists.trait_type,
+          value: traitExists.value,
+        }
+        if (traitExists?.statistics?.prevalence) {
+          traitsToBePushed = {
+            ...traitsToBePushed,
+            rarity: String(traitExists.statistics.prevalence || '0'),
+          }
+        }
+      }
+
+      traits.push(
+        traitsToBePushed,
+      )
     }
   }
   return traits
