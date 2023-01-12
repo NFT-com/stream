@@ -83,11 +83,11 @@ const createQueues = (): Promise<void> => {
     })
 
     // add trading handler job to queue...
-    queues.set(QUEUE_TYPES.SYNC_TRADING, new Bull(
-      QUEUE_TYPES.SYNC_TRADING, {
-        prefix: queuePrefix,
-        redis,
-      }))
+    // queues.set(QUEUE_TYPES.SYNC_TRADING, new Bull(
+    //   QUEUE_TYPES.SYNC_TRADING, {
+    //     prefix: queuePrefix,
+    //     redis,
+    //   }))
 
     // add composite image generation job to queue...
     queues.set(QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, new Bull(
