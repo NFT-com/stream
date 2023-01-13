@@ -16,7 +16,7 @@
   "include": [
     "src/**/*.ts",
     "src/*.ts"
-  ],
+  ]
   // temporarily excluding this file from build because of inconsistencies in trading schemas
 //  "exclude": [
 //    "src/jobs/trading.handler.ts"
