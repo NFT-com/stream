@@ -1,7 +1,6 @@
 import { Job } from 'bull'
 import { BigNumber, ethers, utils } from 'ethers'
 import { defaultAbiCoder } from 'ethers/lib/utils'
-import { IsNull } from 'typeorm'
 
 import { _logger, contracts, db, defs, helper } from '@nftcom/shared'
 
@@ -363,6 +362,31 @@ const parseAsset = async (
   return asset
 }
 
+const parseNFTIdsFromNativeAsset = (
+  assets: Array<defs.MarketplaceAsset>,
+): string[] => {
+  const nftIds: string[] = []
+  for (const asset of assets) {
+    nftIds.push(`ethereum/${ethers.utils.getAddress(asset.standard.contractAddress)}/${helper.bigNumberToHex(asset.standard.tokenId)}`)
+  }
+  return nftIds
+}
+
+const parseContractsFromNativeAsset = (
+  assets: Array<defs.MarketplaceAsset>,
+): string[] => {
+  const contracts: string[] = []
+  const seen = {}
+  for (const asset of assets) {
+    const contract = ethers.utils.getAddress(asset.standard.contractAddress)
+    if (!seen[contract]) {
+      contracts.push(contract)
+      seen[contract] = true
+    }
+  }
+  return contracts
+}
+
 /**
  * listen to Match events
  * TODO: need to confirm again once at least one match event happens
@@ -449,9 +473,11 @@ const listenMatchEvents = async (
               },
               auctionType,
               salt: -1,
+              start: 0,
+              end: -1,
+              makeAsset: [],
+              takeAsset: [],
             },
-            makeAsset: [],
-            takeAsset: [],
             chainId: chainId.toString(),
             createdInternally: true,
           })
@@ -487,9 +513,9 @@ const listenMatchEvents = async (
               salt: -1,
               start: 0,
               end: -1,
+              makeAsset: [],
+              takeAsset: [],
             },
-            makeAsset: [],
-            takeAsset: [],
             chainId: chainId.toString(),
             createdInternally: true,
           })
@@ -503,20 +529,23 @@ const listenMatchEvents = async (
             transactionType: defs.ActivityType.Swap,
             protocol: defs.ProtocolType.NFTCOM,
             transactionHash: log.transactionHash,
-            listingOrderId: txListingOrder.id,
-            bidOrderId: txBidOrder ? txBidOrder.id : IsNull(),
             chainId: chainId.toString(),
           },
         })
         const timestamp = await blockNumberToTimestamp(log.blockNumber, chainId.toString())
         if (!txSwapTransaction) {
+          const listingActivity = await repositories.txActivity.findOne({
+            where: {
+              activityTypeId: txListingOrder.orderHash,
+            },
+          })
           const activity = await activityBuilder(
             defs.ActivityType.Swap,
             log.transactionHash,
             txListingOrder.makerAddress,
             chainId.toString(),
-            [],
-            '0x',
+            listingActivity.nftId,
+            listingActivity.nftContract,
             0,
             null,
           )
@@ -527,18 +556,17 @@ const listenMatchEvents = async (
             protocol: defs.ProtocolType.NFTCOM,
             protocolData: {
               private: helper.parseBoolean(privateSale),
+              listingOrderId: txListingOrder.id,
+              bidOrderId: txBidOrder ? txBidOrder.id : null,
             },
             transactionHash: log.transactionHash,
             blockNumber: log.blockNumber.toString(),
             maker: txListingOrder.makerAddress,
             taker: txBidOrder.makerAddress,
             chainId: chainId.toString(),
-            listingOrderId: txListingOrder.id,
-            bidOrderId: txBidOrder ? txBidOrder.id : null,
           })
 
           await repositories.txOrder.updateOneById(txListingOrder.id, {
-            swapTransactionId: txSwapTransaction.id,
             protocolData: {
               ...txListingOrder.protocolData,
               signature: {
@@ -547,13 +575,13 @@ const listenMatchEvents = async (
                 s: makerSig.s,
               },
               auctionType,
+              swapTransactionId: txSwapTransaction.id,
+              acceptedAt: new Date(timestamp),
             },
-            acceptedAt: new Date(timestamp),
           })
 
           if (txBidOrder) {
             await repositories.txOrder.updateOneById(txBidOrder.id, {
-              swapTransactionId: txSwapTransaction.id,
               protocolData: {
                 ...txBidOrder.protocolData,
                 signature: {
@@ -561,9 +589,10 @@ const listenMatchEvents = async (
                   r: takerSig.r,
                   s: takerSig.s,
                 },
+                swapTransactionId: txSwapTransaction.id,
                 auctionType,
+                acceptedAt: new Date(timestamp),
               },
-              acceptedAt: new Date(timestamp),
             })
           }
           logger.info('created new swap transaction ', txSwapTransaction.id)
@@ -650,11 +679,11 @@ const listenMatchTwoAEvents = async (
               salt,
               start,
               end,
+              makeAsset: [],
+              takeAsset: [],
             },
             makerAddress,
             takerAddress,
-            makeAsset: [],
-            takeAsset: [],
             chainId: chainId.toString(),
             createdInternally: true,
           })
@@ -748,14 +777,17 @@ const listenMatchTwoBEvents = async (
           chainId: chainId.toString(),
         },
       })
+      const nftIds = parseNFTIdsFromNativeAsset(makeAsset)
+      const contracts = parseContractsFromNativeAsset(makeAsset)
+      const contract = contracts.length === 1 ? contracts[0] : '0x'
       if (!txListingOrder) {
         const activity = await activityBuilder(
           defs.ActivityType.Listing,
           makerHash,
           '0x',
           chainId.toString(),
-          [],
-          '0x',
+          nftIds,
+          contract,
           0,
           null,
         )
@@ -776,20 +808,34 @@ const listenMatchTwoBEvents = async (
             salt: -1,
             start: 0,
             end: -1,
+            makeAsset,
+            takeAsset,
           },
           makerAddress: '0x',
           takerAddress: '0x',
-          makeAsset,
-          takeAsset,
           chainId: chainId.toString(),
           createdInternally: true,
         })
 
         logger.info('created new listing order from Match2B ', txListingOrder.id)
       } else {
+        const activity = await repositories.txActivity.findOne({
+          where: {
+            activityTypeId: txListingOrder.orderHash,
+          },
+        })
+        if (activity) {
+          await repositories.txActivity.updateOneById(activity.id, {
+            nftId: [...nftIds],
+            nftContract: contract === '0x' ? '0x' : helper.checkSum(contract),
+          })
+        }
         await repositories.txOrder.updateOneById(txListingOrder.id, {
-          makeAsset,
-          takeAsset,
+          protocolData: {
+            ...txListingOrder.protocolData,
+            makeAsset,
+            takeAsset,
+          },
         })
         logger.info('updated existing listing order from Match2B ', txListingOrder.id)
       }
@@ -847,7 +893,7 @@ const listenMatchThreeAEvents = async (
         const activity = await activityBuilder(
           defs.ActivityType.Bid,
           takerHash,
-          takerAddress,
+          makerAddress,
           chainId.toString(),
           [],
           '0x',
@@ -871,11 +917,11 @@ const listenMatchThreeAEvents = async (
             salt,
             start,
             end,
+            makeAsset: [],
+            takeAsset: [],
           },
           makerAddress,
           takerAddress,
-          makeAsset: [],
-          takeAsset: [],
           chainId: chainId.toString(),
           createdInternally: true,
         })
@@ -960,6 +1006,9 @@ const listenMatchThreeBEvents = async (
         buyerTakerOrderAssetTypeData,
       )
 
+      const nftIds = parseNFTIdsFromNativeAsset(takeAsset)
+      const contracts = parseContractsFromNativeAsset(takeAsset)
+      const contract = contracts.length === 1 ? contracts[0] : '0x'
       let txBidOrder = await repositories.txOrder.findOne({
         where: {
           orderHash: takerHash,
@@ -975,8 +1024,8 @@ const listenMatchThreeBEvents = async (
           takerHash,
           '0x',
           chainId.toString(),
-          [],
-          '0x',
+          nftIds,
+          contract,
           0,
           null,
         )
@@ -997,20 +1046,34 @@ const listenMatchThreeBEvents = async (
             salt: -1,
             start: 0,
             end: -1,
+            makeAsset,
+            takeAsset,
           },
           makerAddress: '0x',
           takerAddress: '0x',
-          makeAsset,
-          takeAsset,
           chainId: chainId.toString(),
           createdInternally: true,
         })
 
         logger.info('created new bid order from Match3B ', txBidOrder.id)
       } else {
+        const activity = await repositories.txActivity.findOne({
+          where: {
+            activityTypeId: txBidOrder.orderHash,
+          },
+        })
+        if (activity) {
+          await repositories.txActivity.updateOneById(activity.id, {
+            nftId: [...nftIds],
+            nftContract: contract === '0x' ? '0x' : helper.checkSum(contract),
+          })
+        }
         await repositories.txOrder.updateOneById(txBidOrder.id, {
-          makeAsset,
-          takeAsset,
+          protocolData: {
+            ...txBidOrder.protocolData,
+            makeAsset,
+            takeAsset,
+          },
         })
         logger.info('updated existing bid order from Match3B ', txBidOrder.id)
       }
@@ -1061,7 +1124,10 @@ const listenBuyNowInfoEvents = async (
       })
       if (txOrder) {
         await repositories.txOrder.updateOneById(txOrder.id, {
-          buyNowTaker: utils.getAddress(takerAddress),
+          protocolData: {
+            ...txOrder.protocolData,
+            buyNowTaker: utils.getAddress(takerAddress),
+          },
         })
 
         logger.debug('updated existing listing order from BuyNowInfo ', txOrder.id)
