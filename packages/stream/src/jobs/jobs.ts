@@ -3,14 +3,14 @@ import Bull from 'bull'
 import { _logger } from '@nftcom/shared'
 
 import { redisConfig } from '../config'
-import { collectionBannerImageSync, collectionIssuanceDateSync, collectionNameSync, collectionSyncHandler, spamCollectionSyncHandler } from './collection.handler'
+import { collectionBannerImageSync, collectionIssuanceDateSync, collectionNameSync, collectionSyncHandler, nftRaritySyncHandler, raritySync, spamCollectionSyncHandler } from './collection.handler'
 import { getEthereumEvents } from './mint.handler'
 import { nftExternalOrdersOnDemand } from './order.handler'
 import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
 import { saveProfileExpireAt, updateNFTsForProfilesHandler } from './profile.handler'
 import { searchListingIndexHandler } from './search.handler'
 import { nftExternalOrders } from './sync.handler'
-import { syncTrading } from './trading.handler'
+// import { syncTrading } from './trading.handler'
 
 const BULL_MAX_REPEAT_COUNT = parseInt(process.env.BULL_MAX_REPEAT_COUNT) || 250
 const logger = _logger.Factory(_logger.Context.Bull)
@@ -27,6 +27,7 @@ export enum QUEUE_TYPES {
   SYNC_COLLECTION_IMAGES = 'SYNC_COLLECTION_IMAGES',
   SYNC_COLLECTION_NAME = 'SYNC_COLLECTION_NAME',
   SYNC_COLLECTION_RARITY = 'SYNC_COLLECTION_RARITY',
+  SYNC_COLLECTION_NFT_RARITY = 'SYNC_COLLECTION_NFT_RARITY',
   SYNC_SPAM_COLLECTIONS = 'SYNC_SPAM_COLLECTIONS',
   REGISTER_OS_STREAMS = 'REGISTER_OS_STREAMS',
   DEREGISTER_OS_STREAMS = 'DEREGISTER_OS_STREAMS',
@@ -138,6 +139,13 @@ const createQueues = (): Promise<void> => {
     // sync collection rarity
     queues.set(QUEUE_TYPES.SYNC_COLLECTION_RARITY, new Bull(
       QUEUE_TYPES.SYNC_COLLECTION_RARITY, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
+    // sync nft/null nft rarity
+    queues.set(QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY, new Bull(
+      QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY, {
         prefix: queuePrefix,
         redis,
       }))
@@ -267,19 +275,19 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_nfts_streams',
           })
-      // case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
-      //   return queues.get(QUEUE_TYPES.SYNC_COLLECTION_RARITY)
-      //     .add({
-      //       SYNC_COLLECTION_RARITY: QUEUE_TYPES.SYNC_COLLECTION_RARITY,
-      //       chainId: process.env.CHAIN_ID,
-      //     },
-      //     {
-      //       removeOnComplete: true,
-      //       removeOnFail: true,
-      //       // repeat every two hours
-      //       repeat: { every: 2 * 60 * 60000 },
-      //       jobId: 'sync_collection_rarity',
-      //     })
+      case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
+        return queues.get(QUEUE_TYPES.SYNC_COLLECTION_RARITY)
+          .add({
+            SYNC_COLLECTION_RARITY: QUEUE_TYPES.SYNC_COLLECTION_RARITY,
+            chainId: process.env.CHAIN_ID,
+          },
+          {
+            removeOnComplete: true,
+            removeOnFail: true,
+            // repeat every five minutes - this repeat job runs to pick up collection addresses from cache
+            repeat: { every: 5 * 60000 },
+            jobId: 'sync_collection_rarity',
+          })
       case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
         return queues.get(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS)
           .add({
@@ -404,9 +412,12 @@ const listenToJobs = async (): Promise<void> => {
     case QUEUE_TYPES.SYNC_COLLECTIONS:
       queue.process(collectionSyncHandler)
       break
-    // case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
-    //   queue.process(raritySync)
-    //   break
+    case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
+      queue.process(raritySync)
+      break
+    case QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY:
+      queue.process(nftRaritySyncHandler)
+      break
     case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
       queue.process(spamCollectionSyncHandler)
       break
@@ -421,9 +432,6 @@ const listenToJobs = async (): Promise<void> => {
       break
     case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
       queue.process(updateNFTsForProfilesHandler)
-      break
-    case QUEUE_TYPES.SYNC_TRADING:
-      queue.process(syncTrading)
       break
     case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
       queue.process(collectionIssuanceDateSync)
