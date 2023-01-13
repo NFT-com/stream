@@ -86,7 +86,7 @@ export const nftTraitBuilder = (
       const traitExists: NFTPortRarityAttributes = rarityAttributes.find(
         (rarityAttribute: NFTPortRarityAttributes) => {
           if (rarityAttribute?.trait_type === attribute?.type
-            && rarityAttribute?.value.trim() === attribute?.value.trim()) {
+            && rarityAttribute?.value?.trim() === attribute?.value?.trim()) {
             return rarityAttribute
           }
         },
