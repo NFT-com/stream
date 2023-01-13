@@ -8,7 +8,7 @@ import { _logger, db, fp, helper } from '@nftcom/shared'
 import { dbConfig } from './config'
 import { nftOrderSubqueue, QUEUE_TYPES, queues, startAndListen, stopAndDisconnect } from './jobs/jobs'
 import { authMiddleWare } from './middleware/auth'
-import { collectionNameSyncSchema, collectionSyncSchema, SyncCollectionInput, validate } from './middleware/validate'
+import { collectionNameSyncSchema, collectionSyncSchema, nftRaritySyncSchema, SyncCollectionInput, validate } from './middleware/validate'
 import { initiateStreaming } from './pipeline'
 import { cache, CacheKeys } from './service/cache'
 //import { startAndListen } from './jobs/jobs'
@@ -126,7 +126,8 @@ app.post('/collectionSync', authMiddleWare, validate(collectionSyncSchema), asyn
           const checkSumedContract: string = helper.checkSum(collection.address)
           validCollections.push({
             address: checkSumedContract,
-            startToken: collections[i]?.startToken,
+            startToken: collection?.startToken,
+            type: collection?.type,
           })
         } catch (err) {
           logger.error(`err: ${err}`)
@@ -381,10 +382,148 @@ app.get('/stopSyncCollectionName', authMiddleWare, async (_req, res) => {
       await job.discard()
       await job.remove()
       // await killProcess(job.data.pid)
-      return res.status(200).send({ message: 'Stopped Collection Sync!' })
+      return res.status(200).send({ message: 'Stopped Collection Name Sync!' })
     }
 
     return res.status(200).send({ message: 'No Collection Name Sync In Progress!' })
+  } catch (error) {
+    logger.error(`err: ${error}`)
+    return res.status(400).send(error)
+  }
+})
+
+// sync collection rarity - authenticated
+app.post('/syncCollectionRarity', authMiddleWare, validate(collectionSyncSchema), async (_req, res) => {
+  try {
+    const { collections } = _req.body
+    const validCollections: SyncCollectionInput[] = []
+    const invalidCollections: SyncCollectionInput[] = []
+    const recentlyRefreshed: SyncCollectionInput[] = []
+    const inprogress: SyncCollectionInput[] = []
+
+    if (!collections.length) {
+      return res.status(400).send({ message: 'No collection to be synced!' })
+    }
+
+    for (const collection of collections) {
+      let checksumContract = ''
+      try {
+        checksumContract = helper.checkSum(collection?.address)
+      } catch(err) {
+        invalidCollections.push(collection)
+        continue
+      }
+
+      if (checksumContract) {
+        const contractInRefreshedCache: string = await cache.zscore(`${CacheKeys.REFRESHED_COLLECTION_RARITY}_${chainId}`, checksumContract)
+  
+        if (Number(contractInRefreshedCache)) {
+          const ttlNotExpiredCond: boolean = Date.now() < Number(contractInRefreshedCache)
+          if (ttlNotExpiredCond) {
+            recentlyRefreshed.push(collection)
+            continue
+          }
+        }
+    
+        const contractInRefreshCache: string = await cache.zscore(`${CacheKeys.REFRESH_COLLECTION_RARITY}_${chainId}`, checksumContract)
+        
+        if (Number(contractInRefreshCache)) {
+          inprogress.push(collection)
+          continue
+        }
+        
+        validCollections.push({
+          address: checksumContract,
+        })
+      }
+    }
+
+    for (const collection of validCollections) {
+      await cache.zadd(`${CacheKeys.REFRESH_COLLECTION_RARITY}_${chainId}`, 1, collection.address)
+    }
+
+    let message = ''
+    if (validCollections.length) {
+      message += `Collection Rarity Sync Started for ${validCollections.map(col => col.address).join(', ')}! `
+    }
+
+    if (invalidCollections.length) {
+      message += `The following collections are invalid: ${invalidCollections.map(col => col.address).join(', ')} `
+    }
+
+    if (recentlyRefreshed.length) {
+      message += `The following collections are recently refreshed: ${recentlyRefreshed.map(col => col.address).join(', ')}`
+    }
+
+    return res.status(200).send({ message })
+  } catch (error) {
+    logger.error(`err: ${error}`)
+    return res.status(400).send(error)
+  }
+})
+
+// stop sync collection rarity - authenticated
+app.post('/stopSyncCollectionRarity', authMiddleWare, async (_req, res) => {
+  try {
+    const { contract } = _req.body
+    const checksumContract: string = helper.checkSum(contract)
+    await cache.zrem(`${CacheKeys.REFRESHED_COLLECTION_RARITY}_${chainId}`, checksumContract)
+    return res.status(200).send({ message: 'No Collection Null Rarity Sync In Progress!' })
+  } catch (error) {
+    logger.error(`err: ${error}`)
+    return res.status(400).send(error)
+  }
+})
+
+// sync collection nft - authenticated
+app.post('/syncCollectionNftRarity', authMiddleWare, validate(nftRaritySyncSchema), async (_req, res) => {
+  const { contract, tokenIds } = _req.body
+  try {
+    const jobId = 'sync_collection_nft_rarity'
+    const collectionNullRarityQueue = queues.get(QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY)
+    const job: Bull.Job = await collectionNullRarityQueue.getJob(jobId)
+    if (job && (job.isFailed() || job.isPaused() || job.isStuck() || job.isDelayed())) {
+      await job.remove()
+    }
+
+    if(!job) {
+      collectionNullRarityQueue
+        .add({
+          SYNC_CONTRACTS: QUEUE_TYPES.SYNC_COLLECTION_NAME,
+          chainId: process.env.CHAIN_ID,
+          contract,
+          tokenIds,
+        }, {
+          attempts: 1,
+          removeOnComplete: true,
+          removeOnFail: true,
+          jobId: 'sync_collection_nft_rarity',
+        })
+      return res.status(200).send({ message: 'Collection Name Sync Started!' })
+    }
+
+    return res.status(200).send({ message: 'Collection Name Sync In Progress Already!' })
+  } catch (error) {
+    logger.error(`err: ${error}`)
+    return res.status(400).send(error)
+  }
+})
+
+// stop sync collection nft rarity - authenticated
+app.post('/stopSyncCollectionNftRarity', authMiddleWare, async (_req, res) => {
+  try {
+    const jobId = 'sync_collection_nft_rarity'
+    const collectionNameQueue = queues.get(QUEUE_TYPES.SYNC_COLLECTION_NAME)
+    const job: Bull.Job = await collectionNameQueue.getJob(jobId)
+    if (job) {
+      await job.moveToFailed(new Error('Abort Triggered!'), true)
+      await job.discard()
+      await job.remove()
+      // await killProcess(job.data.pid)
+      return res.status(200).send({ message: 'Stopped Collection Sync!' })
+    }
+
+    return res.status(200).send({ message: 'No Collection Null Rarity Sync In Progress!' })
   } catch (error) {
     logger.error(`err: ${error}`)
     return res.status(400).send(error)

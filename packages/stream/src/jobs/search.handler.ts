@@ -16,7 +16,7 @@ export const searchListingIndexHandler = async (job: Job): Promise<boolean> => {
       .findActivitiesNotExpired(defs.ActivityType.Listing, new Date(job.timestamp))
     if (listings) {
       const nftsWithListingUpdates = await utils.getNFTsFromTxActivities(listings)
-      seService.indexNFTs(nftsWithListingUpdates)
+      await seService.indexNFTs(nftsWithListingUpdates)
     }
     return Promise.resolve(true)
   } catch (err) {
