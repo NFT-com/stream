@@ -46,7 +46,7 @@ const listenApprovalEvents = async (
   try {
     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
 
-    logger.info('Approval logs', logs.length)
+    logger.info(`Approval logs ${logs.length}`)
 
     const promises = logs.map(async (log) => {
       const event = marketplaceIface.parseLog(log)
@@ -224,7 +224,7 @@ const listenCancelEvents = async (
   try {
     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
 
-    logger.info('Cancel logs', logs.length)
+    logger.info(`Cancel logs ${logs.length}`)
 
     const promises = logs.map(async (log) => {
       const event = marketplaceIface.parseLog(log)
@@ -409,7 +409,7 @@ const listenMatchEvents = async (
   try {
     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
 
-    logger.info('Match logs', logs.length)
+    logger.info(`Match logs ${logs.length}`)
 
     const promises = logs.map(async (log) => {
       try {
@@ -520,7 +520,7 @@ const listenMatchEvents = async (
             createdInternally: true,
           })
 
-          logger.info('created new bid order ', txBidOrder.id)
+          logger.info(`created new bid order ${txBidOrder.id}`)
         }
 
         let txSwapTransaction = await repositories.txTransaction.findOne({
@@ -595,7 +595,7 @@ const listenMatchEvents = async (
               },
             })
           }
-          logger.info('created new swap transaction ', txSwapTransaction.id)
+          logger.info(`created new swap transaction ${txSwapTransaction.id}`)
         }
       } catch (e) {
         logger.error('Error while parsing match event: ', e)
@@ -629,7 +629,7 @@ const listenMatchTwoAEvents = async (
   try {
     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
 
-    logger.info('Match2A logs', logs.length)
+    logger.info(`Match2A logs ${logs.length}`)
 
     await Promise.allSettled(
       logs.map(async (log) => {
@@ -687,7 +687,7 @@ const listenMatchTwoAEvents = async (
             chainId: chainId.toString(),
             createdInternally: true,
           })
-          logger.info('created new listing order from Match2A ', txListingOrder.id)
+          logger.info(`created new listing order from Match2A ${txListingOrder.id}`)
         } else {
           const activity = await repositories.txActivity.findOne({
             where: {
@@ -713,7 +713,7 @@ const listenMatchTwoAEvents = async (
             },
           })
 
-          logger.info('updated existing listing order from Match2A ', txListingOrder.id)
+          logger.info(`updated existing listing order from Match2A ${txListingOrder.id}`)
         }
       }),
     )
@@ -743,7 +743,7 @@ const listenMatchTwoBEvents = async (
   try {
     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
 
-    logger.info('Match2B logs', logs.length)
+    logger.info(`Match2B logs ${logs.length}`)
 
     const promises = logs.map(async (log) => {
       const event = eventIface.parseLog(log)
@@ -817,7 +817,7 @@ const listenMatchTwoBEvents = async (
           createdInternally: true,
         })
 
-        logger.info('created new listing order from Match2B ', txListingOrder.id)
+        logger.info(`created new listing order from Match2B ${txListingOrder.id}`)
       } else {
         const activity = await repositories.txActivity.findOne({
           where: {
@@ -837,7 +837,7 @@ const listenMatchTwoBEvents = async (
             takeAsset,
           },
         })
-        logger.info('updated existing listing order from Match2B ', txListingOrder.id)
+        logger.info(`updated existing listing order from Match2B ${txListingOrder.id}`)
       }
     })
 
@@ -868,7 +868,7 @@ const listenMatchThreeAEvents = async (
   try {
     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
 
-    logger.info('Match3A logs', logs.length)
+    logger.info(`Match3A logs ${logs.length}`)
 
     const promises = logs.map(async (log) => {
       const event = eventIface.parseLog(log)
@@ -925,7 +925,7 @@ const listenMatchThreeAEvents = async (
           chainId: chainId.toString(),
           createdInternally: true,
         })
-        logger.info('created new bid order from Match3A ', txBidOrder.id)
+        logger.info(`created new bid order from Match3A ${txBidOrder.id}`)
       } else {
         const activity = await repositories.txActivity.findOne({
           where: {
@@ -951,7 +951,7 @@ const listenMatchThreeAEvents = async (
           },
         })
 
-        logger.info('updated existing bid order from Match3A ', txBidOrder.id)
+        logger.info(`updated existing bid order from Match3A ${txBidOrder.id}`)
       }
     })
 
@@ -982,7 +982,7 @@ const listenMatchThreeBEvents = async (
   try {
     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
 
-    logger.info('Match3B logs', logs.length)
+    logger.info(`Match3B logs ${logs.length}`)
 
     const promises = logs.map(async (log) => {
       const event = eventIface.parseLog(log)
@@ -1055,7 +1055,7 @@ const listenMatchThreeBEvents = async (
           createdInternally: true,
         })
 
-        logger.info('created new bid order from Match3B ', txBidOrder.id)
+        logger.info(`created new bid order from Match3B ${txBidOrder.id}`)
       } else {
         const activity = await repositories.txActivity.findOne({
           where: {
@@ -1075,7 +1075,7 @@ const listenMatchThreeBEvents = async (
             takeAsset,
           },
         })
-        logger.info('updated existing bid order from Match3B ', txBidOrder.id)
+        logger.info(`updated existing bid order from Match3B ${txBidOrder.id}`)
       }
     })
 
@@ -1106,7 +1106,7 @@ const listenBuyNowInfoEvents = async (
   try {
     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
 
-    logger.debug('BuyNowInfo logs', logs.length)
+    logger.info(`BuyNowInfo logs : ${logs.length}`)
 
     const promises = logs.map(async (log) => {
       const event = eventIface.parseLog(log)
@@ -1130,13 +1130,12 @@ const listenBuyNowInfoEvents = async (
           },
         })
 
-        logger.debug('updated existing listing order from BuyNowInfo ', txOrder.id)
+        logger.info(`updated existing listing order from BuyNowInfo: ${txOrder.id}`)
       }
     })
 
     await Promise.allSettled(promises)
   } catch (e) {
-    logger.debug(e)
     logger.error(`Error in listenBuyNowInfoEvents: ${e}`)
   }
   return
