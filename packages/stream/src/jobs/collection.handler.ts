@@ -128,17 +128,17 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
           const existingNFTs: entity.NFT[] = await repositories.nft.find(
             { where: { contract: helper.checkSum(contract), tokenId: In(nftTokenMap), chainId } },
           )
-          const existingNFTTokenMap: string[] = existingNFTs.map(
-            (nft: entity.NFT) => BigNumber.from(nft.tokenId).toHexString())
+          // const existingNFTTokenMap: string[] = existingNFTs.map(
+          //   (nft: entity.NFT) => BigNumber.from(nft.tokenId).toHexString())
             
           const nftPromiseArray: entity.NFT[] = []
           const alchemyNFTs: NFTAlchemy[] = nfts
 
           for (const nft of alchemyNFTs) {
             // create if not exist, update if does
-            if (!existingNFTTokenMap.includes(BigNumber.from(nft.id.tokenId).toHexString())) {
-              nftPromiseArray.push(nftEntityBuilder(nft, chainId))
-            }
+            //if (!existingNFTTokenMap.includes(BigNumber.from(nft.id.tokenId).toHexString())) {
+            nftPromiseArray.push(nftEntityBuilder(nft, chainId))
+            //}
           }
 
           try {
