@@ -50,17 +50,17 @@ FROM node:16-alpine as release
 WORKDIR /app
 
 COPY --from=deps /app/stream/prod_node_modules ./stream/node_modules
-COPY --from=deps /app/NFT-backend/prod_node_modules ./NFT-backend/node_modules
+# COPY --from=deps /app/NFT-backend/prod_node_modules ./NFT-backend/node_modules
 # COPY --from=build /app/NFT-backend/packages/shared/node_modules ./NFT-backend/packages/shared/node_modules
-COPY --from=build /app/NFT-backend/packages/gql/node_modules ./NFT-backend/packages/gql/node_modules
+# COPY --from=build /app/NFT-backend/packages/gql/node_modules ./NFT-backend/packages/gql/node_modules
 #COPY --from=build /app/stream/packages/stream/node_modules ./stream/packages/stream/node_modules
 
-COPY --from=build /app/NFT-backend/packages/shared/package.json ./NFT-backend/packages/shared/package.json
-COPY --from=build /app/NFT-backend/packages/shared/dist ./NFT-backend/packages/shared/dist
+# COPY --from=build /app/NFT-backend/packages/shared/package.json ./NFT-backend/packages/shared/package.json
+# COPY --from=build /app/NFT-backend/packages/shared/dist ./NFT-backend/packages/shared/dist
 
 
-COPY --from=build /app/NFT-backend/packages/gql/package.json ./NFT-backend/packages/gql/package.json
-COPY --from=build /app/NFT-backend/packages/gql/dist ./NFT-backend/packages/gql/dist
+# COPY --from=build /app/NFT-backend/packages/gql/package.json ./NFT-backend/packages/gql/package.json
+# COPY --from=build /app/NFT-backend/packages/gql/dist ./NFT-backend/packages/gql/dist
 
 COPY --from=build /app/stream/packages/stream/package.json ./stream/packages/stream/package.json
 COPY --from=build /app/stream/packages/stream/dist ./stream/packages/stream/dist
