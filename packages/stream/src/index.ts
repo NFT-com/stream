@@ -3,6 +3,9 @@ import express from 'express'
 import kill from 'kill-port'
 import multer from 'multer'
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import { nftService } from '@nftcom/gql/service'
 import { _logger, db, fp, helper } from '@nftcom/shared'
 
 import { dbConfig } from './config'
@@ -524,6 +527,16 @@ app.post('/stopSyncCollectionNftRarity', authMiddleWare, async (_req, res) => {
     }
 
     return res.status(200).send({ message: 'No Collection Null Rarity Sync In Progress!' })
+  } catch (error) {
+    logger.error(`err: ${error}`)
+    return res.status(400).send(error)
+  }
+})
+
+app.get('/buildTest', authMiddleWare, async (_req, res) => {
+  try {
+    const buildTest: string =  nftService.buildTest()
+    return res.status(200).send({ message: buildTest })
   } catch (error) {
     logger.error(`err: ${error}`)
     return res.status(400).send(error)
