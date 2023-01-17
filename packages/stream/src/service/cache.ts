@@ -23,7 +23,8 @@ export enum CacheKeys {
   SYNC_IN_PROGRESS = 'sync_in_progress',
   RECENTLY_SYNCED = 'recently_synced',
   COLLECTION_ISSUANCE_DATE = 'collection_issuance_date',
-  COLLECTION_ISSUANCE_DATE_IN_PROGRESS = 'collection_issuance_date_in_progress'
+  COLLECTION_ISSUANCE_DATE_IN_PROGRESS = 'collection_issuance_date_in_progress',
+  PROFILE_GK_OWNERS = 'profile_gk_owners'
 }
 
 const createCacheConnection = (): void => {

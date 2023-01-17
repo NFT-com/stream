@@ -7,7 +7,7 @@ import { collectionBannerImageSync, collectionIssuanceDateSync, collectionNameSy
 import { getEthereumEvents } from './mint.handler'
 import { nftExternalOrdersOnDemand } from './order.handler'
 import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
-import { saveProfileExpireAt, updateNFTsForProfilesHandler } from './profile.handler'
+import { profileGKOwnersHandler, saveProfileExpireAt, updateNFTsForProfilesHandler } from './profile.handler'
 import { searchListingIndexHandler } from './search.handler'
 import { nftExternalOrders } from './sync.handler'
 // import { syncTrading } from './trading.handler'
@@ -38,7 +38,8 @@ export enum QUEUE_TYPES {
   FETCH_COLLECTION_ISSUANCE_DATE = 'FETCH_COLLECTION_ISSUANCE_DATE',
   SAVE_PROFILE_EXPIRE_AT = 'SAVE_PROFILE_EXPIRE_AT',
   SYNC_TRADING = 'SYNC_TRADING',
-  SEARCH_ENGINE_LISTINGS_UPDATE = 'SEARCH_ENGINE_LISTINGS_UPDATE'
+  SEARCH_ENGINE_LISTINGS_UPDATE = 'SEARCH_ENGINE_LISTINGS_UPDATE',
+  SYNC_PROFILE_GK_OWNERS = 'SYNC_PROFILE_GK_OWNERS'
 }
 
 export const queues = new Map<string, Bull.Queue>()
@@ -112,6 +113,12 @@ const createQueues = (): Promise<void> => {
 
     queues.set(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, new Bull(
       QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
+    queues.set(QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS, new Bull(
+      QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS, {
         prefix: queuePrefix,
         redis,
       }))
@@ -314,6 +321,15 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             repeat: { every: 24 * 60 * 60000 },
             jobId: 'save_profile_expire_at',
           })
+      case QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS:
+        return queues.get(QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS).add(
+          { chainId: process.env.CHAIN_ID }, {
+            removeOnComplete: true,
+            removeOnFail: true,
+            // repeat every 10 minutes
+            repeat: { every: 10 * 60000 },
+            jobId: 'sync_profile_gk_owners',
+          })
       // case QUEUE_TYPES.REGISTER_OS_STREAMS:
       //   return queues.get(QUEUE_TYPES.REGISTER_OS_STREAMS)
       //     .add({ REGISTER_OS_STREAMS: QUEUE_TYPES.REGISTER_OS_STREAMS }, {
@@ -438,6 +454,9 @@ const listenToJobs = async (): Promise<void> => {
       break
     case QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT:
       queue.process(saveProfileExpireAt)
+      break
+    case QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS:
+      queue.process(profileGKOwnersHandler)
       break
     case QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE:
       queue.process(searchListingIndexHandler)
