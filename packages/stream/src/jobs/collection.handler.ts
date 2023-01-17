@@ -121,7 +121,6 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
           .get(
             `/getNFTsForCollection?${queryParams}`)
 
-        logger.log('collectionNFTs', collectionNFTs)
         if (collectionNFTs?.data?.nfts.length) {
           const nfts = collectionNFTs?.data?.nfts
           const nftTokenMap: string[] = nfts.map(
@@ -129,21 +128,33 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
           const existingNFTs: entity.NFT[] = await repositories.nft.find(
             { where: { contract: helper.checkSum(contract), tokenId: In(nftTokenMap), chainId } },
           )
-          // const existingNFTTokenMap: string[] = existingNFTs.map(
-          //   (nft: entity.NFT) => BigNumber.from(nft.tokenId).toHexString())
             
-          const nftPromiseArray: entity.NFT[] = []
+          const nftPromiseArray: Partial<entity.NFT>[] = []
           const alchemyNFTs: NFTAlchemy[] = nfts
           
           for (const nft of alchemyNFTs) {
-            logger.log('alchemyNFT', nft)
             // create if not exist, update if does
-            //if (!existingNFTTokenMap.includes(BigNumber.from(nft.id.tokenId).toHexString())) {
-            nftPromiseArray.push(nftEntityBuilder(nft, chainId))
-            //}
-          }
+            const nftEntity: entity.NFT = nftEntityBuilder(nft, chainId)
+            const processNFT: entity.NFT = existingNFTs.find(
+              (existingNft: entity.NFT) => {
+                if( existingNft.tokenId === BigNumber.from(nft.id.tokenId).toHexString()) {
+                  return {
+                    ...existingNft,
+                  }
+                }
+              })
 
-          logger.log('nft promise array', nftPromiseArray)
+            if (processNFT?.id) {
+              let updatedNFT: Partial<entity.NFT> = { id: processNFT?.id }
+              updatedNFT = {
+                ...updatedNFT,
+                ...nftEntity,
+              }
+              nftPromiseArray.push(updatedNFT)
+            } else {
+              nftPromiseArray.push(nftEntity)
+            }
+          }
           try {
             if (nftPromiseArray?.length > 0) {
               await nftService.indexNFTsOnSearchEngine(nftPromiseArray)
