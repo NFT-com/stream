@@ -6,7 +6,7 @@ import { IsNull } from 'typeorm'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import {  core,nftService } from '@nftcom/gql/service'
-import { _logger, contracts, db, entity } from '@nftcom/shared'
+import { _logger, contracts, db, entity, helper } from '@nftcom/shared'
 
 import { cache, CacheKeys, removeExpiredTimestampedZsetMembers } from '../service/cache'
 
@@ -222,5 +222,73 @@ export const saveProfileExpireAt = async (job: Job): Promise<any> => {
     logger.info(`Saved expireAt for ${slicedProfiles.length} profiles`)
   } catch (err) {
     logger.error(`Error in saveProfileExpireAt Job: ${err}`)
+  }
+}
+
+export const profileGKOwnersHandler = async (job: Job): Promise<any> => {
+  try {
+    logger.info('Sync profile gk owners')
+    const chainId: string =  job.data?.chainId || process.env.CHAIN_ID
+    const ownersOfGK = await nftService.getOwnersOfGenesisKeys(chainId)
+    const checksumedOwners: string[] = []
+    for (const owner of ownersOfGK) {
+      try {
+        const checksumedOwner = helper.checkSum(owner)
+        checksumedOwners.push(checksumedOwner)
+      } catch(err) {
+        logger.error(`Error in sync profile owner for alchemy GK owner address: ${owner}, ${err}`)
+      }
+    }
+    //console.log('owners', ownersOfGK.map((ownerWallet: string) => etherUtils.getAddress(ownerWallet)).reverse())
+    let profileUpdatePromise = []
+    const cacheProfiles = []
+    const profiles: entity.Profile[] = await repositories.profile.findAllWithRelations()
+  
+    for (const profile of profiles) {
+      const profileWallet: entity.Wallet = (profile as any)?.wallet
+      const isIncludedInGKOwners: boolean = profileWallet?.address
+        && checksumedOwners?.includes(helper.checkSum(profileWallet?.address))
+      
+      if(isIncludedInGKOwners) {
+        if (!profile?.gkIconVisible
+          || profile.gkIconVisible === null
+          || profile.gkIconVisible === undefined) {
+          profileUpdatePromise.push({ id: profile.id, gkIconVisible: true })
+        }
+      
+        // 1 - gkIconVisible
+        const profileScore: string = await cache.zscore(`${CacheKeys.PROFILE_GK_OWNERS}_${chainId}`, profile.id)
+
+        if (!Number(profileScore) || Number(profileScore) === 2) {
+          cacheProfiles.push(1, profile.id)
+        }
+      } else  {
+        if (profile.gkIconVisible
+          || profile.gkIconVisible === null
+          || profile.gkIconVisible === undefined) {
+          profileUpdatePromise.push({ id: profile.id, gkIconVisible: false })
+        }
+        // 2 gkIconNotVisible
+        const profileScore: string = await cache.zscore(`${CacheKeys.PROFILE_GK_OWNERS}_${chainId}`, profile.id)
+        if (!Number(profileScore) || Number(profileScore) === 1) {
+          cacheProfiles.push(2, profile.id)
+        }
+      }
+
+      if (profileUpdatePromise.length > 50) {
+        await repositories.profile.saveMany(profileUpdatePromise, { chunk: 50 })
+        await cache.zadd(`${CacheKeys.PROFILE_GK_OWNERS}_${chainId}`, ...cacheProfiles)
+        profileUpdatePromise = []
+      }
+    }
+
+    if (profileUpdatePromise.length) {
+      await repositories.profile.saveMany(profileUpdatePromise, { chunk: 50 })
+      await cache.zadd(`${CacheKeys.PROFILE_GK_OWNERS}_${chainId}`, ...cacheProfiles)
+    }
+ 
+    logger.info('Sync profile gk owners end')
+  } catch (err) {
+    logger.error(`Error in profile gk owners Job: ${err}`)
   }
 }
