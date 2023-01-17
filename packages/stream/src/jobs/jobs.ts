@@ -10,7 +10,7 @@ import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
 import { profileGKOwnersHandler, saveProfileExpireAt, updateNFTsForProfilesHandler } from './profile.handler'
 import { searchListingIndexHandler } from './search.handler'
 import { nftExternalOrders } from './sync.handler'
-// import { syncTrading } from './trading.handler'
+import { syncTrading } from './trading.handler'
 
 const BULL_MAX_REPEAT_COUNT = parseInt(process.env.BULL_MAX_REPEAT_COUNT) || 250
 const logger = _logger.Factory(_logger.Context.Bull)
@@ -84,11 +84,11 @@ const createQueues = (): Promise<void> => {
     })
 
     // add trading handler job to queue...
-    // queues.set(QUEUE_TYPES.SYNC_TRADING, new Bull(
-    //   QUEUE_TYPES.SYNC_TRADING, {
-    //     prefix: queuePrefix,
-    //     redis,
-    //   }))
+    queues.set(QUEUE_TYPES.SYNC_TRADING, new Bull(
+      QUEUE_TYPES.SYNC_TRADING, {
+        prefix: queuePrefix,
+        redis,
+      }))
 
     // add composite image generation job to queue...
     queues.set(QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, new Bull(
@@ -421,6 +421,9 @@ const listenToJobs = async (): Promise<void> => {
       break
     case QUEUE_TYPES.SYNC_COLLECTION_IMAGES:
       queue.process(collectionBannerImageSync)
+      break
+    case QUEUE_TYPES.SYNC_TRADING:
+      queue.process(syncTrading)
       break
     case QUEUE_TYPES.SYNC_COLLECTION_NAME:
       queue.process(collectionNameSync)
