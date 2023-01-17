@@ -240,7 +240,7 @@ export const profileGKOwnersHandler = async (job: Job): Promise<any> => {
       }
     }
     //console.log('owners', ownersOfGK.map((ownerWallet: string) => etherUtils.getAddress(ownerWallet)).reverse())
-    const profileUpdatePromise = []
+    let profileUpdatePromise = []
     const cacheProfiles = []
     const profiles: entity.Profile[] = await repositories.profile.findAllWithRelations()
   
@@ -278,6 +278,7 @@ export const profileGKOwnersHandler = async (job: Job): Promise<any> => {
       if (profileUpdatePromise.length > 50) {
         await repositories.profile.saveMany(profileUpdatePromise, { chunk: 50 })
         await cache.zadd(`${CacheKeys.PROFILE_GK_OWNERS}_${chainId}`, ...cacheProfiles)
+        profileUpdatePromise = []
       }
     }
 
