@@ -121,6 +121,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
           .get(
             `/getNFTsForCollection?${queryParams}`)
 
+        logger.log('collectionNFTs', collectionNFTs)
         if (collectionNFTs?.data?.nfts.length) {
           const nfts = collectionNFTs?.data?.nfts
           const nftTokenMap: string[] = nfts.map(
@@ -133,14 +134,16 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
             
           const nftPromiseArray: entity.NFT[] = []
           const alchemyNFTs: NFTAlchemy[] = nfts
-
+          
           for (const nft of alchemyNFTs) {
+            logger.log('alchemyNFT', nft)
             // create if not exist, update if does
             //if (!existingNFTTokenMap.includes(BigNumber.from(nft.id.tokenId).toHexString())) {
             nftPromiseArray.push(nftEntityBuilder(nft, chainId))
             //}
           }
 
+          logger.log('nft promise array', nftPromiseArray)
           try {
             if (nftPromiseArray?.length > 0) {
               await nftService.indexNFTsOnSearchEngine(nftPromiseArray)
