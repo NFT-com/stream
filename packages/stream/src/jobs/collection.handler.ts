@@ -480,10 +480,10 @@ export const collectionIssuanceDateSync = async (job: Job): Promise<void> => {
   logger.log('completed collection issuance sync')
 }
 
-const indexNFTs = async (nfts: Partial<entity.NFT>[]): Promise<void> => {
+const indexNFTs = async (nfts: Partial<entity.NFT>[], updateOnly?: boolean): Promise<void> => {
   if (nfts?.length) {
     try {
-      await nftService.indexNFTsOnSearchEngine(nfts)
+      await nftService.indexNFTsOnSearchEngine(nfts, updateOnly)
       await repositories.nft.saveMany(nfts, { chunk: 50 }) // temp chunk
     } catch(err) {
       logger.error(`Error while indexing nfts: ${err}`)
@@ -729,7 +729,7 @@ export const raritySync = async (job: Job): Promise<void> => {
 
                 try {
                   if (nftPromiseArray?.length > 5) {
-                    await indexNFTs(nftPromiseArray)
+                    await indexNFTs(nftPromiseArray, true)
                     nftPromiseArray = []
                   }
                 } catch (errSave) {
@@ -741,7 +741,7 @@ export const raritySync = async (job: Job): Promise<void> => {
     
               try {
                 if (nftPromiseArray?.length) {
-                  await indexNFTs(nftPromiseArray)
+                  await indexNFTs(nftPromiseArray, true)
                   nftPromiseArray = []
                 }
               } catch (errSave) {
@@ -764,7 +764,7 @@ export const raritySync = async (job: Job): Promise<void> => {
 
         try {
           if (nftPromiseArray?.length) {
-            await indexNFTs(nftPromiseArray)
+            await indexNFTs(nftPromiseArray, true)
             nftPromiseArray = []
           }
         } catch (errSave) {
@@ -831,10 +831,12 @@ export const nftRaritySyncHandler = async (job: Job): Promise<void> => {
             traits = nftTraitBuilder(traits, nftPortNFT?.nft?.attributes)
           }
 
-          await repositories.nft.updateOneById(nft.id, {
+          const updatedNFT: entity.NFT = await repositories.nft.updateOneById(nft.id, {
             rarity,
             metadata: { ...nft.metadata, traits },
           })
+
+          await nftService.indexNFTsOnSearchEngine([updatedNFT], true)
         }
       }
     } else {
