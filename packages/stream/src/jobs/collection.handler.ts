@@ -476,10 +476,10 @@ export const collectionIssuanceDateSync = async (job: Job): Promise<void> => {
   logger.log('completed collection issuance sync')
 }
 
-const indexNFTs = async (nfts: Partial<entity.NFT>[], updateOnly?: boolean): Promise<void> => {
+const indexNFTs = async (nfts: Partial<entity.NFT>[]): Promise<void> => {
   if (nfts?.length) {
     try {
-      await nftService.indexNFTsOnSearchEngine(nfts, updateOnly)
+      await nftService.indexNFTsOnSearchEngine(nfts)
       await repositories.nft.saveMany(nfts, { chunk: 50 }) // temp chunk
     } catch(err) {
       logger.error(`Error while indexing nfts: ${err}`)
