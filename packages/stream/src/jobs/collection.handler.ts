@@ -411,10 +411,6 @@ export const collectionIssuanceDateSync = async (job: Job): Promise<void> => {
         chainId,
         contract: Not(In(cachedContracts)),
       },
-      select: {
-        id: true,
-        contract: true,
-      },
     })
   
     let count = 0
@@ -686,17 +682,13 @@ export const raritySync = async (job: Job): Promise<void> => {
             logger.log(`=============== nft sync handler nftTokenMap: ${JSON.stringify(nftTokenMap)}`)
   
             const existingNFTs: entity.NFT[] = await repositories.nft.find(
-              { where: {
-                contract: helper.checkSum(contract),
-                tokenId: In(nftTokenMap),
-                chainId,
-                rarity: IsNull(),
-              },
-              select: {
-                id: true,
-                tokenId: true,
-                metadata: true,
-              },
+              {
+                where: {
+                  contract: helper.checkSum(contract),
+                  tokenId: In(nftTokenMap),
+                  chainId,
+                  rarity: IsNull(),
+                },
               },
             )
 
@@ -713,7 +705,7 @@ export const raritySync = async (job: Job): Promise<void> => {
                   })
   
                 if (processNFT?.id) {
-                  let updatedNFT: Partial<entity.NFT> = { id: processNFT?.id }
+                  let updatedNFT: Partial<entity.NFT> = { id: processNFT?.id, ...processNFT }
                   // update NFT raritys
                   updatedNFT = {
                     ...updatedNFT,
@@ -729,7 +721,7 @@ export const raritySync = async (job: Job): Promise<void> => {
 
                 try {
                   if (nftPromiseArray?.length > 5) {
-                    await indexNFTs(nftPromiseArray, true)
+                    await indexNFTs(nftPromiseArray)
                     nftPromiseArray = []
                   }
                 } catch (errSave) {
@@ -741,7 +733,7 @@ export const raritySync = async (job: Job): Promise<void> => {
     
               try {
                 if (nftPromiseArray?.length) {
-                  await indexNFTs(nftPromiseArray, true)
+                  await indexNFTs(nftPromiseArray)
                   nftPromiseArray = []
                 }
               } catch (errSave) {
@@ -764,7 +756,7 @@ export const raritySync = async (job: Job): Promise<void> => {
 
         try {
           if (nftPromiseArray?.length) {
-            await indexNFTs(nftPromiseArray, true)
+            await indexNFTs(nftPromiseArray)
             nftPromiseArray = []
           }
         } catch (errSave) {
@@ -836,7 +828,7 @@ export const nftRaritySyncHandler = async (job: Job): Promise<void> => {
             metadata: { ...nft.metadata, traits },
           })
 
-          await nftService.indexNFTsOnSearchEngine([updatedNFT], true)
+          await nftService.indexNFTsOnSearchEngine([updatedNFT])
         }
       }
     } else {
