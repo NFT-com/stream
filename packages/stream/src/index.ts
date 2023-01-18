@@ -533,6 +533,7 @@ app.post('/stopSyncCollectionNftRarity', authMiddleWare, async (_req, res) => {
   }
 })
 
+// for test - to be removed
 app.get('/buildTest', authMiddleWare, async (_req, res) => {
   try {
     const buildTest: string =  nftService.buildTest()
