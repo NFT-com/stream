@@ -567,7 +567,7 @@ const bootstrap = (): Promise<void> => {
 
 const killPort = (): Promise<unknown> => {
   return kill(PORT)
-  // Without this small delay sometimes it's not killed in time
+  // Without this small delay sometimes it's not killed in time -
     .then(fp.pause(500))
     .catch((err: any) => logger.error(err))
 }
