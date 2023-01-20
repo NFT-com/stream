@@ -321,7 +321,7 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
     }
     if (contractsToBeProcessed.length) {
       // move to in progress cache
-      await cache.sadd(CacheKeys.SYNC_IN_PROGRESS, ...contractsToBeProcessed)
+      await cache.sadd(`${CacheKeys.SYNC_IN_PROGRESS}_${chainId}`, ...contractsToBeProcessed)
       // run process
       for (let i = 0; i < contractInput.length; i++) {
         const contract: string = contractInput?.[i]?.address
