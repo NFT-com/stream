@@ -170,3 +170,41 @@ export const retrieveContractNFTsNFTPort = async (
     return undefined
   }
 }
+
+export const retrieveTxByContractOrToken = async (
+  contract: string,
+  chainId: string,
+  page: number,
+  include?: NFTPortContractNFTIncludes[],
+): Promise<any> => {
+  // TODO
+  try {
+    logger.debug(`starting retrieveContractNFTs: ${contract} ${chainId} - page: ${page}`)
+    const key = `NFTPORT_CONTRACT_NFTS_${chainId}_${contract}_page_${page}`
+    const cachedData = await cache.get(key)
+    if (cachedData)
+      return JSON.parse(cachedData)
+    const chain = chainFromId(chainId)
+    if (!chain) return
+    const nftInterceptor = getNFTPortInterceptor(NFTPORT_API_BASE_URL)
+    const url = `/nfts/${contract}`
+    const res = await nftInterceptor.get(url, {
+      params: {
+        chain: chain,
+        include: include?.length ? include : [],
+        page_size: 50,
+        page_number: page,
+      },
+      paramsSerializer: (params) => qs.stringify(params, { arrayFormat: 'repeat' }),
+    })
+    if (res && res?.data) {
+      await cache.set(key, JSON.stringify(res.data), 'EX', 60 * 10)
+      return res.data
+    } else {
+      return undefined
+    }
+  } catch (err) {
+    logger.error(`Error in retrieveContractNFTsNFTPort: ${err}`)
+    return undefined
+  }
+}

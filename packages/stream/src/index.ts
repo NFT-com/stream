@@ -530,6 +530,62 @@ app.post('/stopSyncCollectionNftRarity', authMiddleWare, async (_req, res) => {
   }
 })
 
+// reconcile executed orders - authenticated
+app.post('/reconcileOrders', authMiddleWare, validate(nftRaritySyncSchema), async (_req, res) => {
+  // TODO
+  const { contract, tokenIds } = _req.body
+  try {
+    const jobId = 'sync_collection_nft_rarity'
+    const collectionNullRarityQueue = queues.get(QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY)
+    const job: Bull.Job = await collectionNullRarityQueue.getJob(jobId)
+    if (job && (job.isFailed() || job.isPaused() || job.isStuck() || job.isDelayed())) {
+      await job.remove()
+    }
+
+    if(!job) {
+      collectionNullRarityQueue
+        .add({
+          SYNC_CONTRACTS: QUEUE_TYPES.SYNC_COLLECTION_NAME,
+          chainId: process.env.CHAIN_ID,
+          contract,
+          tokenIds,
+        }, {
+          attempts: 1,
+          removeOnComplete: true,
+          removeOnFail: true,
+          jobId: 'sync_collection_nft_rarity',
+        })
+      return res.status(200).send({ message: 'Collection Name Sync Started!' })
+    }
+
+    return res.status(200).send({ message: 'Collection Name Sync In Progress Already!' })
+  } catch (error) {
+    logger.error(`err: ${error}`)
+    return res.status(400).send(error)
+  }
+})
+
+// stop order reconciliation - authenticated
+app.post('/cancelOrderReconciliation', authMiddleWare, async (_req, res) => {
+  // TODO
+  try {
+    const jobId = 'sync_collection_nft_rarity'
+    const collectionNameQueue = queues.get(QUEUE_TYPES.SYNC_COLLECTION_NAME)
+    const job: Bull.Job = await collectionNameQueue.getJob(jobId)
+    if (job) {
+      await job.moveToFailed(new Error('Abort Triggered!'), true)
+      await job.discard()
+      await job.remove()
+      // await killProcess(job.data.pid)
+      return res.status(200).send({ message: 'Stopped Collection Sync!' })
+    }
+
+    return res.status(200).send({ message: 'No Collection Null Rarity Sync In Progress!' })
+  } catch (error) {
+    logger.error(`err: ${error}`)
+    return res.status(400).send(error)
+  }
+})
 // error handler
 const handleError = (err: Error): void => {
   logger.error(`App Error: ${err}`)
