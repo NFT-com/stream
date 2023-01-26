@@ -53,7 +53,7 @@ const listenApprovalEvents = async (
       const structHash = event.args.structHash
       const makerAddress = utils.getAddress(event.args.maker)
 
-      logger.log('struct hash', structHash)
+      logger.log('approval struct hash', structHash)
       let txOrder = await repositories.txOrder.findOne({
         where: {
           orderHash: structHash,
@@ -232,7 +232,7 @@ const listenCancelEvents = async (
       const structHash = event.args.structHash
       const makerAddress = utils.getAddress(event.args.maker)
 
-      logger.log('struct hash', structHash)
+      logger.log('cancellation struct hash', structHash)
       let txOrder = await repositories.txOrder.findOne({
         where: {
           orderHash: structHash,
