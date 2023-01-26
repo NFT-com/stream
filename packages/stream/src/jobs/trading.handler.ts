@@ -733,7 +733,10 @@ const listenMatchTwoAEvents = async (
             end,
           )
           txListingOrder = await repositories.txOrder.save({
-            activity,
+            activity: {
+              ...activity,
+              status: defs.ActivityStatus.Executed,
+            },
             orderHash: makerHash,
             exchange: defs.ExchangeType.NFTCOM,
             orderType: defs.ActivityType.Listing,
@@ -775,6 +778,10 @@ const listenMatchTwoAEvents = async (
             makerAddress,
             takerAddress,
             nonce,
+            activity: {
+              ...activity,
+              status: defs.ActivityStatus.Executed,
+            },
             protocolData: {
               ...txListingOrder.protocolData,
               salt,
@@ -798,8 +805,6 @@ const listenMatchTwoAEvents = async (
         })
 
         if (!txTransaction) {
-          txListingOrder.activity.status = defs.ActivityStatus.Executed
-          await repositories.txOrder.save(txListingOrder)
           const txHashId = `${log.transactionHash}:${txListingOrder.orderHash}`
           try {
             const timestampFromSource: number = (new Date().getTime())/1000
