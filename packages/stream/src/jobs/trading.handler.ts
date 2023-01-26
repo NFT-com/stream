@@ -240,16 +240,12 @@ const listenCancelEvents = async (
 
       logger.log(`cancellation struct hash: ${structHash}`)
       let txOrder = await repositories.txOrder.findOne({
-        relations: ['activity'],
         where: {
           orderHash: structHash,
           makerAddress,
           exchange: defs.ExchangeType.NFTCOM,
           orderType: defs.ActivityType.Listing,
           protocol: defs.ProtocolType.NFTCOM,
-          activity: {
-            status: defs.ActivityStatus.Valid,
-          },
         },
       })
       logger.log(`cancellation listing order: ${txOrder.orderHash}`)
@@ -306,16 +302,12 @@ const listenCancelEvents = async (
       } else {
         try {
           txOrder = await repositories.txOrder.findOne({
-            relations: ['activity'],
             where: {
               orderHash: structHash,
               makerAddress,
               exchange: defs.ExchangeType.NFTCOM,
               orderType: defs.ActivityType.Bid,
               protocol: defs.ProtocolType.NFTCOM,
-              activity: {
-                status: defs.ActivityStatus.Valid,
-              },
             },
           })
           logger.log(`cancellation bid order: ${txOrder.orderHash}`)
