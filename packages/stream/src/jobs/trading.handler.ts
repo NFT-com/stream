@@ -240,6 +240,7 @@ const listenCancelEvents = async (
 
       logger.log(`cancellation struct hash: ${structHash}`)
       let txOrder = await repositories.txOrder.findOne({
+        relations: ['activity'],
         where: {
           orderHash: structHash,
           makerAddress,
@@ -261,7 +262,7 @@ const listenCancelEvents = async (
               chainId: chainId.toString(),
             },
           })
-          logger.log(`cancellation listing cancel: ${txCancel.id}, ${txCancel.foreignKeyId}`)
+          logger.log(`cancellation listing cancel: ${txCancel}`)
           if (!txCancel) {
             try {
               const timestampFromSource: number = (new Date().getTime())/1000
@@ -271,8 +272,8 @@ const listenCancelEvents = async (
                 cancelHash,
                 makerAddress,
                 chainId.toString(),
-                [],
-                '0x',
+                txOrder.activity.nftId,
+                txOrder.activity.nftContract,
                 timestampFromSource,
                 expirationFromSource,
               )
@@ -300,18 +301,19 @@ const listenCancelEvents = async (
           logger.error(`cancel find error: ${err}`)
         }
       } else {
-        try {
-          txOrder = await repositories.txOrder.findOne({
-            where: {
-              orderHash: structHash,
-              makerAddress,
-              exchange: defs.ExchangeType.NFTCOM,
-              orderType: defs.ActivityType.Bid,
-              protocol: defs.ProtocolType.NFTCOM,
-            },
-          })
-          logger.log(`cancellation bid order: ${txOrder.orderHash}`)
-          if (txOrder) {
+        txOrder = await repositories.txOrder.findOne({
+          relations: ['activity'],
+          where: {
+            orderHash: structHash,
+            makerAddress,
+            exchange: defs.ExchangeType.NFTCOM,
+            orderType: defs.ActivityType.Bid,
+            protocol: defs.ProtocolType.NFTCOM,
+          },
+        })
+        logger.log(`cancellation bid order: ${txOrder.orderHash}`)
+        if (txOrder) {
+          try {
             const cancelHash = `${log.transactionHash}:${txOrder.orderHash}`
             const txCancel = await repositories.txCancel.findOne({
               where: {
@@ -322,7 +324,7 @@ const listenCancelEvents = async (
                 chainId: chainId.toString(),
               },
             })
-            logger.log(`cancellation bid cancel: ${txCancel.id}, ${txCancel.foreignKeyId}`)
+            logger.log(`cancellation bid cancel: ${txCancel}`)
             if (!txCancel) {
               const timestampFromSource: number = (new Date().getTime())/1000
               const expirationFromSource = null
@@ -333,8 +335,8 @@ const listenCancelEvents = async (
                   cancelHash,
                   makerAddress,
                   chainId.toString(),
-                  [],
-                  '0x',
+                  txOrder.activity.nftId,
+                  txOrder.activity.nftContract,
                   timestampFromSource,
                   expirationFromSource,
                 )
@@ -357,9 +359,9 @@ const listenCancelEvents = async (
                 logger.error(`cancellation activity err: ${err}`)
               }
             }
+          } catch (err) {
+            logger.error(`cancel find error: ${err}`)
           }
-        } catch (err) {
-          logger.error(`cancel find error: ${err}`)
         }
       }
     })
@@ -796,6 +798,8 @@ const listenMatchTwoAEvents = async (
         })
 
         if (!txTransaction) {
+          txListingOrder.activity.status = defs.ActivityStatus.Executed
+          await repositories.txOrder.save(txListingOrder)
           const txHashId = `${log.transactionHash}:${txListingOrder.orderHash}`
           try {
             const timestampFromSource: number = (new Date().getTime())/1000
@@ -803,10 +807,10 @@ const listenMatchTwoAEvents = async (
             const txActivity: Partial<entity.TxActivity> = await activityBuilder(
               defs.ActivityType.Sale,
               txHashId,
-              '0x',
+              makerAddress,
               chainId.toString(),
-              [],
-              '0x',
+              txListingOrder.activity.nftId,
+              txListingOrder.activity.nftContract,
               timestampFromSource,
               expirationFromSource,
             )
@@ -819,7 +823,7 @@ const listenMatchTwoAEvents = async (
                 protocol: defs.ProtocolType.NFTCOM,
                 transactionHash: txHashId,
                 blockNumber: log.blockNumber.toString(),
-                nftContractAddress: '0x',
+                nftContractAddress: txListingOrder.activity.nftContract,
                 nftContractTokenId: '',
                 maker: makerAddress,
                 taker: '0x',
