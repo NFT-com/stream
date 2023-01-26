@@ -53,7 +53,7 @@ const listenApprovalEvents = async (
       const structHash = event.args.structHash
       const makerAddress = utils.getAddress(event.args.maker)
 
-      logger.log('approval struct hash', structHash)
+      logger.log(`approval struct hash: ${structHash}`)
       let txOrder = await repositories.txOrder.findOne({
         where: {
           orderHash: structHash,
@@ -63,6 +63,7 @@ const listenApprovalEvents = async (
           protocol: defs.ProtocolType.NFTCOM,
         },
       })
+      logger.log(`approval tx order listing: ${txOrder.id}`)
       if (txOrder) {
         const txTransaction = await repositories.txTransaction.findOne({
           where: {
@@ -74,8 +75,9 @@ const listenApprovalEvents = async (
             chainId: chainId.toString(),
           },
         })
+        logger.log(`approval tx listing: ${txTransaction.id, txTransaction.transactionHash}`)
         if (!txTransaction) {
-          await repositories.txTransaction.save({
+          const tx = await repositories.txTransaction.save({
             activity: txOrder.activity,
             exchange: defs.ExchangeType.NFTCOM,
             transactionType: defs.ActivityType.Listing,
@@ -88,6 +90,7 @@ const listenApprovalEvents = async (
             taker: '0x',
             chainId: chainId.toString(),
           })
+          logger.log(`approval tx listing saved: ${tx.id, tx.transactionHash}`)
         }
       } else {
         txOrder = await repositories.txOrder.findOne({
@@ -99,6 +102,7 @@ const listenApprovalEvents = async (
             protocol: defs.ProtocolType.NFTCOM,
           },
         })
+        logger.log(`approval tx order bid: ${txOrder.id}`)
         if (txOrder) {
           const txTransaction = await repositories.txTransaction.findOne({
             where: {
@@ -110,8 +114,9 @@ const listenApprovalEvents = async (
               chainId: chainId.toString(),
             },
           })
+          logger.log(`approval tx bid: ${txTransaction.id, txTransaction.transactionHash}`)
           if (!txTransaction) {
-            await repositories.txTransaction.save({
+            const tx = await repositories.txTransaction.save({
               activity: txOrder.activity,
               exchange: defs.ExchangeType.NFTCOM,
               transactionType: defs.ActivityType.Bid,
@@ -124,6 +129,7 @@ const listenApprovalEvents = async (
               taker: '0x',
               chainId: chainId.toString(),
             })
+            logger.log(`approval tx bid: ${tx.id, tx.transactionHash}`)
           }
         }
       }
@@ -232,7 +238,7 @@ const listenCancelEvents = async (
       const structHash = event.args.structHash
       const makerAddress = utils.getAddress(event.args.maker)
 
-      logger.log('cancellation struct hash', structHash)
+      logger.log(`cancellation struct hash: ${structHash}`)
       let txOrder = await repositories.txOrder.findOne({
         where: {
           orderHash: structHash,
@@ -242,6 +248,7 @@ const listenCancelEvents = async (
           protocol: defs.ProtocolType.NFTCOM,
         },
       })
+      logger.log(`cancellation listing order: ${txOrder.id}`)
       if (txOrder) {
         const txCancel = await repositories.txCancel.findOne({
           where: {
@@ -252,8 +259,9 @@ const listenCancelEvents = async (
             chainId: chainId.toString(),
           },
         })
+        logger.log(`cancellation listing cancel: ${txCancel.id}, ${txCancel.foreignKeyId}`)
         if (!txCancel) {
-          await repositories.txCancel.save({
+          const cancel = await repositories.txCancel.save({
             activity: txOrder.activity,
             exchange: defs.ExchangeType.NFTCOM,
             foreignType: defs.CancelActivities[0],
@@ -262,6 +270,7 @@ const listenCancelEvents = async (
             blockNumber: log.blockNumber.toString(),
             chainId: chainId.toString(),
           })
+          logger.log(`cancellation listing cancel saved: ${cancel.id}, ${cancel.foreignKeyId}`)
         }
       } else {
         txOrder = await repositories.txOrder.findOne({
@@ -273,6 +282,7 @@ const listenCancelEvents = async (
             protocol: defs.ProtocolType.NFTCOM,
           },
         })
+        logger.log(`cancellation bid order: ${txOrder.id}`)
         if (txOrder) {
           const txCancel = await repositories.txCancel.findOne({
             where: {
@@ -283,8 +293,9 @@ const listenCancelEvents = async (
               chainId: chainId.toString(),
             },
           })
+          logger.log(`cancellation bid cancel: ${txCancel.id}, ${txCancel.foreignKeyId}`)
           if (!txCancel) {
-            await repositories.txCancel.save({
+            const cancel = await repositories.txCancel.save({
               activity: txOrder.activity,
               exchange: defs.ExchangeType.NFTCOM,
               foreignType: defs.CancelActivities[1],
@@ -293,6 +304,7 @@ const listenCancelEvents = async (
               blockNumber: log.blockNumber.toString(),
               chainId: chainId.toString(),
             })
+            logger.log(`cancellation bid cancel saved: ${cancel.id}, ${cancel.foreignKeyId}`)
           }
         }
       }
