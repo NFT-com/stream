@@ -2,7 +2,7 @@ import { Job } from 'bull'
 import { BigNumber, ethers, utils } from 'ethers'
 import { defaultAbiCoder } from 'ethers/lib/utils'
 
-import { _logger, contracts, db, defs, helper } from '@nftcom/shared'
+import { _logger, contracts, db, defs, entity,helper } from '@nftcom/shared'
 
 import { cache } from '../service/cache'
 import { activityBuilder } from '../utils/builder/orderBuilder'
@@ -116,7 +116,7 @@ const listenApprovalEvents = async (
           })
           logger.log(`approval tx bid: ${txTransaction.id, txTransaction.transactionHash}`)
           if (!txTransaction) {
-            const tx = await repositories.txTransaction.save({
+            await repositories.txTransaction.save({
               activity: txOrder.activity,
               exchange: defs.ExchangeType.NFTCOM,
               transactionType: defs.ActivityType.Bid,
@@ -129,7 +129,7 @@ const listenApprovalEvents = async (
               taker: '0x',
               chainId: chainId.toString(),
             })
-            logger.log(`approval tx bid: ${tx.id, tx.transactionHash}`)
+            logger.log(`approval tx bid: ${txTransaction.id, txTransaction.transactionHash}`)
           }
         }
       }
@@ -261,8 +261,21 @@ const listenCancelEvents = async (
         })
         logger.log(`cancellation listing cancel: ${txCancel.id}, ${txCancel.foreignKeyId}`)
         if (!txCancel) {
+          const cancelHash = `${log.transactionHash}:${txOrder.orderHash}`
+          const cancellationActivity: Partial<entity.TxActivity> = await activityBuilder(
+            defs.ActivityType.Cancel,
+            cancelHash,
+            '0x',
+            chainId.toString(),
+            [],
+            '0x',
+            0,
+            null,
+          )
+
           const cancel = await repositories.txCancel.save({
-            activity: txOrder.activity,
+            id: cancelHash,
+            activity: cancellationActivity,
             exchange: defs.ExchangeType.NFTCOM,
             foreignType: defs.CancelActivities[0],
             foreignKeyId: txOrder.orderHash,
@@ -295,8 +308,20 @@ const listenCancelEvents = async (
           })
           logger.log(`cancellation bid cancel: ${txCancel.id}, ${txCancel.foreignKeyId}`)
           if (!txCancel) {
+            const cancelHash = `${log.transactionHash}:${txOrder.orderHash}`
+            const cancellationActivity: Partial<entity.TxActivity> = await activityBuilder(
+              defs.ActivityType.Cancel,
+              cancelHash,
+              '0x',
+              chainId.toString(),
+              [],
+              '0x',
+              0,
+              null,
+            )
             const cancel = await repositories.txCancel.save({
-              activity: txOrder.activity,
+              id: cancelHash,
+              activity: cancellationActivity,
               exchange: defs.ExchangeType.NFTCOM,
               foreignType: defs.CancelActivities[1],
               foreignKeyId: txOrder.orderHash,
@@ -728,6 +753,47 @@ const listenMatchTwoAEvents = async (
           })
 
           logger.info(`updated existing listing order from Match2A ${txListingOrder.id}`)
+        }
+
+        const txTransaction = await repositories.txTransaction.findOne({
+          where: {
+            exchange: defs.ExchangeType.NFTCOM,
+            transactionType: defs.ActivityType.Listing,
+            protocol: defs.ProtocolType.NFTCOM,
+            maker: makerAddress,
+            transactionHash: log.transactionHash,
+            chainId: chainId.toString(),
+          },
+        })
+
+        if (!txTransaction) {
+          const txHashId = `${log.transactionHash}:${txListingOrder.orderHash}`
+          const txActivity: Partial<entity.TxActivity> = await activityBuilder(
+            defs.ActivityType.Cancel,
+            txHashId,
+            '0x',
+            chainId.toString(),
+            [],
+            '0x',
+            0,
+            null,
+          )
+          const tx = await repositories.txTransaction.save({
+            id: txHashId,
+            activity: txActivity,
+            exchange: defs.ExchangeType.NFTCOM,
+            transactionType: defs.ActivityType.Listing,
+            protocol: defs.ProtocolType.NFTCOM,
+            transactionHash: txHashId,
+            blockNumber: log.blockNumber.toString(),
+            nftContractAddress: '0x',
+            nftContractTokenId: '',
+            maker: makerAddress,
+            taker: '0x',
+            chainId: chainId.toString(),
+          })
+
+          logger.log(`tx saved: ${tx.id} for order ${txListingOrder.id}`)
         }
       }),
     )
