@@ -262,31 +262,35 @@ const listenCancelEvents = async (
         logger.log(`cancellation listing cancel: ${txCancel.id}, ${txCancel.foreignKeyId}`)
         if (!txCancel) {
           const cancelHash = `${log.transactionHash}:${txOrder.orderHash}`
-          const cancellationActivity: Partial<entity.TxActivity> = await activityBuilder(
-            defs.ActivityType.Cancel,
-            cancelHash,
-            '0x',
-            chainId.toString(),
-            [],
-            '0x',
-            0,
-            null,
-          )
-
           try {
-            const cancel = await repositories.txCancel.save({
-              id: cancelHash,
-              activity: cancellationActivity,
-              exchange: defs.ExchangeType.NFTCOM,
-              foreignType: defs.CancelActivities[0],
-              foreignKeyId: txOrder.orderHash,
-              transactionHash: cancelHash,
-              blockNumber: log.blockNumber.toString(),
-              chainId: chainId.toString(),
-            })
-            logger.log(`cancellation listing cancel saved: ${cancel.id}, ${cancel.foreignKeyId}`)
+            const cancellationActivity: Partial<entity.TxActivity> = await activityBuilder(
+              defs.ActivityType.Cancel,
+              cancelHash,
+              '0x',
+              chainId.toString(),
+              [],
+              '0x',
+              0,
+              null,
+            )
+
+            try {
+              const cancel = await repositories.txCancel.save({
+                id: cancelHash,
+                activity: cancellationActivity,
+                exchange: defs.ExchangeType.NFTCOM,
+                foreignType: defs.CancelActivities[0],
+                foreignKeyId: txOrder.orderHash,
+                transactionHash: cancelHash,
+                blockNumber: log.blockNumber.toString(),
+                chainId: chainId.toString(),
+              })
+              logger.log(`cancellation listing cancel saved: ${cancel.id}, ${cancel.foreignKeyId}`)
+            } catch (err) {
+              logger.error(`cancellation error: ${err}`)
+            }
           } catch (err) {
-            logger.error(`cancellation error: ${err}`)
+            logger.error(`cancellation activity error: ${err}`)
           }
         }
       } else {
@@ -313,30 +317,34 @@ const listenCancelEvents = async (
           logger.log(`cancellation bid cancel: ${txCancel.id}, ${txCancel.foreignKeyId}`)
           if (!txCancel) {
             const cancelHash = `${log.transactionHash}:${txOrder.orderHash}`
-            const cancellationActivity: Partial<entity.TxActivity> = await activityBuilder(
-              defs.ActivityType.Cancel,
-              cancelHash,
-              '0x',
-              chainId.toString(),
-              [],
-              '0x',
-              0,
-              null,
-            )
             try {
-              const cancel = await repositories.txCancel.save({
-                id: cancelHash,
-                activity: cancellationActivity,
-                exchange: defs.ExchangeType.NFTCOM,
-                foreignType: defs.CancelActivities[1],
-                foreignKeyId: txOrder.orderHash,
-                transactionHash: cancelHash,
-                blockNumber: log.blockNumber.toString(),
-                chainId: chainId.toString(),
-              })
-              logger.log(`cancellation bid cancel saved: ${cancel.id}, ${cancel.foreignKeyId}`)
-            } catch (err) {
-              logger.error(`cancellation err: ${err}`)
+              const cancellationActivity: Partial<entity.TxActivity> = await activityBuilder(
+                defs.ActivityType.Cancel,
+                cancelHash,
+                '0x',
+                chainId.toString(),
+                [],
+                '0x',
+                0,
+                null,
+              )
+              try {
+                const cancel = await repositories.txCancel.save({
+                  id: cancelHash,
+                  activity: cancellationActivity,
+                  exchange: defs.ExchangeType.NFTCOM,
+                  foreignType: defs.CancelActivities[1],
+                  foreignKeyId: txOrder.orderHash,
+                  transactionHash: cancelHash,
+                  blockNumber: log.blockNumber.toString(),
+                  chainId: chainId.toString(),
+                })
+                logger.log(`cancellation bid cancel saved: ${cancel.id}, ${cancel.foreignKeyId}`)
+              } catch (err) {
+                logger.error(`cancellation err: ${err}`)
+              }
+            } catch(err) {
+              logger.error(`cancellation activity err: ${err}`)
             }
           }
         }
@@ -776,32 +784,40 @@ const listenMatchTwoAEvents = async (
 
         if (!txTransaction) {
           const txHashId = `${log.transactionHash}:${txListingOrder.orderHash}`
-          const txActivity: Partial<entity.TxActivity> = await activityBuilder(
-            defs.ActivityType.Cancel,
-            txHashId,
-            '0x',
-            chainId.toString(),
-            [],
-            '0x',
-            0,
-            null,
-          )
-          const tx = await repositories.txTransaction.save({
-            id: txHashId,
-            activity: txActivity,
-            exchange: defs.ExchangeType.NFTCOM,
-            transactionType: defs.ActivityType.Listing,
-            protocol: defs.ProtocolType.NFTCOM,
-            transactionHash: txHashId,
-            blockNumber: log.blockNumber.toString(),
-            nftContractAddress: '0x',
-            nftContractTokenId: '',
-            maker: makerAddress,
-            taker: '0x',
-            chainId: chainId.toString(),
-          })
-
-          logger.log(`tx saved: ${tx.id} for order ${txListingOrder.id}`)
+          try {
+            const txActivity: Partial<entity.TxActivity> = await activityBuilder(
+              defs.ActivityType.Cancel,
+              txHashId,
+              '0x',
+              chainId.toString(),
+              [],
+              '0x',
+              0,
+              null,
+            )
+            try {
+              const tx = await repositories.txTransaction.save({
+                id: txHashId,
+                activity: txActivity,
+                exchange: defs.ExchangeType.NFTCOM,
+                transactionType: defs.ActivityType.Listing,
+                protocol: defs.ProtocolType.NFTCOM,
+                transactionHash: txHashId,
+                blockNumber: log.blockNumber.toString(),
+                nftContractAddress: '0x',
+                nftContractTokenId: '',
+                maker: makerAddress,
+                taker: '0x',
+                chainId: chainId.toString(),
+              })
+    
+              logger.log(`tx saved: ${tx.id} for order ${txListingOrder.id}`)
+            } catch (err) {
+              logger.error(`Tx err: ${err}`)
+            }
+          } catch (err) {
+            logger.error(`Tx activity err: ${err}`)
+          }
         }
       }),
     )
