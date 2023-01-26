@@ -41,7 +41,7 @@ const listenApprovalEvents = async (
 ): Promise<void> => {
   const address = contracts.nftMarketplaceAddress(chainId)
   const topics = [
-    helper.id('Approval(bytes32,address)'),
+    helper.id('Approval(bytes32,address,uint256)'),
   ]
   try {
     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
@@ -53,6 +53,7 @@ const listenApprovalEvents = async (
       const structHash = event.args.structHash
       const makerAddress = utils.getAddress(event.args.maker)
 
+      logger.log('approval struct hash', structHash)
       let txOrder = await repositories.txOrder.findOne({
         where: {
           orderHash: structHash,
@@ -231,6 +232,7 @@ const listenCancelEvents = async (
       const structHash = event.args.structHash
       const makerAddress = utils.getAddress(event.args.maker)
 
+      logger.log('cancellation struct hash', structHash)
       let txOrder = await repositories.txOrder.findOne({
         where: {
           orderHash: structHash,
