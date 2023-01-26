@@ -266,7 +266,7 @@ const listenCancelEvents = async (
             const cancellationActivity: Partial<entity.TxActivity> = await activityBuilder(
               defs.ActivityType.Cancel,
               cancelHash,
-              '0x',
+              makerAddress,
               chainId.toString(),
               [],
               '0x',
@@ -321,7 +321,7 @@ const listenCancelEvents = async (
               const cancellationActivity: Partial<entity.TxActivity> = await activityBuilder(
                 defs.ActivityType.Cancel,
                 cancelHash,
-                '0x',
+                makerAddress,
                 chainId.toString(),
                 [],
                 '0x',
@@ -809,6 +809,12 @@ const listenMatchTwoAEvents = async (
                 maker: makerAddress,
                 taker: '0x',
                 chainId: chainId.toString(),
+                protocolData: {
+                  ...txListingOrder.protocolData,
+                  salt,
+                  start,
+                  end,
+                },
               })
     
               logger.log(`tx saved: ${tx.id} for order ${txListingOrder.id}`)
