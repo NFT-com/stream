@@ -745,9 +745,9 @@ const listenMatchTwoAEvents = async (
             protocolData: {
               auctionType: defs.AuctionType.FixedPrice,
               signature: {
-                v: -1,
-                r: '',
-                s: '',
+                v: 0,
+                r: '0x0000000000000000000000000000000000000000000000000000000000000000',
+                s: '0x0000000000000000000000000000000000000000000000000000000000000000',
               },
               salt,
               start,
@@ -941,9 +941,9 @@ const listenMatchTwoBEvents = async (
           protocolData: {
             auctionType: defs.AuctionType.FixedPrice,
             signature: {
-              v: -1,
-              r: '',
-              s: '',
+              v: 0,
+              r: '0x0000000000000000000000000000000000000000000000000000000000000000',
+              s: '0x0000000000000000000000000000000000000000000000000000000000000000',
             },
             salt: -1,
             start: 0,
@@ -1050,9 +1050,9 @@ const listenMatchThreeAEvents = async (
           protocolData: {
             auctionType: defs.AuctionType.FixedPrice,
             signature: {
-              v: -1,
-              r: '',
-              s: '',
+              v: 0,
+              r: '0x0000000000000000000000000000000000000000000000000000000000000000',
+              s: '0x0000000000000000000000000000000000000000000000000000000000000000',
             },
             salt,
             start,
@@ -1179,9 +1179,9 @@ const listenMatchThreeBEvents = async (
           protocolData: {
             auctionType: defs.AuctionType.FixedPrice,
             signature: {
-              v: -1,
-              r: '',
-              s: '',
+              v: 0,
+              r: '0x0000000000000000000000000000000000000000000000000000000000000000',
+              s: '0x0000000000000000000000000000000000000000000000000000000000000000',
             },
             salt: -1,
             start: 0,
