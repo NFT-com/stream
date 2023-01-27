@@ -793,61 +793,67 @@ const listenMatchTwoAEvents = async (
           logger.info(`updated existing listing order from Match2A ${txListingOrder.id}`)
         }
 
-        const txTransaction = await repositories.txTransaction.findOne({
-          where: {
-            exchange: defs.ExchangeType.NFTCOM,
-            transactionType: defs.ActivityType.Sale,
-            protocol: defs.ProtocolType.NFTCOM,
-            maker: makerAddress,
-            transactionHash: log.transactionHash,
-            chainId: chainId.toString(),
-          },
-        })
-
-        if (!txTransaction) {
-          const txHashId = `${log.transactionHash}:${txListingOrder.orderHash}`
-          try {
-            const timestampFromSource: number = (new Date().getTime())/1000
-            const expirationFromSource = null
-            const txActivity: Partial<entity.TxActivity> = await activityBuilder(
-              defs.ActivityType.Sale,
-              txHashId,
-              makerAddress,
-              chainId.toString(),
-              txListingOrder.activity.nftId,
-              txListingOrder.activity.nftContract,
-              timestampFromSource,
-              expirationFromSource,
-            )
+        const txHashId = `${log.transactionHash}:${txListingOrder.orderHash}`
+        try {
+          const txTransaction = await repositories.txTransaction.findOne({
+            where: {
+              exchange: defs.ExchangeType.NFTCOM,
+              transactionType: defs.ActivityType.Sale,
+              protocol: defs.ProtocolType.NFTCOM,
+              maker: makerAddress,
+              transactionHash: txHashId,
+              chainId: chainId.toString(),
+            },
+          })
+  
+          logger.info(`tx exists: ${txTransaction}`)
+  
+          if (!txTransaction) {
             try {
-              const tx = await repositories.txTransaction.save({
-                id: txHashId,
-                activity: txActivity,
-                exchange: defs.ExchangeType.NFTCOM,
-                transactionType: defs.ActivityType.Sale,
-                protocol: defs.ProtocolType.NFTCOM,
-                transactionHash: txHashId,
-                blockNumber: log.blockNumber.toString(),
-                nftContractAddress: txListingOrder.activity.nftContract,
-                nftContractTokenId: '',
-                maker: makerAddress,
-                taker: '0x',
-                chainId: chainId.toString(),
-                protocolData: {
-                  ...txListingOrder.protocolData,
-                  salt,
-                  start,
-                  end,
-                },
-              })
-    
-              logger.log(`tx saved: ${tx.id} for order ${txListingOrder.id}`)
+              const timestampFromSource: number = (new Date().getTime())/1000
+              const expirationFromSource = null
+              const txActivity: Partial<entity.TxActivity> = await activityBuilder(
+                defs.ActivityType.Sale,
+                txHashId,
+                makerAddress,
+                chainId.toString(),
+                txListingOrder?.activity?.nftId || [],
+                txListingOrder?.activity?.nftContract || '0x',
+                timestampFromSource,
+                expirationFromSource,
+              )
+              try {
+                const tx = await repositories.txTransaction.save({
+                  id: txHashId,
+                  activity: txActivity,
+                  exchange: defs.ExchangeType.NFTCOM,
+                  transactionType: defs.ActivityType.Sale,
+                  protocol: defs.ProtocolType.NFTCOM,
+                  transactionHash: txHashId,
+                  blockNumber: log.blockNumber.toString(),
+                  nftContractAddress: txListingOrder?.activity?.nftContract || '0x',
+                  nftContractTokenId: '',
+                  maker: makerAddress,
+                  taker: takerAddress,
+                  chainId: chainId.toString(),
+                  protocolData: {
+                    ...txListingOrder.protocolData,
+                    salt,
+                    start,
+                    end,
+                  },
+                })
+      
+                logger.log(`tx saved: ${tx.id} for order ${txListingOrder.id}`)
+              } catch (err) {
+                logger.error(`Tx err: ${err}`)
+              }
             } catch (err) {
-              logger.error(`Tx err: ${err}`)
+              logger.error(`Tx activity err: ${err}`)
             }
-          } catch (err) {
-            logger.error(`Tx activity err: ${err}`)
           }
+        } catch (err) {
+          logger.error(`tx find error: ${err}`)
         }
       }),
     )
