@@ -97,7 +97,7 @@ const initializeStreamsForAllSlugs = (): void => {
                     },
                   })
                 } catch (err) {
-                  logger.error('nft err', err)
+                  logger.error(`nft err: ${err}`)
                 }
                     
                 if (nft) {
@@ -112,7 +112,7 @@ const initializeStreamsForAllSlugs = (): void => {
                         },
                       })
                     } catch (err) {
-                      logger.error('order err', err)
+                      logger.error(`order err: ${err}`)
                     }
                                                                 
                     if (!order) {
@@ -133,14 +133,14 @@ const initializeStreamsForAllSlugs = (): void => {
                 }
               }
             }  else {
-              logger.error('nftId undefined', nftId)
-              logger.log('event type', eventType)
-              logger.log('event payload', eventPayload)
+              logger.error(`nftId undefined: ${nftId}`)
+              logger.log(`event type: ${eventType}`)
+              logger.log(`event payload: ${eventPayload}`)
             }
           }
         }
       } catch (err) {
-        logger.error('Err:', JSON.stringify(err))
+        logger.error(`Err: ${JSON.stringify(err)}`)
       }
     })
 }

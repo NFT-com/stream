@@ -2,7 +2,7 @@ import { Job } from 'bull'
 import { BigNumber, ethers, utils } from 'ethers'
 import { defaultAbiCoder } from 'ethers/lib/utils'
 
-import { _logger, contracts, db, defs, helper } from '@nftcom/shared'
+import { _logger, contracts, db, defs, entity,helper } from '@nftcom/shared'
 
 import { cache } from '../service/cache'
 import { activityBuilder } from '../utils/builder/orderBuilder'
@@ -41,7 +41,7 @@ const listenApprovalEvents = async (
 ): Promise<void> => {
   const address = contracts.nftMarketplaceAddress(chainId)
   const topics = [
-    helper.id('Approval(bytes32,address)'),
+    helper.id('Approval(bytes32,address,uint256)'),
   ]
   try {
     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
@@ -53,6 +53,7 @@ const listenApprovalEvents = async (
       const structHash = event.args.structHash
       const makerAddress = utils.getAddress(event.args.maker)
 
+      logger.log(`approval struct hash: ${structHash}`)
       let txOrder = await repositories.txOrder.findOne({
         where: {
           orderHash: structHash,
@@ -62,6 +63,7 @@ const listenApprovalEvents = async (
           protocol: defs.ProtocolType.NFTCOM,
         },
       })
+      logger.log(`approval tx order listing: ${txOrder.id}`)
       if (txOrder) {
         const txTransaction = await repositories.txTransaction.findOne({
           where: {
@@ -73,8 +75,9 @@ const listenApprovalEvents = async (
             chainId: chainId.toString(),
           },
         })
+        logger.log(`approval tx listing: ${txTransaction.id, txTransaction.transactionHash}`)
         if (!txTransaction) {
-          await repositories.txTransaction.save({
+          const tx = await repositories.txTransaction.save({
             activity: txOrder.activity,
             exchange: defs.ExchangeType.NFTCOM,
             transactionType: defs.ActivityType.Listing,
@@ -87,6 +90,7 @@ const listenApprovalEvents = async (
             taker: '0x',
             chainId: chainId.toString(),
           })
+          logger.log(`approval tx listing saved: ${tx.id, tx.transactionHash}`)
         }
       } else {
         txOrder = await repositories.txOrder.findOne({
@@ -98,6 +102,7 @@ const listenApprovalEvents = async (
             protocol: defs.ProtocolType.NFTCOM,
           },
         })
+        logger.log(`approval tx order bid: ${txOrder.id}`)
         if (txOrder) {
           const txTransaction = await repositories.txTransaction.findOne({
             where: {
@@ -109,6 +114,7 @@ const listenApprovalEvents = async (
               chainId: chainId.toString(),
             },
           })
+          logger.log(`approval tx bid: ${txTransaction.id, txTransaction.transactionHash}`)
           if (!txTransaction) {
             await repositories.txTransaction.save({
               activity: txOrder.activity,
@@ -123,6 +129,7 @@ const listenApprovalEvents = async (
               taker: '0x',
               chainId: chainId.toString(),
             })
+            logger.log(`approval tx bid: ${txTransaction.id, txTransaction.transactionHash}`)
           }
         }
       }
@@ -231,7 +238,9 @@ const listenCancelEvents = async (
       const structHash = event.args.structHash
       const makerAddress = utils.getAddress(event.args.maker)
 
+      logger.log(`cancellation struct hash: ${structHash}`)
       let txOrder = await repositories.txOrder.findOne({
+        relations: ['activity'],
         where: {
           orderHash: structHash,
           makerAddress,
@@ -240,29 +249,60 @@ const listenCancelEvents = async (
           protocol: defs.ProtocolType.NFTCOM,
         },
       })
+      logger.log(`cancellation listing order: ${txOrder.orderHash}`)
       if (txOrder) {
-        const txCancel = await repositories.txCancel.findOne({
-          where: {
-            exchange: defs.ExchangeType.NFTCOM,
-            foreignType: defs.CancelActivities[0],
-            foreignKeyId: txOrder.orderHash,
-            transactionHash: log.transactionHash,
-            chainId: chainId.toString(),
-          },
-        })
-        if (!txCancel) {
-          await repositories.txCancel.save({
-            activity: txOrder.activity,
-            exchange: defs.ExchangeType.NFTCOM,
-            foreignType: defs.CancelActivities[0],
-            foreignKeyId: txOrder.orderHash,
-            transactionHash: log.transactionHash,
-            blockNumber: log.blockNumber.toString(),
-            chainId: chainId.toString(),
+        const cancelHash = `${log.transactionHash}:${txOrder.orderHash}`
+        try {
+          const txCancel = await repositories.txCancel.findOne({
+            where: {
+              exchange: defs.ExchangeType.NFTCOM,
+              foreignType: defs.CancelActivities[0],
+              foreignKeyId: txOrder.orderHash,
+              transactionHash: cancelHash,
+              chainId: chainId.toString(),
+            },
           })
+          logger.log(`cancellation listing cancel: ${txCancel}`)
+          if (!txCancel) {
+            try {
+              const timestampFromSource: number = (new Date().getTime())/1000
+              const expirationFromSource = null
+              const cancellationActivity: Partial<entity.TxActivity> = await activityBuilder(
+                defs.ActivityType.Cancel,
+                cancelHash,
+                makerAddress,
+                chainId.toString(),
+                txOrder.activity.nftId,
+                txOrder.activity.nftContract,
+                timestampFromSource,
+                expirationFromSource,
+              )
+  
+              try {
+                const cancel = await repositories.txCancel.save({
+                  id: cancelHash,
+                  activity: cancellationActivity,
+                  exchange: defs.ExchangeType.NFTCOM,
+                  foreignType: defs.CancelActivities[0],
+                  foreignKeyId: txOrder.orderHash,
+                  transactionHash: cancelHash,
+                  blockNumber: log.blockNumber.toString(),
+                  chainId: chainId.toString(),
+                })
+                logger.log(`cancellation listing cancel saved: ${cancel.id}, ${cancel.foreignKeyId}`)
+              } catch (err) {
+                logger.error(`cancellation error: ${err}`)
+              }
+            } catch (err) {
+              logger.error(`cancellation activity error: ${err}`)
+            }
+          }
+        } catch (err) {
+          logger.error(`cancel find error: ${err}`)
         }
       } else {
         txOrder = await repositories.txOrder.findOne({
+          relations: ['activity'],
           where: {
             orderHash: structHash,
             makerAddress,
@@ -271,26 +311,56 @@ const listenCancelEvents = async (
             protocol: defs.ProtocolType.NFTCOM,
           },
         })
+        logger.log(`cancellation bid order: ${txOrder.orderHash}`)
         if (txOrder) {
-          const txCancel = await repositories.txCancel.findOne({
-            where: {
-              exchange: defs.ExchangeType.NFTCOM,
-              foreignKeyId: txOrder.orderHash,
-              foreignType: defs.CancelActivities[1],
-              transactionHash: log.transactionHash,
-              chainId: chainId.toString(),
-            },
-          })
-          if (!txCancel) {
-            await repositories.txCancel.save({
-              activity: txOrder.activity,
-              exchange: defs.ExchangeType.NFTCOM,
-              foreignType: defs.CancelActivities[1],
-              foreignKeyId: txOrder.orderHash,
-              transactionHash: log.transactionHash,
-              blockNumber: log.blockNumber.toString(),
-              chainId: chainId.toString(),
+          try {
+            const cancelHash = `${log.transactionHash}:${txOrder.orderHash}`
+            const txCancel = await repositories.txCancel.findOne({
+              where: {
+                exchange: defs.ExchangeType.NFTCOM,
+                foreignKeyId: txOrder.orderHash,
+                foreignType: defs.CancelActivities[1],
+                transactionHash: cancelHash,
+                chainId: chainId.toString(),
+              },
             })
+            logger.log(`cancellation bid cancel: ${txCancel}`)
+            if (!txCancel) {
+              const timestampFromSource: number = (new Date().getTime())/1000
+              const expirationFromSource = null
+              const cancelHash = `${log.transactionHash}:${txOrder.orderHash}`
+              try {
+                const cancellationActivity: Partial<entity.TxActivity> = await activityBuilder(
+                  defs.ActivityType.Cancel,
+                  cancelHash,
+                  makerAddress,
+                  chainId.toString(),
+                  txOrder.activity.nftId,
+                  txOrder.activity.nftContract,
+                  timestampFromSource,
+                  expirationFromSource,
+                )
+                try {
+                  const cancel = await repositories.txCancel.save({
+                    id: cancelHash,
+                    activity: cancellationActivity,
+                    exchange: defs.ExchangeType.NFTCOM,
+                    foreignType: defs.CancelActivities[1],
+                    foreignKeyId: txOrder.orderHash,
+                    transactionHash: cancelHash,
+                    blockNumber: log.blockNumber.toString(),
+                    chainId: chainId.toString(),
+                  })
+                  logger.log(`cancellation bid cancel saved: ${cancel.id}, ${cancel.foreignKeyId}`)
+                } catch (err) {
+                  logger.error(`cancellation err: ${err}`)
+                }
+              } catch(err) {
+                logger.error(`cancellation activity err: ${err}`)
+              }
+            }
+          } catch (err) {
+            logger.error(`cancel find error: ${err}`)
           }
         }
       }
@@ -663,7 +733,10 @@ const listenMatchTwoAEvents = async (
             end,
           )
           txListingOrder = await repositories.txOrder.save({
-            activity,
+            activity: {
+              ...activity,
+              status: defs.ActivityStatus.Executed,
+            },
             orderHash: makerHash,
             exchange: defs.ExchangeType.NFTCOM,
             orderType: defs.ActivityType.Listing,
@@ -672,9 +745,9 @@ const listenMatchTwoAEvents = async (
             protocolData: {
               auctionType: defs.AuctionType.FixedPrice,
               signature: {
-                v: -1,
-                r: '',
-                s: '',
+                v: 0,
+                r: '0x0000000000000000000000000000000000000000000000000000000000000000',
+                s: '0x0000000000000000000000000000000000000000000000000000000000000000',
               },
               salt,
               start,
@@ -705,6 +778,10 @@ const listenMatchTwoAEvents = async (
             makerAddress,
             takerAddress,
             nonce,
+            activity: {
+              ...activity,
+              status: defs.ActivityStatus.Executed,
+            },
             protocolData: {
               ...txListingOrder.protocolData,
               salt,
@@ -714,6 +791,69 @@ const listenMatchTwoAEvents = async (
           })
 
           logger.info(`updated existing listing order from Match2A ${txListingOrder.id}`)
+        }
+
+        const txHashId = `${log.transactionHash}:${txListingOrder.orderHash}`
+        try {
+          const txTransaction = await repositories.txTransaction.findOne({
+            where: {
+              exchange: defs.ExchangeType.NFTCOM,
+              transactionType: defs.ActivityType.Sale,
+              protocol: defs.ProtocolType.NFTCOM,
+              maker: makerAddress,
+              transactionHash: txHashId,
+              chainId: chainId.toString(),
+            },
+          })
+  
+          logger.info(`tx exists: ${txTransaction}`)
+  
+          if (!txTransaction) {
+            try {
+              const timestampFromSource: number = (new Date().getTime())/1000
+              const expirationFromSource = null
+              const txActivity: Partial<entity.TxActivity> = await activityBuilder(
+                defs.ActivityType.Sale,
+                txHashId,
+                makerAddress,
+                chainId.toString(),
+                txListingOrder?.activity?.nftId || [],
+                txListingOrder?.activity?.nftContract || '0x',
+                timestampFromSource,
+                expirationFromSource,
+              )
+              try {
+                const tx = await repositories.txTransaction.save({
+                  id: txHashId,
+                  activity: txActivity,
+                  exchange: defs.ExchangeType.NFTCOM,
+                  transactionType: defs.ActivityType.Sale,
+                  protocol: defs.ProtocolType.NFTCOM,
+                  transactionHash: txHashId,
+                  blockNumber: log.blockNumber.toString(),
+                  nftContractAddress: txListingOrder?.activity?.nftContract || '0x',
+                  nftContractTokenId: '',
+                  maker: makerAddress,
+                  taker: takerAddress,
+                  chainId: chainId.toString(),
+                  protocolData: {
+                    ...txListingOrder.protocolData,
+                    salt,
+                    start,
+                    end,
+                  },
+                })
+      
+                logger.log(`tx saved: ${tx.id} for order ${txListingOrder.id}`)
+              } catch (err) {
+                logger.error(`Tx err: ${err}`)
+              }
+            } catch (err) {
+              logger.error(`Tx activity err: ${err}`)
+            }
+          }
+        } catch (err) {
+          logger.error(`tx find error: ${err}`)
         }
       }),
     )
@@ -801,9 +941,9 @@ const listenMatchTwoBEvents = async (
           protocolData: {
             auctionType: defs.AuctionType.FixedPrice,
             signature: {
-              v: -1,
-              r: '',
-              s: '',
+              v: 0,
+              r: '0x0000000000000000000000000000000000000000000000000000000000000000',
+              s: '0x0000000000000000000000000000000000000000000000000000000000000000',
             },
             salt: -1,
             start: 0,
@@ -910,9 +1050,9 @@ const listenMatchThreeAEvents = async (
           protocolData: {
             auctionType: defs.AuctionType.FixedPrice,
             signature: {
-              v: -1,
-              r: '',
-              s: '',
+              v: 0,
+              r: '0x0000000000000000000000000000000000000000000000000000000000000000',
+              s: '0x0000000000000000000000000000000000000000000000000000000000000000',
             },
             salt,
             start,
@@ -1039,9 +1179,9 @@ const listenMatchThreeBEvents = async (
           protocolData: {
             auctionType: defs.AuctionType.FixedPrice,
             signature: {
-              v: -1,
-              r: '',
-              s: '',
+              v: 0,
+              r: '0x0000000000000000000000000000000000000000000000000000000000000000',
+              s: '0x0000000000000000000000000000000000000000000000000000000000000000',
             },
             salt: -1,
             start: 0,
