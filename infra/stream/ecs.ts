@@ -161,8 +161,8 @@ const createEcsTaskRole = (): aws.iam.Role => {
 }
 
 const createAOTCollectorSSMParameter = (): aws.ssm.Parameter => {
-  return new aws.ssm.Parameter('otel-collector-config', {
-    name: getResourceName('otel-collector-config'),
+  return new aws.ssm.Parameter('otel-collector-config-stream', {
+    name: getResourceName('otel-collector-config-stream'),
     type: 'String',
     value: `extensions:
   health_check:
