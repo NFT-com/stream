@@ -18,7 +18,8 @@ export const syncTxsFromNFTPortHandler = async (job: Job): Promise<void> => {
   const chainId: string = job.data.chainId || process.env.chainId || '5'
   try {
     const key = tokenId ? helper.checkSum(address) + '::' + BigNumber.from(tokenId).toHexString() : helper.checkSum(address)
-    await nftPortService.fetchTxsFromNFTPort(endpoint, 'ethereum', ['all'], address, tokenId)
+    const chain = chainId === '1' ? 'ethereum' : 'goerli'
+    await nftPortService.fetchTxsFromNFTPort(endpoint, chain, ['all'], address, tokenId)
     // Once we fetch transactions for collection or NFT, we cache it to NFTPORT_RECENTLY_SYNCED with expire date
     const now: Date = new Date()
     now.setMilliseconds(now.getMilliseconds() + NFTPORT_EXPIRE_DURATION)
