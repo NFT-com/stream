@@ -87,7 +87,7 @@ export const uploadImageToS3 = async (
     logger.info(`finished uploading in uploadImageToS3: ${imageUrl}`)
     return core.s3ToCdn(`https://${assetBucket.name}.s3.amazonaws.com/${imageKey}`)
   } catch (err) {
-    logger.error(`Error in uploadImageToS3 ${err}`)
+    logger.error(err, 'Error in uploadImageToS3')
     throw err
   }
 }

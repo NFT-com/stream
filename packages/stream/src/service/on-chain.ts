@@ -404,9 +404,10 @@ const keepAlive = ({
             )
 
             if (wallet) {
-              await nftService.updateNFTOwnershipAndMetadata(
+              const savedNFT = await nftService.updateNFTOwnershipAndMetadata(
                 obj, wallet.userId, wallet.id, chainId.toString(),
               )
+              if (savedNFT) await nftService.indexNFTsOnSearchEngine([savedNFT])
             }
 
             logger.log(`
@@ -476,9 +477,10 @@ const keepAlive = ({
             )
 
             if (wallet) {
-              await nftService.updateNFTOwnershipAndMetadata(
+              const savedNFT = await nftService.updateNFTOwnershipAndMetadata(
                 obj, wallet.userId, wallet.id, chainId.toString(),
               )
+              if (savedNFT) await nftService.indexNFTsOnSearchEngine([savedNFT])
             }
 
             logger.log(`
@@ -666,9 +668,10 @@ const keepAlive = ({
               contract, tokenId, chainId.toString(),
             )
             if (wallet) {
-              await nftService.updateNFTOwnershipAndMetadata(
+              const savedNFT = await nftService.updateNFTOwnershipAndMetadata(
                 obj, wallet.userId, wallet.id, chainId.toString(),
               )
+              if (savedNFT) await nftService.indexNFTsOnSearchEngine([savedNFT])
             }
             logger.log(`
             Evt Saved: ${OSSeaportEventName.OrderFulfilled} for orderHash ${orderHash},
@@ -810,9 +813,10 @@ const keepAlive = ({
               contract, tokenId, chainId.toString(),
             )
             if (wallet) {
-              await nftService.updateNFTOwnershipAndMetadata(
+              const savedNFT = await nftService.updateNFTOwnershipAndMetadata(
                 obj, wallet.userId, wallet.id, chainId.toString(),
               )
+              if (savedNFT) await nftService.indexNFTsOnSearchEngine([savedNFT])
             }
 
             logger.log(`
@@ -931,9 +935,10 @@ const keepAlive = ({
               contract, tokenId, chainId.toString(),
             )
             if (wallet) {
-              await nftService.updateNFTOwnershipAndMetadata(
+              const savedNFT = await nftService.updateNFTOwnershipAndMetadata(
                 obj, wallet.userId, wallet.id, chainId.toString(),
               )
+              if (savedNFT) await nftService.indexNFTsOnSearchEngine([savedNFT])
             }
             logger.log(`
               Evt Saved: ${X2Y2EventName.EvInventory} for orderHash ${orderHash}
