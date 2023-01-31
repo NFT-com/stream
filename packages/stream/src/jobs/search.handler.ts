@@ -1,4 +1,5 @@
 import { Job } from 'bull'
+import { MoreThanOrEqual } from 'typeorm'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -13,7 +14,10 @@ export const searchListingIndexHandler = async (job: Job): Promise<boolean> => {
   try {
     const listings: entity.TxActivity[] = await repos
       .txActivity
-      .findActivitiesNotExpired(defs.ActivityType.Listing, new Date(job.timestamp))
+      .find({ where: {
+        activityType: defs.ActivityType.Listing,
+        updatedAt: MoreThanOrEqual(new Date(job.timestamp)),
+      } })
     if (listings) {
       const nftsWithListingUpdates = await utils.getNFTsFromTxActivities(listings)
       await seService.indexNFTs(nftsWithListingUpdates)

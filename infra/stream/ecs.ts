@@ -319,6 +319,10 @@ const createEcsTaskDefinition = (
                   Value: process.env.HCS_PRIVATE_KEY,
                 },
                 {
+                  Name: 'HCS_ENABLED',
+                  Value: process.env.HCS_ENABLED,
+                },
+                {
                   Name: 'ZMOK_API_URL',
                   Value: process.env.ZMOK_API_URL,
                 },
