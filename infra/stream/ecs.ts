@@ -268,6 +268,10 @@ const createEcsTaskDefinition = (
               Value: process.env.HCS_TOPIC_ID,
             },
             {
+              Name: 'HCS_ENABLED',
+              Value: process.env.HCS_ENABLED,
+            },
+            {
               Name: 'HCS_ACCOUNT_ID',
               Value: process.env.HCS_ACCOUNT_ID,
             },
