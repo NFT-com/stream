@@ -86,6 +86,7 @@ runs:
         MNEMONIC: ${{ fromJSON(inputs.secrets).MNEMONIC }}
         MNEMONIC_RINKEBY: ${{ fromJSON(inputs.secrets).MNEMONIC_RINKEBY }}
         HCS_TOPIC_ID: ${{ fromJSON(inputs.secrets).HCS_TOPIC_ID }}
+        HCS_ENABLED: ${{ fromJSON(inputs.secrets).HCS_ENABLED }}
         HCS_ACCOUNT_ID: ${{ fromJSON(inputs.secrets).HCS_ACCOUNT_ID }}
         HCS_PRIVATE_KEY: ${{ fromJSON(inputs.secrets).HCS_PRIVATE_KEY }}
         ZMOK_API_URL: ${{ fromJSON(inputs.secrets).ZMOK_API_URL }}
