@@ -367,9 +367,10 @@ const fulfillOrCancelLooksrare = async (
       // marking everything as executed for now - need to see if cancellations can be separated
       // it serves the purpose for now since all the orders become invalid
       // https://looksrare.dev/reference/orders-schema
-      await repositories.txActivity.update({
+      const updateFilter  = {
         id: In(orderIdMap),
-      }, {
+      } as any
+      await repositories.txActivity.update(updateFilter, {
         status: defs.ActivityStatus.Executed,
       })
     }
@@ -517,13 +518,14 @@ export const orderReconciliationHandler = async (job: Job): Promise<void> =>  {
     chainId,
     // updatedAt: MoreThanOrEqual(updatedAt),
   }
-  const unexpiredListingsCount: number = await repositories.txOrder.count({
+  const countFilter = {
     activity: {
       ...expirationFilters,
     },
     orderType: defs.ActivityType.Listing,
     chainId,
-  })
+  } as any
+  const unexpiredListingsCount: number = await repositories.txOrder.count(countFilter)
   logger.log(`current valid listing count: ${unexpiredListingsCount}`)
 
   for (let i=0; i < unexpiredListingsCount; i+= CALL_SAMPLE_BATCH_SIZE) {
