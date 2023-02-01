@@ -8,7 +8,7 @@ import { cache, CacheKeys } from '../service/cache'
 
 const logger = _logger.Factory(_logger.Context.Bull)
 
-const NFTPORT_EXPIRE_DURATION = 10 * 60000 // 10 min
+const NFTPORT_EXPIRE_DURATION = 3 * 60 * 60000 // 10 min
 
 export const syncTxsFromNFTPortHandler = async (job: Job): Promise<void> => {
   logger.log('initiated transactions sync from NFTPort')
