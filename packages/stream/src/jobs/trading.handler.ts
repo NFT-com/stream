@@ -484,8 +484,8 @@ const listenMatchEvents = async (
     const promises = logs.map(async (log) => {
       try {
         const event = eventIface.parseLog(log)
-        const makerHash = log.topics[1]
-        const takerHash = log.topics[2]
+        const sellHash = log.topics[1]
+        const buyHash = log.topics[2]
         const privateSale = event.args.privateSale
         const auctionType = event.args.auctionType == 0 ?
           defs.AuctionType.FixedPrice :
@@ -498,7 +498,7 @@ const listenMatchEvents = async (
         let txListingOrder, txBidOrder
         txListingOrder = await repositories.txOrder.findOne({
           where: {
-            orderHash: makerHash,
+            orderHash: sellHash,
             exchange: defs.ExchangeType.NFTCOM,
             orderType: defs.ActivityType.Listing,
             protocol: defs.ProtocolType.NFTCOM,
@@ -507,7 +507,7 @@ const listenMatchEvents = async (
         })
         txBidOrder = await repositories.txOrder.findOne({
           where: {
-            orderHash: takerHash,
+            orderHash: buyHash,
             exchange: defs.ExchangeType.NFTCOM,
             orderType: defs.ActivityType.Bid,
             protocol: defs.ProtocolType.NFTCOM,
@@ -518,7 +518,7 @@ const listenMatchEvents = async (
         if (!txListingOrder) {
           const activity = await activityBuilder(
             defs.ActivityType.Listing,
-            makerHash,
+            sellHash,
             '0x',
             chainId.toString(),
             [],
@@ -528,7 +528,7 @@ const listenMatchEvents = async (
           )
           txListingOrder = await repositories.txOrder.save({
             activity,
-            orderHash: makerHash,
+            orderHash: sellHash,
             exchange: defs.ExchangeType.NFTCOM,
             orderType: defs.ActivityType.Listing,
             protocol: defs.ProtocolType.NFTCOM,
@@ -553,10 +553,10 @@ const listenMatchEvents = async (
           })
         }
 
-        if (!txBidOrder && takerHash != '0x0000000000000000000000000000000000000000000000000000000000000000') {
+        if (!txBidOrder && buyHash != '0x0000000000000000000000000000000000000000000000000000000000000000') {
           const activity = await activityBuilder(
             defs.ActivityType.Bid,
-            takerHash,
+            buyHash,
             '0x',
             chainId.toString(),
             [],
@@ -566,7 +566,7 @@ const listenMatchEvents = async (
           )
           txBidOrder = await repositories.txOrder.save({
             activity,
-            orderHash: takerHash,
+            orderHash: buyHash,
             exchange: defs.ExchangeType.NFTCOM,
             orderType: defs.ActivityType.Bid,
             protocol: defs.ProtocolType.NFTCOM,
@@ -612,7 +612,7 @@ const listenMatchEvents = async (
           const activity = await activityBuilder(
             defs.ActivityType.Swap,
             log.transactionHash,
-            txListingOrder.makerAddress,
+            '0x',
             chainId.toString(),
             listingActivity.nftId,
             listingActivity.nftContract,
@@ -636,6 +636,10 @@ const listenMatchEvents = async (
             chainId: chainId.toString(),
           })
 
+          await repositories.txActivity.updateOneById(listingActivity.id, {
+            status: defs.ActivityStatus.Executed,
+          })
+
           await repositories.txOrder.updateOneById(txListingOrder.id, {
             protocolData: {
               ...txListingOrder.protocolData,
@@ -651,6 +655,14 @@ const listenMatchEvents = async (
           })
 
           if (txBidOrder) {
+            const bidActivity = await repositories.txActivity.findOne({
+              where: {
+                activityTypeId: txBidOrder.orderHash,
+              },
+            })
+            await repositories.txActivity.updateOneById(bidActivity.id, {
+              status: defs.ActivityStatus.Executed,
+            })
             await repositories.txOrder.updateOneById(txBidOrder.id, {
               protocolData: {
                 ...txBidOrder.protocolData,
