@@ -277,7 +277,7 @@ const listenCancelEvents = async (
                 timestampFromSource,
                 expirationFromSource,
               )
-  
+
               try {
                 const cancel = await repositories.txCancel.save({
                   id: cancelHash,
@@ -805,9 +805,9 @@ const listenMatchTwoAEvents = async (
               chainId: chainId.toString(),
             },
           })
-  
+
           logger.info(`tx exists: ${txTransaction}`)
-  
+
           if (!txTransaction) {
             try {
               const timestampFromSource: number = (new Date().getTime())/1000
@@ -843,7 +843,7 @@ const listenMatchTwoAEvents = async (
                     end,
                   },
                 })
-      
+
                 logger.log(`tx saved: ${tx.id} for order ${txListingOrder.id}`)
               } catch (err) {
                 logger.error(`Tx err: ${err}`)
@@ -1263,6 +1263,15 @@ const listenBuyNowInfoEvents = async (
         },
       })
       if (txOrder) {
+        const activity = await repositories.txActivity.findOne({
+          where: {
+            activityTypeId: makerHash,
+            activityType: defs.ActivityType.Listing,
+          },
+        })
+        await repositories.txActivity.updateOneById(activity.id, {
+          status: defs.ActivityStatus.Executed,
+        })
         await repositories.txOrder.updateOneById(txOrder.id, {
           protocolData: {
             ...txOrder.protocolData,
