@@ -490,6 +490,10 @@ const createEcsTaskDefinition = (
                   Name: 'MULTICALL_CONTRACT',
                   Value: process.env.MULTICALL_CONTRACT,
                 },
+                {
+                  Name: 'ORDER_RECONCILIATION_PERIOD',
+                  Value: process.env.ORDER_RECONCILIATION_PERIOD,
+                },
               ],
               dependsOn: [
                 {
