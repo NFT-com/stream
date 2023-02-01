@@ -14,6 +14,7 @@ const logger = _logger.Factory(_logger.Context.NFTPort)
 const NFTPORT_API_KEY = process.env.NFTPORT_KEY
 type NFTPortDetailIncludes = 'rarity' | 'attributes'
 type NFTPortContractNFTIncludes = 'rarity' | 'metadata' | 'file_information' | 'last_sale_price' | 'all'
+export type NFTPortContractTxType = 'transfer' | 'mint' | 'burn' | 'sale' | 'list' | 'all'
 
 export interface NFTPortRarityAttributes {
   trait_type: string
@@ -170,3 +171,59 @@ export const retrieveContractNFTsNFTPort = async (
     return undefined
   }
 }
+
+export const retrieveContractTxsNFTPort = async (
+  contract: string,
+  chainId: string,
+  tokenId?: string,
+  continuation?: string,
+  type?: NFTPortContractTxType[],
+): Promise<any> => {
+  try {
+    logger.debug(`starting retrieveContractTxs: ${contract} ${chainId} - continuation: ${continuation}`)
+    const key = `NFTPORT_CONTRACT_TXS_${chainId}_${contract}_continuation_${continuation}`
+    const cachedData = await cache.get(key)
+    if (cachedData)
+      return JSON.parse(cachedData)
+    const chain = chainFromId(chainId)
+    if (!chain) return
+    const nftInterceptor = getNFTPortInterceptor(NFTPORT_API_BASE_URL)
+    let url = `/transactions/nfts/${contract}`
+
+    if (tokenId) {
+      url += `/${tokenId}`
+    }
+    let params = {
+      chain,
+      page_size: 50,
+    }
+
+    if (type?.length) {
+      params = {
+        ...params,
+        type,
+      } as any
+    }
+
+    if (continuation) {
+      params = {
+        ...params,
+        continuation,
+      } as any
+    }
+    const res = await nftInterceptor.get(url, {
+      params,
+      paramsSerializer: (params) => qs.stringify(params, { arrayFormat: 'repeat' }),
+    })
+    if (res && res?.data) {
+      await cache.set(key, JSON.stringify(res.data), 'EX', 60 * 10)
+      return res.data
+    } else {
+      return undefined
+    }
+  } catch (err) {
+    logger.error(`Error in retrieveContractNFTsNFTPort: ${err}`)
+    return undefined
+  }
+}
+

@@ -138,6 +138,7 @@ runs:
         DB_PORT: ${{ fromJSON(inputs.secrets).DB_PORT }}
         DB_USE_SSL: ${{ fromJSON(inputs.secrets).DB_USE_SSL }}
         MULTICALL_CONTRACT: ${{ fromJSON(inputs.secrets).MULTICALL_CONTRACT }}
+        ORDER_RECONCILIATION_PERIOD: ${{ fromJSON(inputs.secrets).ORDER_RECONCILIATION_PERIOD }}
         NODE_ENV: ${{ fromJSON(inputs.secrets).NODE_ENV }}
         DATADOG_API_KEY: ${{ fromJSON(inputs.secrets).DATADOG_API_KEY }}
       run: npm run deploy:stream
