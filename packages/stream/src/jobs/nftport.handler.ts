@@ -1,8 +1,10 @@
 import { Job } from 'bull'
 import { BigNumber } from 'ethers'
 
-import { nftPortService } from '@nftcom/gql/dist/packages/gql/src/service'
-import { _logger, helper } from '@nftcom/shared/src/index'
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import { nftPortService } from '@nftcom/gql/service'
+import { _logger, helper } from '@nftcom/shared'
 
 import { cache, CacheKeys } from '../service/cache'
 
