@@ -13,7 +13,7 @@ import { nftExternalOrders } from './sync.handler'
 import { syncTrading } from './trading.handler'
 
 const BULL_MAX_REPEAT_COUNT = parseInt(process.env.BULL_MAX_REPEAT_COUNT) || 250
-const ORDER_RECONCILIATION_PERIOD = parseInt(process.env.ORDER_RECONCILIATION_PERIOD) || 14400 // default is once every day
+const ORDER_RECONCILIATION_PERIOD = parseInt(process.env.ORDER_RECONCILIATION_PERIOD) || 1440 // default is once every day
 const logger = _logger.Factory(_logger.Context.Bull)
 
 export const redis = {
