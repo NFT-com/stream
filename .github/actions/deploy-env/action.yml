@@ -86,6 +86,7 @@ runs:
         MNEMONIC: ${{ fromJSON(inputs.secrets).MNEMONIC }}
         MNEMONIC_RINKEBY: ${{ fromJSON(inputs.secrets).MNEMONIC_RINKEBY }}
         HCS_TOPIC_ID: ${{ fromJSON(inputs.secrets).HCS_TOPIC_ID }}
+        HCS_ENABLED: ${{ fromJSON(inputs.secrets).HCS_ENABLED }}
         HCS_ACCOUNT_ID: ${{ fromJSON(inputs.secrets).HCS_ACCOUNT_ID }}
         HCS_PRIVATE_KEY: ${{ fromJSON(inputs.secrets).HCS_PRIVATE_KEY }}
         ZMOK_API_URL: ${{ fromJSON(inputs.secrets).ZMOK_API_URL }}
@@ -136,7 +137,8 @@ runs:
         PORT: ${{ fromJSON(inputs.secrets).PORT }}
         DB_PORT: ${{ fromJSON(inputs.secrets).DB_PORT }}
         DB_USE_SSL: ${{ fromJSON(inputs.secrets).DB_USE_SSL }}
-        NODE_ENV: ${{ fromJSON(inputs.secrets).NODE_ENV }}
         MULTICALL_CONTRACT: ${{ fromJSON(inputs.secrets).MULTICALL_CONTRACT }}
         ORDER_RECONCILIATION_PERIOD: ${{ fromJSON(inputs.secrets).ORDER_RECONCILIATION_PERIOD }}
+        NODE_ENV: ${{ fromJSON(inputs.secrets).NODE_ENV }}
+        DATADOG_API_KEY: ${{ fromJSON(inputs.secrets).DATADOG_API_KEY }}
       run: npm run deploy:stream

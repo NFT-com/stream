@@ -1,3 +1,9 @@
+// Tracing needs to be set up early to ensure everything gets picked up
+import { setupTracing } from './tracer'
+if (['development','staging','production'].includes(process.env.NODE_ENV)) {
+  setupTracing(`${process.env.NODE_ENV}-gql`)
+}
+
 import Bull from 'bull'
 import express from 'express'
 import kill from 'kill-port'
@@ -20,11 +26,11 @@ const chainId: string = process.env.CHAIN_ID || '5'
 logger.log(`Chain Id for environment: ${chainId}`)
 
 const upload = multer({ storage: multer.memoryStorage(),
-  limit: {
+  limits: {
     fields: 3,
   },
   fileFilter: (_req, file, cb) => {
-    file.mimetype === 'text/csv' ? cb(null, true) : cb(new Error('Only csvs are allowed'), false)
+    file.mimetype === 'text/csv' ? cb(null, true) : cb(new Error('Only csvs are allowed'))
   },
 })
 const app = express()

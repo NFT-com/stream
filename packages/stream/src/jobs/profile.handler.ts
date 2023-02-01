@@ -33,8 +33,8 @@ export const nftUpdateBatchProcessor = async (job: Job): Promise<boolean> => {
       }),
     )
     if (savedNFTs.length) {
-      await nftService.indexNFTsOnSearchEngine(savedNFTs)
       await nftService.updateCollectionForNFTs(savedNFTs)
+      await nftService.indexNFTsOnSearchEngine(savedNFTs)
     }
     return Promise.resolve(true)
   } catch (err) {
