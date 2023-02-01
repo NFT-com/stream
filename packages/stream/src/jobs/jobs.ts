@@ -5,7 +5,7 @@ import { _logger } from '@nftcom/shared'
 import { redisConfig } from '../config'
 import { collectionBannerImageSync, collectionIssuanceDateSync, collectionNameSync, collectionSyncHandler, nftRaritySyncHandler, raritySync, spamCollectionSyncHandler } from './collection.handler'
 import { getEthereumEvents } from './mint.handler'
-import { nftExternalOrdersOnDemand } from './order.handler'
+import { nftExternalOrdersOnDemand, orderReconciliationHandler } from './order.handler'
 import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
 import { profileGKOwnersHandler, saveProfileExpireAt, updateNFTsForProfilesHandler } from './profile.handler'
 import { searchListingIndexHandler } from './search.handler'
@@ -13,6 +13,7 @@ import { nftExternalOrders } from './sync.handler'
 import { syncTrading } from './trading.handler'
 
 const BULL_MAX_REPEAT_COUNT = parseInt(process.env.BULL_MAX_REPEAT_COUNT) || 250
+const ORDER_RECONCILIATION_PERIOD = parseInt(process.env.ORDER_RECONCILIATION_PERIOD) || 14400 // default is once every day
 const logger = _logger.Factory(_logger.Context.Bull)
 
 export const redis = {
@@ -39,7 +40,8 @@ export enum QUEUE_TYPES {
   SAVE_PROFILE_EXPIRE_AT = 'SAVE_PROFILE_EXPIRE_AT',
   SYNC_TRADING = 'SYNC_TRADING',
   SEARCH_ENGINE_LISTINGS_UPDATE = 'SEARCH_ENGINE_LISTINGS_UPDATE',
-  SYNC_PROFILE_GK_OWNERS = 'SYNC_PROFILE_GK_OWNERS'
+  SYNC_PROFILE_GK_OWNERS = 'SYNC_PROFILE_GK_OWNERS',
+  RECONCILE_ORDERS = 'RECONCILE_ORDERS'
 }
 
 export const queues = new Map<string, Bull.Queue>()
@@ -219,6 +221,13 @@ const createQueues = (): Promise<void> => {
         redis,
       }))
 
+    // reconcile exchange orders
+    queues.set(QUEUE_TYPES.RECONCILE_ORDERS, new Bull(
+      QUEUE_TYPES.RECONCILE_ORDERS, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
     resolve()
   })
 }
@@ -376,7 +385,7 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
       case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
         return queues.get(QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE)
           .add({
-            FETCH_EXTERNAL_ORDERS_ON_DEMAND: QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE,
+            FETCH_COLLECTION_ISSUANCE_DATE: QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE,
             chainId: process.env.CHAIN_ID,
           }, {
             attempts: 5,
@@ -397,6 +406,17 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             removeOnFail: true,
             repeat: { every: 10 * 60000 },
             jobId: 'search_engine_listings_update',
+          })
+      case QUEUE_TYPES.RECONCILE_ORDERS:
+        return queues.get(QUEUE_TYPES.RECONCILE_ORDERS)
+          .add({
+            chainId: process.env.CHAIN_ID,
+          }, {
+            removeOnComplete: true,
+            removeOnFail: true,
+            // will run every week?
+            repeat: { every: ORDER_RECONCILIATION_PERIOD * 60000 },
+            jobId: 'reconcile_orders',
           })
       default:
         return queues.get(chainId).add({ chainId }, {
@@ -463,6 +483,9 @@ const listenToJobs = async (): Promise<void> => {
       break
     case QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE:
       queue.process(searchListingIndexHandler)
+      break
+    case QUEUE_TYPES.RECONCILE_ORDERS:
+      queue.process(orderReconciliationHandler)
       break
     default:
       queue.process(getEthereumEvents)

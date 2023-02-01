@@ -1,18 +1,25 @@
 
 import { Job } from 'bull'
+import { ethers } from 'ethers'
+import { In, MoreThan } from 'typeorm'
 
+import { Result } from '@ethersproject/abi'
+import { Contract } from '@ethersproject/contracts'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import { looksrareService, openseaService, x2y2Service } from '@nftcom/gql/service'
-import { _logger, db, entity, helper } from '@nftcom/shared'
+import { core, looksrareService, openseaService, x2y2Service } from '@nftcom/gql/service'
+import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
 import { cache, CacheKeys, removeExpiredTimestampedZsetMembers, ttlForTimestampedZsetMembers } from '../service/cache'
+import { provider } from '../utils/logParser/eventLogParser'
 
 // exported for tests
 export const repositories = db.newRepositories()
 const logger = _logger.Factory(_logger.Context.Bull)
 
 const MAX_CHUNK_SIZE = 500
+const CALL_SAMPLE_BATCH_SIZE = 10000
+const CALL_BATCH_SIZE = 1000
 
 // commented for future reference
 
@@ -282,4 +289,329 @@ export const nftExternalOrdersOnDemand = async (job: Job): Promise<void> => {
   } catch (err) {
     logger.error(`Error in nftExternalOrdersOnDemand Job: ${err}`)
   }
+}
+
+enum OrderStatusCallType {
+  OPENSEA = 'getOrderStatus',
+  LOOKSRARE = 'isUserOrderNonceExecutedOrCancelled',
+  X2Y2 = 'inventoryStatus'
+}
+
+interface OSCallResponse {
+  isValidated: boolean
+  isCancelled: boolean
+  totalFilled: number
+  totalSize: number
+}
+
+const fulfillOrCancelOpenSea = async (
+  orderHash: string,
+  callResponse: OSCallResponse): Promise<void> => {
+  let status: defs.ActivityStatus
+  if (callResponse?.isCancelled) {
+    status = defs.ActivityStatus.Cancelled
+  } else {
+    if (
+      callResponse?.isValidated
+        && callResponse?.totalFilled
+        && callResponse?.totalSize
+    ) {
+      const totalFilled: number = helper.bigNumberToNumber(callResponse?.totalFilled)
+      const totalSize: number = helper.bigNumberToNumber(callResponse?.totalSize)
+      const filledRatio: number = totalFilled/totalSize
+      if (filledRatio === 1) {
+        status = defs.ActivityStatus.Executed
+      }
+    }
+  }
+
+  if (status) {
+    await repositories.txActivity.update({
+      activityType: defs.ActivityType.Listing,
+      status: defs.ActivityStatus.Valid,
+      activityTypeId: orderHash,
+    }
+    , {
+      status,
+    })
+  }
+}
+
+const fulfillOrCancelLooksrare = async (
+  makerAddress: string,
+  nonce: string,
+  isExecutedOrCancelled: boolean,
+): Promise<void> => {
+  if (isExecutedOrCancelled) {
+    const orders: Partial<entity.TxOrder>[] = await repositories.txOrder.find({
+      relations: ['activity'],
+      where: {
+        makerAddress: helper.checkSum(makerAddress),
+        nonce: Number(nonce),
+        exchange: defs.ExchangeType.LooksRare,
+        activity: {
+          activityType: defs.ActivityType.Listing,
+          status: defs.ActivityStatus.Valid,
+        },
+      },
+      select: {
+        orderHash: true,
+      },
+    })
+  
+    let orderIdMap: string[] = []
+    if (orders.length) {
+      orderIdMap = orders.map((order: Partial<entity.TxOrder>) => order.activity.id)
+    }
+    if (orderIdMap.length) {
+      // marking everything as executed for now - need to see if cancellations can be separated
+      // it serves the purpose for now since all the orders become invalid
+      // https://looksrare.dev/reference/orders-schema
+      await repositories.txActivity.update({
+        id: In(orderIdMap),
+      }, {
+        status: defs.ActivityStatus.Executed,
+      })
+    }
+  }
+}
+
+const fulfillOrCancelX2Y2 = async (
+  orderHash: string,
+  callResponse: number,
+): Promise<void> => {
+  let status: defs.ActivityStatus
+  if (callResponse === 2) {
+    status = defs.ActivityStatus.Executed
+  } else if (callResponse === 3) {
+    status = defs.ActivityStatus.Cancelled
+  }
+
+  if (status) {
+    await repositories.txActivity.update({
+      activityType: defs.ActivityType.Listing,
+      status: defs.ActivityStatus.Valid,
+      activityTypeId: orderHash,
+    }
+    , {
+      status,
+    })
+  }
+}
+
+/**
+ * Fetches information about pools and return as `Pair` array using multicall contract.
+ * @param calls 'Call' array
+ * @param abi
+ * @param chainId
+ * based on:
+ * - https://github.com/mds1/multicall#deployments
+ * - https://github.com/sushiswap/sushiswap-sdk/blob/canary/src/constants/addresses.ts#L323
+ * - https://github.com/joshstevens19/ethereum-multicall#multicall-contracts
+ */
+
+const fetchDataUsingMulticallAndReconcile = async (
+  calls: Array<core.Call>,
+  abi: any[],
+  chainId: string,
+): Promise<Array<Result | undefined>> => {
+  try {
+    const multicall2ABI = contracts.Multicall2ABI()
+    // 1. create contract using multicall contract address and abi...
+    const multicallAddress = process.env.MULTICALL_CONTRACT
+    const multicallContract = new Contract(
+      multicallAddress.toLowerCase(),
+      multicall2ABI,
+      provider(Number(chainId), true),
+    )
+    const abiInterface = new ethers.utils.Interface(abi)
+    const callData = calls.map((call) =>
+    {
+      return [
+        call.contract.toLowerCase(),
+        abiInterface.encodeFunctionData(call.name, call.params),
+      ]})
+    // 2. get bytes array from multicall contract by process aggregate method...
+    const results: { success: boolean; returnData: string }[] =
+      await multicallContract.tryAggregate(false, callData)
+    let openSeaPromiseArray = [], looksrarePromiseArray = [], x2y2PromiseArray = []
+    // 3. decode bytes array to useful data array...
+    for (let i=0; i < results.length; i++) {
+      const result = results?.[i]
+      const callName: string = calls[i]?.name
+      const callParams: any = calls[i].params
+      if (result.returnData !== '0x') {
+        const resultDecoded = abiInterface.decodeFunctionResult(
+          callName,
+          result.returnData,
+        )
+        switch (callName) {
+        case OrderStatusCallType.OPENSEA:
+          // eslint-disable-next-line
+            const [ isValidated, isCancelled, totalFilled, totalSize ] = resultDecoded
+          openSeaPromiseArray.push(fulfillOrCancelOpenSea(callParams?.[0],
+            { isValidated,
+              isCancelled,
+              totalFilled,
+              totalSize,
+            },
+          ),
+          )
+          break
+        case OrderStatusCallType.LOOKSRARE:
+          looksrarePromiseArray.push(fulfillOrCancelLooksrare(callParams?.[0],
+            callParams?.[1],
+            resultDecoded?.[0],
+          ))
+          break
+        case OrderStatusCallType.X2Y2:
+          x2y2PromiseArray.push(fulfillOrCancelX2Y2(callParams?.[0],
+            resultDecoded?.[0],
+          ),
+          )
+          break
+        default:
+          break
+        }
+        if (openSeaPromiseArray.length > CALL_BATCH_SIZE) {
+          await Promise.all(openSeaPromiseArray)
+          openSeaPromiseArray = []
+        }
+        if (looksrarePromiseArray.length > CALL_BATCH_SIZE) {
+          await Promise.all(looksrarePromiseArray)
+          looksrarePromiseArray = []
+        }
+        if (x2y2PromiseArray.length > CALL_BATCH_SIZE) {
+          await Promise.all(x2y2PromiseArray)
+          x2y2PromiseArray = []
+        }
+      }
+    }
+    if (openSeaPromiseArray.length) {
+      await Promise.all(openSeaPromiseArray)
+      openSeaPromiseArray = []
+    }
+    if (looksrarePromiseArray.length > CALL_BATCH_SIZE) {
+      await Promise.all(looksrarePromiseArray)
+      looksrarePromiseArray = []
+    }
+    if (x2y2PromiseArray.length) {
+      await Promise.all(x2y2PromiseArray)
+      x2y2PromiseArray = []
+    }
+  } catch (error) {
+    logger.error(
+      `Failed to fetch data using multicall: ${error}`,
+    )
+    return []
+  }
+}
+
+export const orderReconciliationHandler = async (job: Job): Promise<void> =>  {
+  logger.log('initiated order reconciliation process')
+  const chainId: string = job.data.chainId || process.env.CHAIN_ID
+  const expirationFilters = {
+    activityType: defs.ActivityType.Listing,
+    status: defs.ActivityStatus.Valid,
+    expiration: MoreThan(new Date()),
+    chainId,
+    // updatedAt: MoreThanOrEqual(updatedAt),
+  }
+  const unexpiredListingsCount: number = await repositories.txOrder.count({
+    activity: {
+      ...expirationFilters,
+    },
+    orderType: defs.ActivityType.Listing,
+    chainId,
+  })
+  logger.log(`current valid listing count: ${unexpiredListingsCount}`)
+
+  for (let i=0; i < unexpiredListingsCount; i+= CALL_SAMPLE_BATCH_SIZE) {
+    const unexpiredListingBatch: Partial<entity.TxOrder>[] = await repositories.txOrder.find({
+      relations: ['activity'],
+      where: {
+        activity: {
+          ...expirationFilters,
+        },
+      },
+      skip: i,
+      take: CALL_SAMPLE_BATCH_SIZE,
+      select: {
+        id: true,
+        orderHash: true,
+        exchange: true,
+        protocolData: true,
+        makerAddress: true,
+      },
+    })
+
+    if (unexpiredListingBatch?.length) {
+      let seaportCalls = [], looksrareCalls = [], x2y2Calls = []
+      const seaportAbi = contracts.openseaSeaportABI()
+      const looksrareAbi = contracts.looksrareExchangeABI()
+      const x2y2Abi = contracts.x2y2ABI()
+  
+      for (const listing of unexpiredListingBatch) {
+        switch (listing.exchange) {
+        case defs.ExchangeType.OpenSea:
+          seaportCalls.push({
+            contract: contracts.openseaSeaportAddress(chainId),
+            name: 'getOrderStatus',
+            params: [listing.orderHash],
+          })
+          break
+        case defs.ExchangeType.LooksRare:
+          if (listing?.protocolData?.nonce !== null && listing?.protocolData?.nonce !== undefined) {
+            looksrareCalls.push({
+              contract: contracts.looksrareExchangeAddress(chainId),
+              name: 'isUserOrderNonceExecutedOrCancelled',
+              params: [listing.makerAddress, listing.protocolData?.nonce],
+            })
+          }
+          break
+        case defs.ExchangeType.X2Y2:
+          // 0 -> not fulfilled, 1 -> auction, 2 -> fulfilled, 3 -> cancelled, 4 -> refunded
+          x2y2Calls.push({
+            contract: contracts.x2y2Address(chainId),
+            name: 'inventoryStatus',
+            params: [listing.orderHash],
+          })
+          break
+        default:
+          break
+        }
+  
+        if (seaportCalls.length >= CALL_BATCH_SIZE) {
+          await fetchDataUsingMulticallAndReconcile(seaportCalls, seaportAbi, chainId)
+          seaportCalls = []
+        }
+  
+        if (looksrareCalls.length >= CALL_BATCH_SIZE) {
+          await fetchDataUsingMulticallAndReconcile(looksrareCalls, looksrareAbi, chainId)
+          looksrareCalls = []
+        }
+  
+        if (x2y2Calls.length >= CALL_BATCH_SIZE) {
+          await fetchDataUsingMulticallAndReconcile(x2y2Calls, x2y2Abi, chainId)
+          x2y2Calls = []
+        }
+      }
+  
+      if (seaportCalls.length) {
+        await fetchDataUsingMulticallAndReconcile(seaportCalls, seaportAbi, chainId)
+        seaportCalls = []
+      }
+  
+      if (looksrareCalls.length) {
+        await fetchDataUsingMulticallAndReconcile(looksrareCalls, looksrareAbi, chainId)
+        looksrareCalls = []
+      }
+  
+      if (x2y2Calls.length) {
+        await fetchDataUsingMulticallAndReconcile(x2y2Calls, x2y2Abi, chainId)
+        x2y2Calls = []
+      }
+    }
+  }
+  logger.log('completed order reconciliation process')
 }
