@@ -148,6 +148,7 @@ app.post('/syncTxsFromNFTPort', authMiddleWare, validate(syncTxsFromNFTPortSchem
       } else {
         // 5. check NFTPORT_SYNC_IN_PROGRESS cache if it's running more than MAXIMAM_PROCESS_AT_TIME collection or NFTs
         const processingCalls = await cache.zrevrangebyscore(`${CacheKeys.NFTPORT_SYNC_IN_PROGRESS}_${chainId}`, '+inf', '(0')
+        logger.info(`Number of processing calls to NFTPort : ${processingCalls.length}`)
         if (processingCalls.length < MAXIMAM_PROCESS_AT_TIME) {
           // 6. add collection or NFT to NFTPORT_SYNC_IN_PROGRESS
           await cache.zadd(`${CacheKeys.NFTPORT_SYNC_IN_PROGRESS}_${chainId}`, 'INCR', 1, key)
