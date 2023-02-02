@@ -91,8 +91,8 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
 
           try {
             if (nftPromiseArray?.length > 0) {
-              await nftService.indexNFTsOnSearchEngine(nftPromiseArray)
-              await repositories.nft.saveMany(nftPromiseArray, { chunk: 50 }) // temp chunk
+              const savedNFTs = await repositories.nft.saveMany(nftPromiseArray, { chunk: 50 }) // temp chunk
+              await nftService.indexNFTsOnSearchEngine(savedNFTs)
               logger.log(`saved ${queryParams}`)
             }
     
@@ -157,8 +157,8 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
           }
           try {
             if (nftPromiseArray?.length > 0) {
-              await nftService.indexNFTsOnSearchEngine(nftPromiseArray)
-              await repositories.nft.saveMany(nftPromiseArray, { chunk: 50 }) // temp chunk
+              const savedNFTs = await repositories.nft.saveMany(nftPromiseArray, { chunk: 50 }) // temp chunk
+              await nftService.indexNFTsOnSearchEngine(savedNFTs)
               logger.log(`saved ${queryParams}`)
             }
     
@@ -709,6 +709,7 @@ export const raritySync = async (job: Job): Promise<void> => {
                   // update NFT raritys
                   updatedNFT = {
                     ...updatedNFT,
+                    owner: nft?.owner || processNFT.owner,
                     rarity: nft?.rarity?.score || '0',
                     metadata: {
                       ...processNFT?.metadata,
@@ -826,6 +827,7 @@ export const nftRaritySyncHandler = async (job: Job): Promise<void> => {
           const updatedNFT: entity.NFT = await repositories.nft.updateOneById(nft.id, {
             rarity,
             metadata: { ...nft.metadata, traits },
+            owner: nftPortNFT?.owner || nft.owner,
           })
 
           await nftService.indexNFTsOnSearchEngine([updatedNFT])
