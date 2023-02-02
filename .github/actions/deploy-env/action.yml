@@ -141,4 +141,5 @@ runs:
         ORDER_RECONCILIATION_PERIOD: ${{ fromJSON(inputs.secrets).ORDER_RECONCILIATION_PERIOD }}
         NODE_ENV: ${{ fromJSON(inputs.secrets).NODE_ENV }}
         DATADOG_API_KEY: ${{ fromJSON(inputs.secrets).DATADOG_API_KEY }}
+        MAX_BATCHES_NFTPORT: ${{ fromJSON(inputs.secrets).MAX_BATCHES_NFTPORT }}
       run: npm run deploy:stream
