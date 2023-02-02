@@ -41,6 +41,15 @@ const subQueueBaseOptions: Bull.JobOptions = {
   },
 }
 
+const checkSumOwner = (owner: string): string | undefined => {
+  try {
+    return helper.checkSum(owner)
+  } catch (err) {
+    logger.error(err, `Unable to checkSum owner: ${owner}`)
+  }
+  return
+}
+
 export const nftSyncHandler = async (job: Job): Promise<void> => {
   const { contract, chainId, startTokenParam } = job.data
   logger.log(`nft sync handler process started for: ${contract}, chainId: ${chainId}`)
@@ -705,11 +714,12 @@ export const raritySync = async (job: Job): Promise<void> => {
                   })
   
                 if (processNFT?.id) {
+                  const csOwner = checkSumOwner(nft.owner)
                   let updatedNFT: Partial<entity.NFT> = { id: processNFT?.id, ...processNFT }
                   // update NFT raritys
                   updatedNFT = {
                     ...updatedNFT,
-                    owner: nft?.owner ? helper.checkSum(nft.owner) : processNFT.owner,
+                    owner: csOwner || processNFT.owner,
                     rarity: nft?.rarity?.score || '0',
                     metadata: {
                       ...processNFT?.metadata,
@@ -824,10 +834,11 @@ export const nftRaritySyncHandler = async (job: Job): Promise<void> => {
             traits = nftTraitBuilder(traits, nftPortNFT?.nft?.attributes)
           }
 
+          const csOwner = checkSumOwner(nftPortNFT.owner)
           const updatedNFT: entity.NFT = await repositories.nft.updateOneById(nft.id, {
             rarity,
             metadata: { ...nft.metadata, traits },
-            owner: nftPortNFT?.owner ? helper.checkSum(nftPortNFT.owner) : nft.owner,
+            owner: csOwner || nft.owner,
           })
 
           await nftService.indexNFTsOnSearchEngine([updatedNFT])

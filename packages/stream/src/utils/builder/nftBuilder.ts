@@ -38,16 +38,26 @@ export const collectionEntityBuilder = async (
   }
 }
 
+const checkSumOwner = (owner: string): string | undefined => {
+  try {
+    return helper.checkSum(owner)
+  } catch (err) {
+    logger.error(err, `Unable to checkSum owner: ${owner}`)
+  }
+  return
+}
+
 // for NftPort CryptoPunk specifically
 export const nftEntityBuilderCryptoPunks = (
   nft: NFT_NftPort,
   chainId: string,
 ): entity.NFT => {
+  const csOwner = checkSumOwner(nft.owner)
   return {
     contract: helper.checkSum(nft.contract_address),
     tokenId: helper.bigNumberToHex(nft.token_id),
     type: nftService.getNftType(undefined, nft), // skip alchemy, pass in nftport nft
-    owner: nft.owner && helper.checkSum(nft.owner),
+    owner: csOwner,
     metadata: {
       name: nft?.metadata?.name,
       description: '',
@@ -62,11 +72,12 @@ export const nftEntityBuilder = (
   nft: NFTAlchemy,
   chainId: string,
 ): entity.NFT => {
+  const csOwner = checkSumOwner(nft.owner)
   return {
     contract: helper.checkSum(nft.contract.address),
     tokenId: helper.bigNumberToHex(nft.id.tokenId),
     type: nftService.getNftType(nft),
-    owner: nft.owner && helper.checkSum(nft.owner),
+    owner: csOwner,
     metadata: {
       name: nft?.title || nft?.metadata?.name,
       description: nftService.getNftDescription(nft),
