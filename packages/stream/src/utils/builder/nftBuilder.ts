@@ -47,7 +47,7 @@ export const nftEntityBuilderCryptoPunks = (
     contract: helper.checkSum(nft.contract_address),
     tokenId: helper.bigNumberToHex(nft.token_id),
     type: nftService.getNftType(undefined, nft), // skip alchemy, pass in nftport nft
-    owner: nft.owner,
+    owner: nft.owner && helper.checkSum(nft.owner),
     metadata: {
       name: nft?.metadata?.name,
       description: '',
@@ -66,7 +66,7 @@ export const nftEntityBuilder = (
     contract: helper.checkSum(nft.contract.address),
     tokenId: helper.bigNumberToHex(nft.id.tokenId),
     type: nftService.getNftType(nft),
-    owner: nft.owner,
+    owner: nft.owner && helper.checkSum(nft.owner),
     metadata: {
       name: nft?.title || nft?.metadata?.name,
       description: nftService.getNftDescription(nft),

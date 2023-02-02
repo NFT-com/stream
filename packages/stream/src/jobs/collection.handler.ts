@@ -709,7 +709,7 @@ export const raritySync = async (job: Job): Promise<void> => {
                   // update NFT raritys
                   updatedNFT = {
                     ...updatedNFT,
-                    owner: nft?.owner || processNFT.owner,
+                    owner: nft?.owner ? helper.checkSum(nft.owner) : processNFT.owner,
                     rarity: nft?.rarity?.score || '0',
                     metadata: {
                       ...processNFT?.metadata,
@@ -827,7 +827,7 @@ export const nftRaritySyncHandler = async (job: Job): Promise<void> => {
           const updatedNFT: entity.NFT = await repositories.nft.updateOneById(nft.id, {
             rarity,
             metadata: { ...nft.metadata, traits },
-            owner: nftPortNFT?.owner || nft.owner,
+            owner: nftPortNFT?.owner ? helper.checkSum(nftPortNFT.owner) : nft.owner,
           })
 
           await nftService.indexNFTsOnSearchEngine([updatedNFT])
