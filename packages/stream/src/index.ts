@@ -131,23 +131,27 @@ app.post('/syncTxsFromNFTPort', authMiddleWare, validate(syncTxsFromNFTPortSchem
     const key = tokenId ? helper.checkSum(address) + '::' + BigNumber.from(tokenId).toHexString() : helper.checkSum(address)
     const recentlyRefreshed: string = await cache.zscore(`${CacheKeys.NFTPORT_RECENTLY_SYNCED}_${chainId}`, key)
     if (!recentlyRefreshed) {
-      // 1. add to cache list
-      await cache.zadd(`${CacheKeys.NFTPORT_TO_SYNC}_${chainId}`, 'INCR', 1, key)
-      // 2. remove expired collections and NFTS from the NFTPORT_RECENTLY_SYNCED cache
+      // 1. remove expired collections and NFTS from the NFTPORT_RECENTLY_SYNCED cache
       await removeExpiredTimestampedZsetMembers(`${CacheKeys.NFTPORT_RECENTLY_SYNCED}_${chainId}`)
-      // 3. check if syncing is in progress
+      // 2. check if collection or NFT is in NFTPORT_TO_SYNC cache
+      const inTodo = await cache.zscore(`${CacheKeys.NFTPORT_TO_SYNC}_${chainId}`, key)
+      if (!inTodo) {
+        // 3. add to cache list
+        await cache.zadd(`${CacheKeys.NFTPORT_TO_SYNC}_${chainId}`, 'INCR', 1, key)
+      }
+      // 4. check if syncing is in progress
       const inProgress = await cache.zscore(`${CacheKeys.NFTPORT_SYNC_IN_PROGRESS}_${chainId}`, key)
       if (inProgress) {
         res.status(200).send({
           message: 'Syncing transactions is in progress.',
         })
       } else {
-        // 4. check NFTPORT_SYNC_IN_PROGRESS cache if it's running more than MAXIMAM_PROCESS_AT_TIME collection or NFTs
+        // 5. check NFTPORT_SYNC_IN_PROGRESS cache if it's running more than MAXIMAM_PROCESS_AT_TIME collection or NFTs
         const processingCalls = await cache.zrevrangebyscore(`${CacheKeys.NFTPORT_SYNC_IN_PROGRESS}_${chainId}`, '+inf', '(0')
         if (processingCalls.length < MAXIMAM_PROCESS_AT_TIME) {
-          // 5. add collection or NFT to NFTPORT_SYNC_IN_PROGRESS
+          // 6. add collection or NFT to NFTPORT_SYNC_IN_PROGRESS
           await cache.zadd(`${CacheKeys.NFTPORT_SYNC_IN_PROGRESS}_${chainId}`, 'INCR', 1, key)
-          // 6. sync txs for collection + timestamp
+          // 7. sync txs for collection + timestamp
           const jobId = `sync_txs_nftport:${Date.now()}`
           queues.get(QUEUE_TYPES.SYNC_TXS_NFTPORT)
             .add({
