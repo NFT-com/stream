@@ -126,7 +126,7 @@ app.get('/stopSync', authMiddleWare, async (_req, res) => {
 
 app.post('/syncTxsFromNFTPort', authMiddleWare, validate(syncTxsFromNFTPortSchema), async (_req, res) => {
   try {
-    const MAXIMAM_PROCESS_AT_TIME = process.env.MAX_BATCHES_NFTPORT
+    const MAXIMAM_PROCESS_AT_TIME = Number(process.env.MAX_BATCHES_NFTPORT)
     const { address, tokenId } = _req.body
     const key = tokenId ? helper.checkSum(address) + '::' + BigNumber.from(tokenId).toHexString() : helper.checkSum(address)
     const recentlyRefreshed: string = await cache.zscore(`${CacheKeys.NFTPORT_RECENTLY_SYNCED}_${chainId}`, key)
