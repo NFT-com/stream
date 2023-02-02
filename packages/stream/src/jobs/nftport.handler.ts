@@ -10,7 +10,7 @@ import { cache, CacheKeys } from '../service/cache'
 
 const logger = _logger.Factory(_logger.Context.Bull)
 
-const NFTPORT_EXPIRE_DURATION = 3 * 60 * 60000 // 10 min
+const NFTPORT_EXPIRE_DURATION = 3 * 60 * 60000 // 3 hours
 
 export const syncTxsFromNFTPortHandler = async (job: Job): Promise<void> => {
   logger.log('initiated transactions sync from NFTPort')
@@ -18,9 +18,10 @@ export const syncTxsFromNFTPortHandler = async (job: Job): Promise<void> => {
   const tokenId = job.data.tokenId
   const endpoint = job.data.endpoint
   const chainId: string = job.data.chainId || process.env.chainId || '5'
+  logger.info(`address : ${address}, tokenId: ${tokenId}, endpoint: ${endpoint}`)
   try {
     const key = tokenId ? helper.checkSum(address) + '::' + BigNumber.from(tokenId).toHexString() : helper.checkSum(address)
-    const chain = chainId === '1' ? 'ethereum' : 'goerli'
+    const chain = (chainId === '1' || chainId === '5') ? 'ethereum' : 'goerli'
     await nftPortService.fetchTxsFromNFTPort(endpoint, chain, ['all'], address, tokenId)
     // Once we fetch transactions for collection or NFT, we cache it to NFTPORT_RECENTLY_SYNCED with expire date
     const now: Date = new Date()
