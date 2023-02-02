@@ -13,12 +13,12 @@ const logger = _logger.Factory(_logger.Context.Bull)
 const NFTPORT_EXPIRE_DURATION = 3 * 60 * 60000 // 3 hours
 
 export const syncTxsFromNFTPortHandler = async (job: Job): Promise<void> => {
-  logger.log('initiated transactions sync from NFTPort')
+  logger.log(`initiated transactions sync from NFTPort : ${JSON.stringify(job.data)}`)
   const address = job.data.address
   const tokenId = job.data.tokenId
   const endpoint = job.data.endpoint
   const chainId: string = job.data.chainId || process.env.chainId || '5'
-  logger.info(`address : ${address}, tokenId: ${tokenId}, endpoint: ${endpoint}`)
+  logger.info(`address ${address}, tokenId ${tokenId}, endpoint ${endpoint}`)
   try {
     const key = tokenId ? helper.checkSum(address) + '::' + BigNumber.from(tokenId).toHexString() : helper.checkSum(address)
     const chain = (chainId === '1' || chainId === '5') ? 'ethereum' : 'goerli'
