@@ -10,7 +10,7 @@ import { cache, CacheKeys } from '../service/cache'
 
 const logger = _logger.Factory(_logger.Context.Bull)
 
-const NFTPORT_EXPIRE_DURATION = 3 * 60 * 60000 // 3 hours
+const NFTPORT_EXPIRE_DURATION = 24 * 60 * 60000 // one day
 
 export const syncTxsFromNFTPortHandler = async (job: Job): Promise<void> => {
   logger.log(`initiated transactions sync from NFTPort : ${JSON.stringify(job.data)}`)
@@ -19,6 +19,7 @@ export const syncTxsFromNFTPortHandler = async (job: Job): Promise<void> => {
   const endpoint = job.data.endpoint
   const chainId: string = job.data.chainId || process.env.chainId || '5'
   logger.info(`address ${address}, tokenId ${tokenId}, endpoint ${endpoint}`)
+  if (!address && !tokenId && !endpoint) return
   try {
     const key = tokenId ? helper.checkSum(address) + '::' + BigNumber.from(tokenId).toHexString() : helper.checkSum(address)
     const chain = (chainId === '1' || chainId === '5') ? 'ethereum' : 'goerli'

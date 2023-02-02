@@ -494,6 +494,10 @@ const createEcsTaskDefinition = (
                   Name: 'ORDER_RECONCILIATION_PERIOD',
                   Value: process.env.ORDER_RECONCILIATION_PERIOD,
                 },
+                {
+                  Name: 'MAX_BATCHES_NFTPORT',
+                  Value: process.env.MAX_BATCHES_NFTPORT,
+                },
               ],
               dependsOn: [
                 {
