@@ -5,6 +5,7 @@ if (['development','staging','production'].includes(process.env.NODE_ENV)) {
 }
 
 import Bull from 'bull'
+import { BigNumber } from 'ethers'
 import express from 'express'
 import kill from 'kill-port'
 import multer from 'multer'
@@ -14,9 +15,16 @@ import { _logger, db, fp, helper } from '@nftcom/shared'
 import { dbConfig } from './config'
 import { nftOrderSubqueue, QUEUE_TYPES, queues, startAndListen, stopAndDisconnect } from './jobs/jobs'
 import { authMiddleWare } from './middleware/auth'
-import { collectionNameSyncSchema, collectionSyncSchema, nftRaritySyncSchema, SyncCollectionInput, validate } from './middleware/validate'
+import {
+  collectionNameSyncSchema,
+  collectionSyncSchema,
+  nftRaritySyncSchema,
+  SyncCollectionInput,
+  syncTxsFromNFTPortSchema,
+  validate,
+} from './middleware/validate'
 import { initiateStreaming } from './pipeline'
-import { cache, CacheKeys } from './service/cache'
+import { cache, CacheKeys, removeExpiredTimestampedZsetMembers } from './service/cache'
 //import { startAndListen } from './jobs/jobs'
 import { startProvider, stopProvider } from './service/on-chain'
 import { client } from './service/opensea'
@@ -114,7 +122,57 @@ app.get('/stopSync', authMiddleWare, async (_req, res) => {
   }
 })
 
-// sync collections - 
+// sync transactions from NFTPort
+
+app.post('/syncTxsFromNFTPort', authMiddleWare, validate(syncTxsFromNFTPortSchema), async (_req, res) => {
+  try {
+    const { address, tokenId } = _req.body
+    const key = tokenId ? helper.checkSum(address) + '::' + BigNumber.from(tokenId).toHexString() : helper.checkSum(address)
+    const recentlyRefreshed: string = await cache.zscore(`${CacheKeys.NFTPORT_RECENTLY_SYNCED}_${chainId}`, key)
+    if (!recentlyRefreshed) {
+      // 1. add to cache list
+      await cache.zadd(`${CacheKeys.NFTPORT_TO_SYNC}_${chainId}`, 'INCR', 1, key)
+      // 2. remove expired collections and NFTS from the NFTPORT_RECENTLY_SYNCED cache
+      await removeExpiredTimestampedZsetMembers(`${CacheKeys.NFTPORT_RECENTLY_SYNCED}_${chainId}`)
+      // 3. check if syncing is in progress
+      const inProgress = await cache.zscore(`${CacheKeys.NFTPORT_SYNC_IN_PROGRESS}_${chainId}`, key)
+      if (inProgress) {
+        res.status(200).send({
+          message: 'Syncing transactions is in progress.',
+        })
+      } else {
+        // 4. add collection or NFT to NFTPORT_SYNC_IN_PROGRESS
+        await cache.zadd(`${CacheKeys.NFTPORT_SYNC_IN_PROGRESS}_${chainId}`, 'INCR', 1, key)
+        // 5. sync txs for collection + timestamp
+        const jobId = `sync_txs_nftport:${Date.now()}`
+        queues.get(QUEUE_TYPES.SYNC_TXS_NFTPORT)
+          .add({
+            SYNC_TXS_NFTPORT: QUEUE_TYPES.SYNC_TXS_NFTPORT,
+            address,
+            tokenId,
+            endpoint: tokenId ? 'txByNFT' : 'txByContract',
+            chainId: process.env.CHAIN_ID,
+          }, {
+            removeOnComplete: true,
+            removeOnFail: true,
+            jobId,
+          })
+        res.status(200).send({
+          message: 'Started syncing transactions.',
+        })
+      }
+    } else {
+      res.status(200).send({
+        message: 'Transactions are recently refreshed.',
+      })
+    }
+  } catch (err) {
+    logger.error(`err: ${err}`)
+    res.status(400).send(err)
+  }
+})
+
+// sync collections -
 app.post('/collectionSync', authMiddleWare, validate(collectionSyncSchema), async (_req, res) => {
   try {
     const { collections } = _req.body
@@ -153,7 +211,7 @@ app.post('/collectionSync', authMiddleWare, validate(collectionSyncSchema), asyn
         removeOnFail: true,
         jobId,
       })
-    
+
     // response msg
     const responseMsg = []
 
@@ -178,7 +236,7 @@ app.post('/collectionSync', authMiddleWare, validate(collectionSyncSchema), asyn
   }
 })
 
-// sync collections through file 
+// sync collections through file
 app.post('/uploadCollections', authMiddleWare, upload.single('file'), async (_req, res) => {
   if (_req.file != undefined) {
     const fileBufferToString: string = _req.file.buffer.toString('utf8')
@@ -228,19 +286,19 @@ app.post('/uploadCollections', authMiddleWare, upload.single('file'), async (_re
     if (validCollections.length) {
       responseMsg.push(`Sync started for the following collections: ${validCollections.map(i => i.address).join(', ')}.`)
     }
-    
+
     if (invalidCollections.length) {
       responseMsg.push(`The following collections are invalid: ${invalidCollections.map(i => i.address).join(', ')}.`)
     }
-    
+
     if (recentlyRefreshed.length) {
       responseMsg.push(`The following collections are recently refreshed: ${recentlyRefreshed.map(i => i.address).join(', ')}.`)
     }
-    
+
     // if (recentlyRefreshed.length) {
     //   responseMsg.push(`The following collections are recently refreshed: ${recentlyRefreshed.map(i => i.address).join(', ')}.`)
     // }
-    
+
     res.status(200).send({
       message: responseMsg.join(' '),
     })
@@ -422,7 +480,7 @@ app.post('/syncCollectionRarity', authMiddleWare, validate(collectionSyncSchema)
 
       if (checksumContract) {
         const contractInRefreshedCache: string = await cache.zscore(`${CacheKeys.REFRESHED_COLLECTION_RARITY}_${chainId}`, checksumContract)
-  
+
         if (Number(contractInRefreshedCache)) {
           const ttlNotExpiredCond: boolean = Date.now() < Number(contractInRefreshedCache)
           if (ttlNotExpiredCond) {
@@ -430,14 +488,14 @@ app.post('/syncCollectionRarity', authMiddleWare, validate(collectionSyncSchema)
             continue
           }
         }
-    
+
         const contractInRefreshCache: string = await cache.zscore(`${CacheKeys.REFRESH_COLLECTION_RARITY}_${chainId}`, checksumContract)
-        
+
         if (Number(contractInRefreshCache)) {
           inprogress.push(collection)
           continue
         }
-        
+
         validCollections.push({
           address: checksumContract,
         })

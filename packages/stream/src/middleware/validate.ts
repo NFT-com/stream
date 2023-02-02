@@ -9,6 +9,20 @@ export enum CollectionType {
   NONE = 'none'
 }
 
+export const syncTxsFromNFTPortSchema = z.object({
+  body: z.object({
+    address: z.string(
+      {
+        required_error: 'address is required',
+        invalid_type_error: 'address must be a string',
+      },
+    ),
+    tokenId: z.string({
+      invalid_type_error: 'address must be a string',
+    }).optional(),
+  }),
+})
+
 export const collectionSyncSchema = z.object({
   body: z.object({
     collections: z.array(z.object({

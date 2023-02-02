@@ -5,6 +5,7 @@ import { _logger } from '@nftcom/shared'
 import { redisConfig } from '../config'
 import { collectionBannerImageSync, collectionIssuanceDateSync, collectionNameSync, collectionSyncHandler, nftRaritySyncHandler, raritySync, spamCollectionSyncHandler } from './collection.handler'
 import { getEthereumEvents } from './mint.handler'
+import { syncTxsFromNFTPortHandler } from './nftport.handler'
 import { nftExternalOrdersOnDemand, orderReconciliationHandler } from './order.handler'
 import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
 import { profileGKOwnersHandler, saveProfileExpireAt, updateNFTsForProfilesHandler } from './profile.handler'
@@ -41,6 +42,7 @@ export enum QUEUE_TYPES {
   SYNC_TRADING = 'SYNC_TRADING',
   SEARCH_ENGINE_LISTINGS_UPDATE = 'SEARCH_ENGINE_LISTINGS_UPDATE',
   SYNC_PROFILE_GK_OWNERS = 'SYNC_PROFILE_GK_OWNERS',
+  SYNC_TXS_NFTPORT = 'SYNC_TXS_NFTPORT',
   RECONCILE_ORDERS = 'RECONCILE_ORDERS'
 }
 
@@ -134,6 +136,13 @@ const createQueues = (): Promise<void> => {
     // sync external orders
     queues.set(QUEUE_TYPES.SYNC_CONTRACTS, new Bull(
       QUEUE_TYPES.SYNC_CONTRACTS, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
+    // sync txs from nftport
+    queues.set(QUEUE_TYPES.SYNC_TXS_NFTPORT, new Bull(
+      QUEUE_TYPES.SYNC_TXS_NFTPORT, {
         prefix: queuePrefix,
         redis,
       }))
@@ -447,6 +456,9 @@ const listenToJobs = async (): Promise<void> => {
       break
     case QUEUE_TYPES.SYNC_COLLECTION_NAME:
       queue.process(collectionNameSync)
+      break
+    case QUEUE_TYPES.SYNC_TXS_NFTPORT:
+      queue.process(syncTxsFromNFTPortHandler)
       break
     case QUEUE_TYPES.SYNC_COLLECTIONS:
       queue.process(collectionSyncHandler)
