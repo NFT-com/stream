@@ -126,6 +126,7 @@ app.get('/stopSync', authMiddleWare, async (_req, res) => {
 
 app.post('/syncTxsFromNFTPort', authMiddleWare, validate(syncTxsFromNFTPortSchema), async (_req, res) => {
   try {
+    const MAXIMAM_PROCESS_AT_TIME = 2
     const { address, tokenId } = _req.body
     const key = tokenId ? helper.checkSum(address) + '::' + BigNumber.from(tokenId).toHexString() : helper.checkSum(address)
     const recentlyRefreshed: string = await cache.zscore(`${CacheKeys.NFTPORT_RECENTLY_SYNCED}_${chainId}`, key)
@@ -141,25 +142,33 @@ app.post('/syncTxsFromNFTPort', authMiddleWare, validate(syncTxsFromNFTPortSchem
           message: 'Syncing transactions is in progress.',
         })
       } else {
-        // 4. add collection or NFT to NFTPORT_SYNC_IN_PROGRESS
-        await cache.zadd(`${CacheKeys.NFTPORT_SYNC_IN_PROGRESS}_${chainId}`, 'INCR', 1, key)
-        // 5. sync txs for collection + timestamp
-        const jobId = `sync_txs_nftport:${Date.now()}`
-        queues.get(QUEUE_TYPES.SYNC_TXS_NFTPORT)
-          .add({
-            SYNC_TXS_NFTPORT: QUEUE_TYPES.SYNC_TXS_NFTPORT,
-            address,
-            tokenId,
-            endpoint: tokenId ? 'txByNFT' : 'txByContract',
-            chainId: process.env.CHAIN_ID,
-          }, {
-            removeOnComplete: true,
-            removeOnFail: true,
-            jobId,
+        // 4. check NFTPORT_SYNC_IN_PROGRESS cache if it's running more than MAXIMAM_PROCESS_AT_TIME collection or NFTs
+        const processingCalls = await cache.zrevrangebyscore(`${CacheKeys.NFTPORT_SYNC_IN_PROGRESS}_${chainId}`, '+inf', '(0')
+        if (processingCalls.length < MAXIMAM_PROCESS_AT_TIME) {
+          // 5. add collection or NFT to NFTPORT_SYNC_IN_PROGRESS
+          await cache.zadd(`${CacheKeys.NFTPORT_SYNC_IN_PROGRESS}_${chainId}`, 'INCR', 1, key)
+          // 6. sync txs for collection + timestamp
+          const jobId = `sync_txs_nftport:${Date.now()}`
+          queues.get(QUEUE_TYPES.SYNC_TXS_NFTPORT)
+            .add({
+              SYNC_TXS_NFTPORT: QUEUE_TYPES.SYNC_TXS_NFTPORT,
+              address,
+              tokenId,
+              endpoint: tokenId ? 'txByNFT' : 'txByContract',
+              chainId: process.env.CHAIN_ID,
+            }, {
+              removeOnComplete: true,
+              removeOnFail: true,
+              jobId,
+            })
+          res.status(200).send({
+            message: 'Started syncing transactions.',
           })
-        res.status(200).send({
-          message: 'Started syncing transactions.',
-        })
+        } else {
+          res.status(200).send({
+            message: 'Syncing transactions are queued. Will begin soon.',
+          })
+        }
       }
     } else {
       res.status(200).send({
