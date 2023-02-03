@@ -26,7 +26,7 @@ export const searchListingIndexHandler = async (job: Job): Promise<boolean> => {
         logger.log(`nft with listing updates: ${nftsWithListingUpdates.length}`)
         await seService.indexNFTs(nftsWithListingUpdates)
       } catch (err) {
-        logger.error(`Error in getNFTs or indexing: ${err}`)
+        logger.error(`Error in getNFTs or indexNFTs: ${err}`)
       }
     }
     logger.log('completed listing sync')
