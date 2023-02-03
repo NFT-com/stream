@@ -11,7 +11,7 @@ const seService = searchEngineService.SearchEngineService()
 const repos = db.newRepositories()
 
 export const searchListingIndexHandler = async (job: Job): Promise<boolean> => {
-  logger.log('Started listing sync')
+  logger.log('intiated listing sync')
   try {
     const listings: entity.TxActivity[] = await repos
       .txActivity
@@ -19,15 +19,20 @@ export const searchListingIndexHandler = async (job: Job): Promise<boolean> => {
         activityType: defs.ActivityType.Listing,
         updatedAt: MoreThanOrEqual(new Date(job.timestamp)),
       } })
-    logger.log(`total listings: ${listings.length}`)
+    logger.log(`total listings in search index sync: ${listings.length}`)
     if (listings) {
-      const nftsWithListingUpdates = await utils.getNFTsFromTxActivities(listings)
-      await seService.indexNFTs(nftsWithListingUpdates)
+      try {
+        const nftsWithListingUpdates = await utils.getNFTsFromTxActivities(listings)
+        logger.log(`nft with listing updates: ${nftsWithListingUpdates.length}`)
+        await seService.indexNFTs(nftsWithListingUpdates)
+      } catch (err) {
+        logger.error(`Error in getNFTs or indexing: ${err}`)
+      }
     }
     logger.log('completed listing sync')
     return Promise.resolve(true)
   } catch (err) {
-    logger.error(`listing sync error: ${err}`)
+    logger.error(`search index listing sync error: ${err}`)
     return Promise.resolve(false)
   }
 }
