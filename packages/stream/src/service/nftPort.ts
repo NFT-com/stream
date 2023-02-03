@@ -57,6 +57,7 @@ export interface NFTPortNFT {
       cached_banner_url?: string
     }
   }
+  owner: string
   status_message?: string
 }
 

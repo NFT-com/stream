@@ -41,6 +41,15 @@ const subQueueBaseOptions: Bull.JobOptions = {
   },
 }
 
+const checkSumOwner = (owner: string): string | undefined => {
+  try {
+    return helper.checkSum(owner)
+  } catch (err) {
+    logger.error(err, `Unable to checkSum owner: ${owner}`)
+  }
+  return
+}
+
 export const nftSyncHandler = async (job: Job): Promise<void> => {
   const { contract, chainId, startTokenParam } = job.data
   logger.log(`nft sync handler process started for: ${contract}, chainId: ${chainId}`)
@@ -91,8 +100,8 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
 
           try {
             if (nftPromiseArray?.length > 0) {
-              await nftService.indexNFTsOnSearchEngine(nftPromiseArray)
-              await repositories.nft.saveMany(nftPromiseArray, { chunk: 50 }) // temp chunk
+              const savedNFTs = await repositories.nft.saveMany(nftPromiseArray, { chunk: 50 }) // temp chunk
+              await nftService.indexNFTsOnSearchEngine(savedNFTs)
               logger.log(`saved ${queryParams}`)
             }
     
@@ -133,8 +142,17 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
           const alchemyNFTs: NFTAlchemy[] = nfts
           
           for (const nft of alchemyNFTs) {
+            let owner
+            try {
+              const nftOwners = await nftService.getOwnersForNFT(
+                { tokenId: nft.id.tokenId, contract: nft.contract.address, chainId } as entity.NFT)
+              if (nftOwners.length === 1) owner = nftOwners[0]
+            } catch (err) {
+              logger.error(err)
+            }
+            
             // create if not exist, update if does
-            const nftEntity: entity.NFT = nftEntityBuilder(nft, chainId)
+            const nftEntity: entity.NFT = nftEntityBuilder({ ...nft, owner }, chainId)
             const processNFT: entity.NFT = existingNFTs.find(
               (existingNft: entity.NFT) => {
                 if( existingNft.tokenId === BigNumber.from(nft.id.tokenId).toHexString()) {
@@ -157,8 +175,8 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
           }
           try {
             if (nftPromiseArray?.length > 0) {
-              await nftService.indexNFTsOnSearchEngine(nftPromiseArray)
-              await repositories.nft.saveMany(nftPromiseArray, { chunk: 50 }) // temp chunk
+              const savedNFTs = await repositories.nft.saveMany(nftPromiseArray, { chunk: 50 }) // temp chunk
+              await nftService.indexNFTsOnSearchEngine(savedNFTs)
               logger.log(`saved ${queryParams}`)
             }
     
@@ -705,10 +723,12 @@ export const raritySync = async (job: Job): Promise<void> => {
                   })
   
                 if (processNFT?.id) {
+                  const csOwner = checkSumOwner(nft.owner)
                   let updatedNFT: Partial<entity.NFT> = { id: processNFT?.id, ...processNFT }
                   // update NFT raritys
                   updatedNFT = {
                     ...updatedNFT,
+                    owner: csOwner || processNFT.owner,
                     rarity: nft?.rarity?.score || '0',
                     metadata: {
                       ...processNFT?.metadata,
@@ -823,9 +843,11 @@ export const nftRaritySyncHandler = async (job: Job): Promise<void> => {
             traits = nftTraitBuilder(traits, nftPortNFT?.nft?.attributes)
           }
 
+          const csOwner = checkSumOwner(nftPortNFT.owner)
           const updatedNFT: entity.NFT = await repositories.nft.updateOneById(nft.id, {
             rarity,
             metadata: { ...nft.metadata, traits },
+            owner: csOwner || nft.owner,
           })
 
           await nftService.indexNFTsOnSearchEngine([updatedNFT])

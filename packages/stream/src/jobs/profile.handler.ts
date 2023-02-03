@@ -21,12 +21,13 @@ export const nftUpdateBatchProcessor = async (job: Job): Promise<boolean> => {
     const { userId, walletId, nfts } = job.data
     const chainId = job.data?.chainId || process.env.CHAIN_ID
     const savedNFTs = []
+    const wallet = await repositories.wallet.findById(walletId)
     await Promise.allSettled(
       nfts.map(async (nft) => {
         const savedNFT = await nftService.updateNFTOwnershipAndMetadata(
           nft,
           userId,
-          walletId,
+          wallet,
           chainId,
         )
         if (savedNFT) savedNFTs.push(savedNFT)

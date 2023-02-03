@@ -405,7 +405,7 @@ const keepAlive = ({
 
             if (wallet) {
               const savedNFT = await nftService.updateNFTOwnershipAndMetadata(
-                obj, wallet.userId, wallet.id, chainId.toString(),
+                obj, wallet.userId, wallet, chainId.toString(),
               )
               if (savedNFT) await nftService.indexNFTsOnSearchEngine([savedNFT])
             }
@@ -478,7 +478,7 @@ const keepAlive = ({
 
             if (wallet) {
               const savedNFT = await nftService.updateNFTOwnershipAndMetadata(
-                obj, wallet.userId, wallet.id, chainId.toString(),
+                obj, wallet.userId, wallet, chainId.toString(),
               )
               if (savedNFT) await nftService.indexNFTsOnSearchEngine([savedNFT])
             }
@@ -669,7 +669,7 @@ const keepAlive = ({
             )
             if (wallet) {
               const savedNFT = await nftService.updateNFTOwnershipAndMetadata(
-                obj, wallet.userId, wallet.id, chainId.toString(),
+                obj, wallet.userId, wallet, chainId.toString(),
               )
               if (savedNFT) await nftService.indexNFTsOnSearchEngine([savedNFT])
             }
@@ -814,7 +814,7 @@ const keepAlive = ({
             )
             if (wallet) {
               const savedNFT = await nftService.updateNFTOwnershipAndMetadata(
-                obj, wallet.userId, wallet.id, chainId.toString(),
+                obj, wallet.userId, wallet, chainId.toString(),
               )
               if (savedNFT) await nftService.indexNFTsOnSearchEngine([savedNFT])
             }
@@ -936,7 +936,7 @@ const keepAlive = ({
             )
             if (wallet) {
               const savedNFT = await nftService.updateNFTOwnershipAndMetadata(
-                obj, wallet.userId, wallet.id, chainId.toString(),
+                obj, wallet.userId, wallet, chainId.toString(),
               )
               if (savedNFT) await nftService.indexNFTsOnSearchEngine([savedNFT])
             }
