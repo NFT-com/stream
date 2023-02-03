@@ -2,9 +2,12 @@
 // @ts-ignore
 import {  alchemyService, nftService } from '@nftcom/gql/service'
 import { defs, entity, helper } from '@nftcom/shared'
+import { _logger } from '@nftcom/shared'
 
 import { NFT_NftPort, NFTAlchemy } from '../../interface'
 import { NFTPortRarityAttributes } from '../../service/nftPort'
+
+const logger = _logger.Factory('nftBuilder', _logger.Context.Bull)
 
 export const collectionEntityBuilder = async (
   contract: string,
