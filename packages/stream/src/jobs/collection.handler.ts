@@ -145,7 +145,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
             let owner
             try {
               const nftOwners = await nftService.getOwnersForNFT(
-                { tokenId: nft.id.token_id, contract: nft.contract, chainId } as entity.NFT)
+                { tokenId: nft.id.tokenId, contract: nft.contract.address, chainId } as entity.NFT)
               if (nftOwners.length === 1) owner = nftOwners[0]
             } catch (err) {
               logger.error(err)
