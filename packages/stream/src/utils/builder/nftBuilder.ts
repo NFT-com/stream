@@ -69,7 +69,7 @@ export const nftEntityBuilderCryptoPunks = (
 }
 
 export const nftEntityBuilder = (
-  nft: NFTAlchemy,
+  nft: NFTAlchemy & { owner: string },
   chainId: string,
 ): entity.NFT => {
   const csOwner = checkSumOwner(nft.owner)

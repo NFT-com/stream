@@ -142,8 +142,17 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
           const alchemyNFTs: NFTAlchemy[] = nfts
           
           for (const nft of alchemyNFTs) {
+            let owner
+            try {
+              const nftOwners = await nftService.getOwnersForNFT(
+                { tokenId: nft.id.token_id, contract: nft.contract, chainId } as entity.NFT)
+              if (nftOwners.length === 1) owner = nftOwners[0]
+            } catch (err) {
+              logger.error(err)
+            }
+            
             // create if not exist, update if does
-            const nftEntity: entity.NFT = nftEntityBuilder(nft, chainId)
+            const nftEntity: entity.NFT = nftEntityBuilder({ ...nft, owner }, chainId)
             const processNFT: entity.NFT = existingNFTs.find(
               (existingNft: entity.NFT) => {
                 if( existingNft.tokenId === BigNumber.from(nft.id.tokenId).toHexString()) {
