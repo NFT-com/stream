@@ -82,7 +82,12 @@ export const nftEntityBuilder = (
     type: nftService.getNftType(nft),
     owner: csOwner,
     metadata: {
-      name: nft?.title || nft?.metadata?.name,
+      name: nftService.getNftName(
+        nft?.metadata,
+        undefined,
+        nft,
+        helper.bigNumberToString(nft.id.tokenId),
+      ),
       description: nftService.getNftDescription(nft),
       imageURL: nftService.getNftImage(nft?.metadata),
       traits: nftService.getMetadata(nft?.metadata),
