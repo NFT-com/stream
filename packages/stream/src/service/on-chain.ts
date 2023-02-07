@@ -1,13 +1,11 @@
 import { BigNumber, ethers, providers, utils } from 'ethers'
 import { In, LessThan } from 'typeorm'
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore:next-line
-import {  nftService } from '@nftcom/gql/service'
 import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
 import { delay } from '../utils'
 import { cancelEntityBuilder, txEntityBuilder, txX2Y2ProtocolDataParser } from '../utils/builder/orderBuilder'
+import { updateOwnership } from './ownership'
 
 const repositories = db.newRepositories()
 const nftResolverInterface = new utils.Interface(contracts.NftResolverABI())
@@ -390,25 +388,13 @@ const keepAlive = ({
             // update NFT ownership
             const tokenId: string = helper.bigNumberToHex(order.protocolData?.tokenId)
 
-            const obj = {
-              contract: {
-                address: checksumContract,
-              },
-              id: {
-                tokenId,
-              },
-            }
-
-            const wallet = await nftService.getUserWalletFromNFT(
-              checksumContract, tokenId, chainId.toString(),
+            await updateOwnership(
+              checksumContract,
+              tokenId,
+              maker,
+              taker,
+              chainId.toString(),
             )
-
-            if (wallet) {
-              const savedNFT = await nftService.updateNFTOwnershipAndMetadata(
-                obj, wallet.userId, wallet, chainId.toString(),
-              )
-              if (savedNFT) await nftService.indexNFTsOnSearchEngine([savedNFT])
-            }
 
             logger.log(`
                 updated ${orderHash} for collection ${collection} -- strategy:
@@ -463,25 +449,13 @@ const keepAlive = ({
             // update NFT ownership
             const tokenId: string = helper.bigNumberToHex(order.protocolData?.tokenId)
 
-            const obj = {
-              contract: {
-                address: checksumContract,
-              },
-              id: {
-                tokenId,
-              },
-            }
-
-            const wallet = await nftService.getUserWalletFromNFT(
-              checksumContract, tokenId, chainId.toString(),
+            await updateOwnership(
+              checksumContract,
+              tokenId,
+              maker,
+              taker,
+              chainId.toString(),
             )
-
-            if (wallet) {
-              const savedNFT = await nftService.updateNFTOwnershipAndMetadata(
-                obj, wallet.userId, wallet, chainId.toString(),
-              )
-              if (savedNFT) await nftService.indexNFTsOnSearchEngine([savedNFT])
-            }
 
             logger.log(`
             updated ${orderHash} for collection ${collection} -- strategy:
@@ -655,24 +629,14 @@ const keepAlive = ({
             const tokenId: string = helper.bigNumberToHex(
               order.protocolData?.parameters?.offer?.[0]?.identifierOrCriteria,
             )
-            const obj = {
-              contract: {
-                address: contract,
-              },
-              id: {
-                tokenId,
-              },
-            }
-    
-            const wallet = await nftService.getUserWalletFromNFT(
-              contract, tokenId, chainId.toString(),
+            
+            await updateOwnership(
+              contract,
+              tokenId,
+              offerer,
+              recipient,
+              chainId.toString(),
             )
-            if (wallet) {
-              const savedNFT = await nftService.updateNFTOwnershipAndMetadata(
-                obj, wallet.userId, wallet, chainId.toString(),
-              )
-              if (savedNFT) await nftService.indexNFTsOnSearchEngine([savedNFT])
-            }
             logger.log(`
             Evt Saved: ${OSSeaportEventName.OrderFulfilled} for orderHash ${orderHash},
             offerer ${offerer},
@@ -800,24 +764,13 @@ const keepAlive = ({
             const tokenId: string = helper.bigNumberToHex(
               order.protocolData?.tokenId,
             )
-            const obj = {
-              contract: {
-                address: contract,
-              },
-              id: {
-                tokenId,
-              },
-            }
-
-            const wallet = await nftService.getUserWalletFromNFT(
-              contract, tokenId, chainId.toString(),
+            await updateOwnership(
+              contract,
+              tokenId,
+              order.makerAddress,
+              to,
+              chainId.toString(),
             )
-            if (wallet) {
-              const savedNFT = await nftService.updateNFTOwnershipAndMetadata(
-                obj, wallet.userId, wallet, chainId.toString(),
-              )
-              if (savedNFT) await nftService.indexNFTsOnSearchEngine([savedNFT])
-            }
 
             logger.log(`
                   Evt Saved: ${X2Y2EventName.EvProfit} for orderHash ${orderHash}
@@ -922,24 +875,13 @@ const keepAlive = ({
             const tokenId: string = helper.bigNumberToHex(
               order.protocolData?.tokenId,
             )
-            const obj = {
-              contract: {
-                address: contract,
-              },
-              id: {
-                tokenId,
-              },
-            }
-
-            const wallet = await nftService.getUserWalletFromNFT(
-              contract, tokenId, chainId.toString(),
+            await updateOwnership(
+              contract,
+              tokenId,
+              maker,
+              taker,
+              chainId.toString(),
             )
-            if (wallet) {
-              const savedNFT = await nftService.updateNFTOwnershipAndMetadata(
-                obj, wallet.userId, wallet, chainId.toString(),
-              )
-              if (savedNFT) await nftService.indexNFTsOnSearchEngine([savedNFT])
-            }
             logger.log(`
               Evt Saved: ${X2Y2EventName.EvInventory} for orderHash ${orderHash}
               and ownership updated
