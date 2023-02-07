@@ -26,7 +26,7 @@ export const updateOwnership = async (
   const csContract = checksumAddress(contract),
     csPrevOwner =  checksumAddress(prevOwner),
     csNewOwner = checksumAddress(newOwner)
-  const hexTokenId = tokenId
+  const hexTokenId = helper.bigNumberToHex(tokenId)
 
   if (csContract && csPrevOwner && csNewOwner && hexTokenId) {
     const wallet = await repositories.wallet.findByNetworkChainAddress(
