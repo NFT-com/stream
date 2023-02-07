@@ -6,7 +6,7 @@ import { BigNumber, ethers, providers, utils } from 'ethers'
 import {  core, HederaConsensusService } from '@nftcom/gql/service'
 import { _logger, contracts, db, defs, helper } from '@nftcom/shared'
 
-import { cache } from '../service/cache'
+import { cache, CacheKeys } from '../service/cache'
 
 const logger = _logger.Factory(_logger.Context.Bull)
 const repositories = db.newRepositories()
@@ -269,6 +269,30 @@ export const profileParseLog = (log: any): any => {
   return profileInterface.parseLog(log)
 }
 
+const executeUpdateNFTsForProfile = async (
+  profileId,
+  chainId: string,
+): Promise<void> => {
+  try {
+    const recentlyRefreshed: string = await cache.zscore(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, profileId)
+    if (recentlyRefreshed) {
+      // remove profile from cache which store recently refreshed
+      await cache.zrem(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, [profileId])
+    }
+    const inProgress = await cache.zscore(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, profileId)
+    if (inProgress) {
+      await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profileId])
+    }
+    const inQueue = await cache.zscore(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, profileId)
+    if (!inQueue) {
+      // add to NFT cache list
+      await cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profileId)
+    }
+  } catch (err) {
+    logger.error(`Error in executeUpdateNFTsForProfile: ${err}`)
+  }
+}
+
 export const getEthereumEvents = async (job: Job): Promise<any> => {
   try {
     const { chainId } = job.data
@@ -380,6 +404,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                   description: description ?? `NFT.com profile for ${profile.url}`,
                 })
               }
+              await executeUpdateNFTsForProfile(profile.id, chainId)
               logger.debug(`New profile transfer event found. profileURL=${profile.url} from=${from} to=${to} chainId=${chainId}`)
             }
           }
