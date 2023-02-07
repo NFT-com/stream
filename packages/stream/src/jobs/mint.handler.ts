@@ -328,7 +328,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
             if (Number(timestamp) !== 0) {
               const expireAt = new Date(Number(timestamp) * 1000)
               await repositories.profile.updateOneById(profile.id, { expireAt })
-              logger.debug(`New ExtendExpiry event found. profileURL=${profileUrl} expireAt=${timestamp} chainId=${chainId}`)
+              logger.info(`New ExtendExpiry event found. profileURL=${profileUrl} expireAt=${timestamp} chainId=${chainId}`)
             }
           }
         } else if (evt.name === EventName.Transfer) {
@@ -381,7 +381,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                 })
               }
               await nftService.executeUpdateNFTsForProfile(profile.id, chainId)
-              logger.debug(`New profile transfer event found. profileURL=${profile.url} from=${from} to=${to} chainId=${chainId}`)
+              logger.info(`New profile transfer event found. profileURL=${profile.url} from=${from} to=${to} chainId=${chainId}`)
             }
           }
         }
