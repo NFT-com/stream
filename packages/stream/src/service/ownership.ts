@@ -67,6 +67,7 @@ export const updateOwnership = async (
               edgeType: defs.EdgeType.Displays,
             },
           })
+          logger.log(`old profileId ${edge.thisEntityId}`)
           await repositories.edge.hardDelete({
             thatEntityId: existingNFT.id,
             edgeType: defs.EdgeType.Displays,
@@ -98,9 +99,23 @@ export const updateOwnership = async (
             userId: wallet.userId,
             walletId: wallet.id,
           })
-  
-          await cache.del(`${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${edge.thisEntityId}*`)
-          await cache.del(`${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${edge.thisEntityId}*`)
+
+          // new owner profile
+          const profile = await repositories.profile.findOne({ where: {
+            tokenId: BigNumber.from(updatedNFT.tokenId).toString(),
+            ownerWalletId: wallet.id,
+            ownerUserId: wallet.userId,
+          } })
+          logger.log(`new profile id: ${profile.id}`)
+
+          try {
+            await cache.del(`${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${edge.thisEntityId}*`)
+            await cache.del(`${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${edge.thisEntityId}*`)
+            await cache.del(`${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${profile.id}*`)
+            await cache.del(`${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${profile.id}*`)
+          } catch (err) {
+            logger.log(err, 'Error while clearing cache...')
+          }
         }
       }
     }
