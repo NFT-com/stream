@@ -48,15 +48,14 @@ const updateWalletNFTs = async (
   profileId: string,
   profile: entity.Profile,
   userId: string,
-  walletId: string,
-  walletAddress: string,
+  wallet: entity.Wallet,
   chainId: string,
 ): Promise<void> => {
   try {
     nftService.initiateWeb3(chainId)
-    await nftService.updateWalletNFTs(userId, walletId, walletAddress, chainId)
+    await nftService.updateWalletNFTs(userId, wallet, chainId)
     logger.info(`updated wallet NFTs for profile ${profileId}`)
-    await nftService.updateEdgesWeightForProfile(profile.id, walletId)
+    await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
     logger.info(`updated edges for profile ${profile.id}`)
     await nftService.syncEdgesWithNFTs(profile.id)
     logger.info(`synced edges with NFTs for profile ${profile.id}`)
@@ -76,7 +75,7 @@ const updateWalletNFTs = async (
       repositories,
       profile,
       chainId,
-      walletAddress,
+      wallet.address,
     )
     logger.info(msg)
     // if gkIconVisible is true, we check if this profile owner still owns genesis key,
@@ -143,8 +142,7 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
                 profileId,
                 profile,
                 profile.ownerUserId,
-                wallet.id,
-                wallet.address,
+                wallet,
                 chainId,
               )
             } catch (err) {
@@ -244,19 +242,19 @@ export const profileGKOwnersHandler = async (job: Job): Promise<any> => {
     let profileUpdatePromise = []
     const cacheProfiles = []
     const profiles: entity.Profile[] = await repositories.profile.findAllWithRelations()
-  
+
     for (const profile of profiles) {
       const profileWallet: entity.Wallet = (profile as any)?.wallet
       const isIncludedInGKOwners: boolean = profileWallet?.address
         && checksumedOwners?.includes(helper.checkSum(profileWallet?.address))
-      
+
       if(isIncludedInGKOwners) {
         if (!profile?.gkIconVisible
           || profile.gkIconVisible === null
           || profile.gkIconVisible === undefined) {
           profileUpdatePromise.push({ id: profile.id, gkIconVisible: true })
         }
-      
+
         // 1 - gkIconVisible
         const profileScore: string = await cache.zscore(`${CacheKeys.PROFILE_GK_OWNERS}_${chainId}`, profile.id)
 
@@ -287,7 +285,7 @@ export const profileGKOwnersHandler = async (job: Job): Promise<any> => {
       await repositories.profile.saveMany(profileUpdatePromise, { chunk: 50 })
       await cache.zadd(`${CacheKeys.PROFILE_GK_OWNERS}_${chainId}`, ...cacheProfiles)
     }
- 
+
     logger.info('Sync profile gk owners end')
   } catch (err) {
     logger.error(`Error in profile gk owners Job: ${err}`)
