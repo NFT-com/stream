@@ -28,6 +28,8 @@ export enum CacheKeys {
   NFTPORT_RECENTLY_SYNCED = 'nftport_recently_synced',
   NFTPORT_SYNC_IN_PROGRESS = 'nftport_sync_in_progress',
   NFTPORT_TO_SYNC = 'nftport_to_sync',
+  PROFILE_SORTED_NFTS = 'PROFILE_SORTED_NFTS',
+  PROFILE_SORTED_VISIBLE_NFTS = 'PROFILE_SORTED_VISIBLE_NFTS',
 }
 
 const createCacheConnection = (): void => {

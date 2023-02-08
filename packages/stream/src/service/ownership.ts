@@ -5,6 +5,8 @@ import { BigNumber, ethers } from 'ethers'
 import {  nftService } from '@nftcom/gql/service'
 import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
+import { cache, CacheKeys } from './cache'
+
 const logger = _logger.Factory(_logger.Context.NFT)
 const repositories = db.newRepositories()
 
@@ -59,6 +61,12 @@ export const updateOwnership = async (
         if (existingNFT.userId !== wallet.userId || existingNFT.walletId !== wallet.id) {
           // we remove edge of previous profile
           // logger.log(`&&& updateNFTOwnershipAndMetadata: existingNFT.userId ${existingNFT.userId}, userId ${userId}, existingNFT.walletId ${existingNFT.walletId}, walletId ${walletId}`)
+          const edge: entity.Edge =  await repositories.edge.findOne({
+            where: {
+              thatEntityId: existingNFT.id,
+              edgeType: defs.EdgeType.Displays,
+            },
+          })
           await repositories.edge.hardDelete({
             thatEntityId: existingNFT.id,
             edgeType: defs.EdgeType.Displays,
@@ -85,12 +93,15 @@ export const updateOwnership = async (
               logger.info(`previous wallet for existing NFT ${existingNFT.id} is undefined`)
             }
           }
+          updatedNFT = await repositories.nft.updateOneById(existingNFT.id, {
+            owner: csNewOwner,
+            userId: wallet.userId,
+            walletId: wallet.id,
+          })
+  
+          await cache.del(`${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${edge.thisEntityId}*`)
+          await cache.del(`${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${edge.thisEntityId}*`)
         }
-        updatedNFT = await repositories.nft.updateOneById(existingNFT.id, {
-          owner: csNewOwner,
-          userId: wallet.userId,
-          walletId: wallet.id,
-        })
       }
     }
 
