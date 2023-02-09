@@ -117,18 +117,17 @@ export const updateOwnership = async (
             ownerUserId: wallet.userId,
           } })
 
-          logger.log(newOwnerProfiles, 'newOwnerProfiles')
           for (const profile of newOwnerProfiles) {
             try {
               await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
-              logger.info(`updated edges for profile ${profile.id}`)
+              logger.info(`updated edges for profile in ownership for profileId: ${profile.id}, url: ${profile.url}`)
             } catch (err) {
               logger.error(err, `Error in updateEdgesWeightForProfile in ownership for profileId:${profile.id}, url: ${profile.url}`)
             }
 
             try {
               await nftService.syncEdgesWithNFTs(profile.id)
-              logger.info(`synced edges with NFTs for profile ${profile.id}`)
+              logger.info(`synced edges with NFTs for profile in ownership for profileId: ${profile.id}, url: ${profile.url}`)
             } catch (err) {
               logger.error(err, `Error in syncEdgesWithNFTs in ownership for profileId:${profile.id}, url: ${profile.url}`)
             }
@@ -139,6 +138,7 @@ export const updateOwnership = async (
                 cache.zrem(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, [profile.id]),
               ])
               await nftService.executeUpdateNFTsForProfile(profile.id, chainId)
+              logger.info(`executeUpdateNFTsForProfile in ownership for profileId: ${profile.id}, url: ${profile.url}`)
             } catch (err) {
               logger.error(err, `Error in executeUpdateNFTsForProfile in ownership for profileId:${profile.id}, url: ${profile.url}`)
             }
@@ -147,7 +147,6 @@ export const updateOwnership = async (
           if (cachePromise.length) {
             try {
               const keysArray = await Promise.all(cachePromise)
-              logger.log(keysArray, 'keyArray')
               if (keysArray.length) {
                 for (const keys of keysArray) {
                   if (keys?.length) {
