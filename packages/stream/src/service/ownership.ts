@@ -68,17 +68,17 @@ export const updateOwnership = async (
               edgeType: defs.EdgeType.Displays,
             },
           })
-          if (edges.length) {
-            for (const edge of edges) {
-              const key1 = `${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${edge.thisEntityId}`,
-                key2 = `${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${edge.thisEntityId}`
-              cachePromise.push(
-                cache.keys(`${key1}*`),
-                cache.keys(`${key2}*`),
-              )
-              logger.log(`old profileId: ${edge.thisEntityId}, key1: ${key1}, key2: ${key2}`)
-            }
+        
+          for (const edge of edges) {
+            const key1 = `${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${edge.thisEntityId}`,
+              key2 = `${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${edge.thisEntityId}`
+            cachePromise.push(
+              cache.keys(`${key1}*`),
+              cache.keys(`${key2}*`),
+            )
+            logger.log(`old profileId: ${edge.thisEntityId}, key1: ${key1}, key2: ${key2}`)
           }
+
           await repositories.edge.hardDelete({
             thatEntityId: existingNFT.id,
             edgeType: defs.EdgeType.Displays,
@@ -117,15 +117,13 @@ export const updateOwnership = async (
             ownerUserId: wallet.userId,
           } })
 
-          if (newOwnerProfiles?.length) {
-            for (const profile of newOwnerProfiles) {
-              await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
-              logger.info(`updated edges for profile ${profile.id}`)
-              await nftService.syncEdgesWithNFTs(profile.id)
-              logger.info(`synced edges with NFTs for profile ${profile.id}`)
-              // add to NFT refresh cache list
-              await cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id)
-            }
+          for (const profile of newOwnerProfiles) {
+            await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
+            logger.info(`updated edges for profile ${profile.id}`)
+            await nftService.syncEdgesWithNFTs(profile.id)
+            logger.info(`synced edges with NFTs for profile ${profile.id}`)
+            // add to NFT refresh cache list
+            await cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id)
           }
 
           if (cachePromise.length) {
