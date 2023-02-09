@@ -62,20 +62,22 @@ export const updateOwnership = async (
         if (existingNFT.userId !== wallet.userId || existingNFT.walletId !== wallet.id) {
           // we remove edge of previous profile
           // logger.log(`&&& updateNFTOwnershipAndMetadata: existingNFT.userId ${existingNFT.userId}, userId ${userId}, existingNFT.walletId ${existingNFT.walletId}, walletId ${walletId}`)
-          const edge: entity.Edge =  await repositories.edge.findOne({
+          const edges: entity.Edge[] =  await repositories.edge.find({
             where: {
               thatEntityId: existingNFT.id,
               edgeType: defs.EdgeType.Displays,
             },
           })
-          if (edge) {
-            const key1 = `${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${edge.thisEntityId}`,
-              key2 = `${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${edge.thisEntityId}`
-            cachePromise.push(
-              cache.keys(`${key1}*`),
-              cache.keys(`${key2}*`),
-            )
-            logger.log(`old profileId: ${edge.thisEntityId}, key1: ${key1}, key2: ${key2}`)
+          if (edges.length) {
+            for (const edge of edges) {
+              const key1 = `${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${edge.thisEntityId}`,
+                key2 = `${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${edge.thisEntityId}`
+              cachePromise.push(
+                cache.keys(`${key1}*`),
+                cache.keys(`${key2}*`),
+              )
+              logger.log(`old profileId: ${edge.thisEntityId}, key1: ${key1}, key2: ${key2}`)
+            }
           }
           await repositories.edge.hardDelete({
             thatEntityId: existingNFT.id,
