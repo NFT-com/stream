@@ -863,6 +863,27 @@ const listenMatchTwoAEvents = async (
             } catch (err) {
               logger.error(`Tx activity err: ${err}`)
             }
+          } else {
+            const activity = await repositories.txActivity.findOne({
+              where: {
+                activityTypeId: txHashId,
+              },
+            })
+            if (activity) {
+              await repositories.txActivity.updateOneById(activity.id, {
+                walletAddress: makerAddress,
+              })
+            }
+            await repositories.txTransaction.updateOneById(txTransaction.id, {
+              maker: makerAddress,
+              taker: takerAddress,
+              protocolData: {
+                ...txTransaction.protocolData,
+                salt,
+                start,
+                end,
+              },
+            })
           }
         } catch (err) {
           logger.error(`tx find error: ${err}`)
@@ -990,6 +1011,87 @@ const listenMatchTwoBEvents = async (
           },
         })
         logger.info(`updated existing listing order from Match2B ${txListingOrder.id}`)
+      }
+
+      const txHashId = `${log.transactionHash}:${txListingOrder.orderHash}`
+      try {
+        const txTransaction = await repositories.txTransaction.findOne({
+          where: {
+            exchange: defs.ExchangeType.NFTCOM,
+            transactionType: defs.ActivityType.Sale,
+            protocol: defs.ProtocolType.NFTCOM,
+            maker: txListingOrder.makerAddress,
+            transactionHash: txHashId,
+            chainId: chainId.toString(),
+          },
+        })
+
+        logger.info(`tx exists: ${txTransaction}`)
+
+        if (!txTransaction) {
+          try {
+            const timestampFromSource: number = (new Date().getTime())/1000
+            const expirationFromSource = null
+            const txActivity: Partial<entity.TxActivity> = await activityBuilder(
+              defs.ActivityType.Sale,
+              txHashId,
+              txListingOrder.makerAddress,
+              chainId.toString(),
+              nftIds,
+              contract,
+              timestampFromSource,
+              expirationFromSource,
+            )
+            try {
+              const tx = await repositories.txTransaction.save({
+                id: txHashId,
+                activity: txActivity,
+                exchange: defs.ExchangeType.NFTCOM,
+                transactionType: defs.ActivityType.Sale,
+                protocol: defs.ProtocolType.NFTCOM,
+                transactionHash: txHashId,
+                blockNumber: log.blockNumber.toString(),
+                nftContractAddress: txListingOrder?.activity?.nftContract || '0x',
+                nftContractTokenId: '',
+                maker: txListingOrder.makerAddress,
+                taker: txListingOrder.takerAddress,
+                chainId: chainId.toString(),
+                protocolData: {
+                  ...txListingOrder.protocolData,
+                  makeAsset,
+                  takeAsset,
+                },
+              })
+
+              logger.log(`tx saved: ${tx.id} for order ${txListingOrder.id}`)
+            } catch (err) {
+              logger.error(`Tx err: ${err}`)
+            }
+          } catch (err) {
+            logger.error(`Tx activity err: ${err}`)
+          }
+        } else {
+          const activity = await repositories.txActivity.findOne({
+            where: {
+              activityTypeId: txHashId,
+            },
+          })
+          if (activity) {
+            await repositories.txActivity.updateOneById(activity.id, {
+              nftId: [...nftIds],
+              nftContract: contract === '0x' ? '0x' : helper.checkSum(contract),
+            })
+          }
+          await repositories.txTransaction.updateOneById(txTransaction.id, {
+            protocolData: {
+              ...txTransaction.protocolData,
+              makeAsset,
+              takeAsset,
+            },
+          })
+        }
+      } catch (err) {
+        logger.error(`tx find error: ${err}`)
       }
     })
 
