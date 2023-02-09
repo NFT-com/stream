@@ -90,7 +90,7 @@ export const updateOwnership = async (
             const previousWallet = await repositories.wallet.findById(existingNFT.walletId)
 
             if (previousWallet) {
-              const profile = await repositories.profile.findOne({ where: {
+              const profile: entity.Profile = await repositories.profile.findOne({ where: {
                 tokenId: BigNumber.from(existingNFT.tokenId).toString(),
                 ownerWalletId: previousWallet.id,
                 ownerUserId: previousWallet.userId,
@@ -112,7 +112,7 @@ export const updateOwnership = async (
           })
 
           // new owner profile
-          const newOwnerProfiles = await repositories.profile.find({ where: {
+          const newOwnerProfiles: entity.Profile[] = await repositories.profile.find({ where: {
             ownerWalletId: wallet.id,
             ownerUserId: wallet.userId,
           } })
