@@ -127,8 +127,8 @@ export const updateOwnership = async (
               for (const keys of keysArray) {
                 if (keys?.length) {
                   await cache.del(...keys)
+                  logger.log(`Key deleted: ${keys}`)
                 }
-                logger.log(`Key deleted: ${keys}`)
               }
             }
           } catch (err) {
