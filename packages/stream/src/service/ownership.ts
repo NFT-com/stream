@@ -135,9 +135,12 @@ export const updateOwnership = async (
 
           try {
             const keysArray = await Promise.all(cachePromise)
-            for (const keys of keysArray) {
-              await cache.del(keys)
-              logger.log(`Key deleted: ${keys}`)
+            logger.log(keysArray, 'keyArray')
+            if (keysArray.length) {
+              for (const keys of keysArray) {
+                await cache.del(keys)
+                logger.log(`Key deleted: ${keys}`)
+              }
             }
           } catch (err) {
             logger.log(err, 'Error while clearing cache...')
