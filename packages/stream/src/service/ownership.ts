@@ -123,20 +123,24 @@ export const updateOwnership = async (
               await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
               logger.info(`updated edges for profile ${profile.id}`)
             } catch (err) {
-              logger.error(err, `Error in updateEdgesWeightForProfile for profileId:${profile.id}, url: ${profile.url}`)
+              logger.error(err, `Error in updateEdgesWeightForProfile in ownership for profileId:${profile.id}, url: ${profile.url}`)
             }
 
             try {
               await nftService.syncEdgesWithNFTs(profile.id)
               logger.info(`synced edges with NFTs for profile ${profile.id}`)
             } catch (err) {
-              logger.error(err, `Error in syncEdgesWithNFTs for profileId:${profile.id}, url: ${profile.url}`)
+              logger.error(err, `Error in syncEdgesWithNFTs in ownership for profileId:${profile.id}, url: ${profile.url}`)
             }
              
             try {
+              await Promise.all([
+                cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id]),
+                cache.zrem(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, [profile.id]),
+              ])
               await nftService.executeUpdateNFTsForProfile(profile.id, chainId)
             } catch (err) {
-              logger.error(err, `Error in executeUpdateNFTsForProfile for profileId:${profile.id}, url: ${profile.url}`)
+              logger.error(err, `Error in executeUpdateNFTsForProfile in ownership for profileId:${profile.id}, url: ${profile.url}`)
             }
           }
 
