@@ -76,7 +76,7 @@ export const updateOwnership = async (
               cache.keys(`${key1}*`),
               cache.keys(`${key2}*`),
             )
-            logger.log(`old profileId: ${edge.thisEntityId}, key1: ${key1}, key2: ${key2}`)
+            logger.log(`old profileId: ${edge.thisEntityId}, key1: ${key1}, key2: ${key2}.`)
           }
 
           await repositories.edge.hardDelete({
