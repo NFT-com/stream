@@ -57,6 +57,7 @@ export const updateOwnership = async (
           profileId: null,
         })
       } else {
+        const cachePromise = []
         // if this NFT is existing and owner changed, we change its ownership...
         if (existingNFT.userId !== wallet.userId || existingNFT.walletId !== wallet.id) {
           // we remove edge of previous profile
@@ -67,7 +68,13 @@ export const updateOwnership = async (
               edgeType: defs.EdgeType.Displays,
             },
           })
-          logger.log(`old profileId ${edge.thisEntityId}`)
+          const key1 = `${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${edge.thisEntityId}`,
+            key2 = `${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${edge.thisEntityId}`
+          cachePromise.push(
+            cache.keys(`${key1}*`),
+            cache.keys(`${key2}*`),
+          )
+          logger.log(`old profileId: ${edge.thisEntityId}, key1: ${key1}, key2: ${key2}`)
           await repositories.edge.hardDelete({
             thatEntityId: existingNFT.id,
             edgeType: defs.EdgeType.Displays,
@@ -101,18 +108,37 @@ export const updateOwnership = async (
           })
 
           // new owner profile
-          const profile = await repositories.profile.findOne({ where: {
-            tokenId: BigNumber.from(updatedNFT.tokenId).toString(),
+          const newOwnerProfiles = await repositories.profile.find({ where: {
             ownerWalletId: wallet.id,
             ownerUserId: wallet.userId,
           } })
-          logger.log(`new profile id: ${profile.id}`)
+
+          for (const profile of newOwnerProfiles) {
+            const edge = await repositories.edge.findOne({
+              where: {
+                thisEntityId: profile.id,
+                thatEntityId: updatedNFT.id,
+                edgeType: defs.EdgeType.Displays,
+              },
+            })
+            
+            if (edge) {
+              const key1 = `${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${profile.id}`,
+                key2 = `${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${profile.id}`
+              cachePromise.push(
+                cache.keys(`${key1}*`),
+                cache.keys(`${key2}*`),
+              )
+              logger.log(`new profileId: ${profile.id}, key1: ${key1}, key2: ${key2}`)
+            }
+          }
 
           try {
-            await cache.del(`${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${edge.thisEntityId}*`)
-            await cache.del(`${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${edge.thisEntityId}*`)
-            await cache.del(`${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${profile.id}*`)
-            await cache.del(`${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${profile.id}*`)
+            const keysArray = await Promise.all(cachePromise)
+            for (const keys of keysArray) {
+              await cache.del(keys)
+              logger.log(`Key deleted: ${keys}`)
+            }
           } catch (err) {
             logger.log(err, 'Error while clearing cache...')
           }
