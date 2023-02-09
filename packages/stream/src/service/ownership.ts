@@ -115,24 +115,32 @@ export const updateOwnership = async (
             ownerUserId: wallet.userId,
           } })
 
-          for (const profile of newOwnerProfiles) {
-            // add to NFT refresh cache list
-            await cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id)
+          if (newOwnerProfiles?.length) {
+            for (const profile of newOwnerProfiles) {
+              await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
+              logger.info(`updated edges for profile ${profile.id}`)
+              await nftService.syncEdgesWithNFTs(profile.id)
+              logger.info(`synced edges with NFTs for profile ${profile.id}`)
+              // add to NFT refresh cache list
+              await cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id)
+            }
           }
 
-          try {
-            const keysArray = await Promise.all(cachePromise)
-            logger.log(keysArray, 'keyArray')
-            if (keysArray.length) {
-              for (const keys of keysArray) {
-                if (keys?.length) {
-                  await cache.del(...keys)
-                  logger.log(`Key deleted: ${keys}`)
+          if (cachePromise.length) {
+            try {
+              const keysArray = await Promise.all(cachePromise)
+              logger.log(keysArray, 'keyArray')
+              if (keysArray.length) {
+                for (const keys of keysArray) {
+                  if (keys?.length) {
+                    await cache.del(...keys)
+                    logger.log(`Key deleted: ${keys}`)
+                  }
                 }
               }
+            } catch (err) {
+              logger.log(err, 'Error while clearing cache...')
             }
-          } catch (err) {
-            logger.log(err, 'Error while clearing cache...')
           }
         }
       }
