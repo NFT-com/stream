@@ -68,13 +68,15 @@ export const updateOwnership = async (
               edgeType: defs.EdgeType.Displays,
             },
           })
-          const key1 = `${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${edge.thisEntityId}`,
-            key2 = `${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${edge.thisEntityId}`
-          cachePromise.push(
-            cache.keys(`${key1}*`),
-            cache.keys(`${key2}*`),
-          )
-          logger.log(`old profileId: ${edge.thisEntityId}, key1: ${key1}, key2: ${key2}`)
+          if (edge) {
+            const key1 = `${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${edge.thisEntityId}`,
+              key2 = `${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${edge.thisEntityId}`
+            cachePromise.push(
+              cache.keys(`${key1}*`),
+              cache.keys(`${key2}*`),
+            )
+            logger.log(`old profileId: ${edge.thisEntityId}, key1: ${key1}, key2: ${key2}`)
+          }
           await repositories.edge.hardDelete({
             thatEntityId: existingNFT.id,
             edgeType: defs.EdgeType.Displays,
@@ -108,32 +110,15 @@ export const updateOwnership = async (
           })
 
           // new owner profile
-          //   const newOwnerProfiles = await repositories.profile.find({ where: {
-          //     ownerWalletId: wallet.id,
-          //     ownerUserId: wallet.userId,
-          //   } })
+          const newOwnerProfiles = await repositories.profile.find({ where: {
+            ownerWalletId: wallet.id,
+            ownerUserId: wallet.userId,
+          } })
 
-          //   for (const profile of newOwnerProfiles) {
-          //     const edge = await repositories.edge.findOne({
-          //       where: {
-          //         thisEntityId: profile.id,
-          //         thatEntityId: updatedNFT.id,
-          //         edgeType: defs.EdgeType.Displays,
-          //       },
-          //     })
-            
-          //     if (!edge) {
-          //         let weight = await core.getLastWeight(repositories, profile.id)
-          //         const newWeight = await core.generateWeight(weight)
-          //         await repositories.edge.save({
-          //             thisEntityId: profile.id,
-          //             thatEntityId: updatedNFT.id,
-          //             edgeType: defs.EdgeType.Displays,
-          //             hide: true,
-          //             weight: newWeight
-          //         })
-          //     }
-          //   }
+          for (const profile of newOwnerProfiles) {
+            // add to NFT refresh cache list
+            await cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id)
+          }
 
           try {
             const keysArray = await Promise.all(cachePromise)
