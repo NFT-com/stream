@@ -118,8 +118,16 @@ export const updateOwnership = async (
           } })
 
           for (const profile of newOwnerProfiles) {
+            // 
             try {
-              await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
+              await repositories.edge.save({
+                thisEntityType: defs.EntityType.Profile,
+                thatEntityType: defs.EntityType.NFT,
+                thisEntityId: profile.id,
+                thatEntityId: updatedNFT.id,
+                edgeType: defs.EdgeType.Displays,
+                hide: true,
+              })
               logger.info(`updated edges for profile in ownership for profileId: ${profile.id}, url: ${profile.url}`)
             } catch (err) {
               logger.error(err, `Error in updateEdgesWeightForProfile in ownership for profileId:${profile.id}, url: ${profile.url}`)
