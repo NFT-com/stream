@@ -118,12 +118,16 @@ export const updateOwnership = async (
           } })
 
           for (const profile of newOwnerProfiles) {
-            await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
-            logger.info(`updated edges for profile ${profile.id}`)
-            await nftService.syncEdgesWithNFTs(profile.id)
-            logger.info(`synced edges with NFTs for profile ${profile.id}`)
-            // add to NFT refresh cache list
-            await cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id)
+            try {
+              await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
+              logger.info(`updated edges for profile ${profile.id}`)
+              await nftService.syncEdgesWithNFTs(profile.id)
+              logger.info(`synced edges with NFTs for profile ${profile.id}`)
+              // add to NFT refresh cache list
+              await cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id)
+            } catch (err) {
+              logger.error(err, 'Error while syncing new profile')
+            }
           }
 
           if (cachePromise.length) {
