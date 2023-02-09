@@ -108,30 +108,32 @@ export const updateOwnership = async (
           })
 
           // new owner profile
-          const newOwnerProfiles = await repositories.profile.find({ where: {
-            ownerWalletId: wallet.id,
-            ownerUserId: wallet.userId,
-          } })
+          //   const newOwnerProfiles = await repositories.profile.find({ where: {
+          //     ownerWalletId: wallet.id,
+          //     ownerUserId: wallet.userId,
+          //   } })
 
-          for (const profile of newOwnerProfiles) {
-            const edge = await repositories.edge.findOne({
-              where: {
-                thisEntityId: profile.id,
-                thatEntityId: updatedNFT.id,
-                edgeType: defs.EdgeType.Displays,
-              },
-            })
+          //   for (const profile of newOwnerProfiles) {
+          //     const edge = await repositories.edge.findOne({
+          //       where: {
+          //         thisEntityId: profile.id,
+          //         thatEntityId: updatedNFT.id,
+          //         edgeType: defs.EdgeType.Displays,
+          //       },
+          //     })
             
-            if (edge) {
-              const key1 = `${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${profile.id}`,
-                key2 = `${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${profile.id}`
-              cachePromise.push(
-                cache.keys(`${key1}*`),
-                cache.keys(`${key2}*`),
-              )
-              logger.log(`new profileId: ${profile.id}, key1: ${key1}, key2: ${key2}`)
-            }
-          }
+          //     if (!edge) {
+          //         let weight = await core.getLastWeight(repositories, profile.id)
+          //         const newWeight = await core.generateWeight(weight)
+          //         await repositories.edge.save({
+          //             thisEntityId: profile.id,
+          //             thatEntityId: updatedNFT.id,
+          //             edgeType: defs.EdgeType.Displays,
+          //             hide: true,
+          //             weight: newWeight
+          //         })
+          //     }
+          //   }
 
           try {
             const keysArray = await Promise.all(cachePromise)
