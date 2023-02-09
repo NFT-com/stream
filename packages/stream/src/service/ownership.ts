@@ -124,6 +124,7 @@ export const updateOwnership = async (
                 thisEntityType: defs.EntityType.Profile,
                 thatEntityType: defs.EntityType.NFT,
                 thisEntityId: profile.id,
+                thatEntityId: updatedNFT.id,
                 edgeType: defs.EdgeType.Displays,
                 hide: true,
               })
@@ -131,7 +132,7 @@ export const updateOwnership = async (
             } catch (err) {
               logger.error(err, `Error in updateEdgesWeightForProfile in ownership for profileId:${profile.id}, url: ${profile.url}`)
             }
-            
+
             try {
               await nftService.syncEdgesWithNFTs(profile.id)
               logger.info(`synced edges with NFTs for profile in ownership for profileId: ${profile.id}, url: ${profile.url}`)
