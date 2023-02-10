@@ -128,7 +128,7 @@ export const updateOwnership = async (
                 edgeType: defs.EdgeType.Displays,
                 hide: true,
               })
-              logger.info(`updated edges for profile in ownership for profileId: ${profile.id}, url: ${profile.url}`)
+              logger.info(`updated edges for profile in ownership for profileId: ${profile.id}, url: ${profile.url}.`)
             } catch (err) {
               logger.error(err, `Error in updateEdgesWeightForProfile in ownership for profileId:${profile.id}, url: ${profile.url}`)
             }
