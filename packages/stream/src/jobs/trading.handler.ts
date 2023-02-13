@@ -5,10 +5,14 @@ import { _logger, contracts, defs, helper } from '@nftcom/shared'
 
 import { cache } from '../service/cache'
 import {
-  approvalEventHandler, buyNowInfoEventHandler,
+  approvalEventHandler,
+  buyNowInfoEventHandler,
   cancelEventHandler,
-  matchEventHandler, matchThreeAEventHandler, matchThreeBEventHandler,
-  matchTwoAEventHandler, matchTwoBEventHandler,
+  matchEventHandler,
+  matchThreeAEventHandler,
+  matchThreeBEventHandler,
+  matchTwoAEventHandler,
+  matchTwoBEventHandler,
 } from '../service/trading'
 import { getCachedBlock, getPastLogs, provider } from './mint.handler'
 
