@@ -1,13 +1,18 @@
 import { BigNumber, ethers, utils } from 'ethers'
 import { defaultAbiCoder } from 'ethers/lib/utils'
 
-import { _logger, db, defs, entity, helper } from '@nftcom/shared'
+import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
+import { provider } from '../jobs/mint.handler'
 import { blockNumberToTimestamp } from '../jobs/trading.handler'
 import { activityBuilder } from '../utils/builder/orderBuilder'
 
 const logger = _logger.Factory('NFTCOM')
 const repositories = db.newRepositories()
+const eventIface = new utils.Interface(contracts.marketplaceEventABI())
+export const TOKEN_TRANSFER_TOPIC = ethers.utils.id(
+  'Transfer(address,address,uint256)',
+)
 
 export const approvalEventHandler = async (
   makerAddress: string,
@@ -623,7 +628,7 @@ export const matchTwoAEventHandler = async (
 
     const txHashId = `${transactionHash}:${txListingOrder.orderHash}`
     try {
-      const txTransaction = await repositories.txTransaction.findOne({
+      let txTransaction = await repositories.txTransaction.findOne({
         where: {
           exchange: defs.ExchangeType.NFTCOM,
           transactionType: defs.ActivityType.Sale,
@@ -651,7 +656,7 @@ export const matchTwoAEventHandler = async (
             expirationFromSource,
           )
           try {
-            const tx = await repositories.txTransaction.save({
+            txTransaction = await repositories.txTransaction.save({
               id: txHashId,
               activity: txActivity,
               exchange: defs.ExchangeType.NFTCOM,
@@ -672,7 +677,7 @@ export const matchTwoAEventHandler = async (
               },
             })
 
-            logger.log(`tx saved: ${tx.id} for order ${txListingOrder.id}`)
+            logger.log(`tx saved: ${txTransaction.id} for order ${txListingOrder.id}`)
           } catch (err) {
             logger.error(`Tx err: ${err}`)
           }
@@ -701,6 +706,23 @@ export const matchTwoAEventHandler = async (
           },
         })
       }
+      // find transfer event
+      const chainProvider = provider(Number(chainId))
+      const receipt = await chainProvider.getTransactionReceipt(transactionHash)
+      await Promise.allSettled(
+        receipt.logs.map(async (log) => {
+          if (log.topics[0] === TOKEN_TRANSFER_TOPIC) {
+            const evt = eventIface.parseLog(log)
+            const [from, to, tokenId] = evt.args
+            logger.log(`transfer NFT: from ${from} to ${to} tokenId ${tokenId}`)
+            if (utils.getAddress(from) === makerAddress) {
+              await repositories.txTransaction.updateOneById(txTransaction.id, {
+                taker: utils.getAddress(to),
+              })
+            }
+          }
+        }),
+      )
     } catch (err) {
       logger.error(`tx find error: ${err}`)
     }
@@ -808,7 +830,7 @@ export const matchTwoBEventHandler = async (
 
     const txHashId = `${transactionHash}:${txListingOrder.orderHash}`
     try {
-      const txTransaction = await repositories.txTransaction.findOne({
+      let txTransaction = await repositories.txTransaction.findOne({
         where: {
           exchange: defs.ExchangeType.NFTCOM,
           transactionType: defs.ActivityType.Sale,
@@ -836,7 +858,7 @@ export const matchTwoBEventHandler = async (
             expirationFromSource,
           )
           try {
-            const tx = await repositories.txTransaction.save({
+            txTransaction = await repositories.txTransaction.save({
               id: txHashId,
               activity: txActivity,
               exchange: defs.ExchangeType.NFTCOM,
@@ -856,7 +878,7 @@ export const matchTwoBEventHandler = async (
               },
             })
 
-            logger.log(`tx saved: ${tx.id} for order ${txListingOrder.id}`)
+            logger.log(`tx saved: ${txTransaction.id} for order ${txListingOrder.id}`)
           } catch (err) {
             logger.error(`Tx err: ${err}`)
           }
@@ -883,6 +905,23 @@ export const matchTwoBEventHandler = async (
           },
         })
       }
+      // find transfer event
+      const chainProvider = provider(Number(chainId))
+      const receipt = await chainProvider.getTransactionReceipt(transactionHash)
+      await Promise.allSettled(
+        receipt.logs.map(async (log) => {
+          if (log.topics[0] === TOKEN_TRANSFER_TOPIC) {
+            const evt = eventIface.parseLog(log)
+            const [from, to, tokenId] = evt.args
+            logger.log(`transfer NFT: from ${from} to ${to} tokenId ${tokenId}`)
+            if (utils.getAddress(from) === txTransaction.maker) {
+              await repositories.txTransaction.updateOneById(txTransaction.id, {
+                taker: utils.getAddress(to),
+              })
+            }
+          }
+        }),
+      )
     } catch (err) {
       logger.error(`tx find error: ${err}`)
     }
