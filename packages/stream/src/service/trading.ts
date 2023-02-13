@@ -706,7 +706,7 @@ export const matchTwoAEventHandler = async (
           },
         })
       }
-      // find transfer event
+      // find transfer event and update taker with recipient address
       const chainProvider = provider(Number(chainId))
       const receipt = await chainProvider.getTransactionReceipt(transactionHash)
       await Promise.allSettled(
