@@ -7,9 +7,12 @@ import { delay } from '../utils'
 import { cancelEntityBuilder, txEntityBuilder, txX2Y2ProtocolDataParser } from '../utils/builder/orderBuilder'
 import { updateOwnership } from './ownership'
 import {
-  approvalEventHandler, buyNowInfoEventHandler,
+  approvalEventHandler,
+  buyNowInfoEventHandler,
   cancelEventHandler,
-  matchEventHandler, matchThreeAEventHandler, matchThreeBEventHandler,
+  matchEventHandler,
+  matchThreeAEventHandler,
+  matchThreeBEventHandler,
   matchTwoAEventHandler,
   matchTwoBEventHandler,
 } from './trading'
