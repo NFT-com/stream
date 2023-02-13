@@ -6,12 +6,25 @@ import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 import { delay } from '../utils'
 import { cancelEntityBuilder, txEntityBuilder, txX2Y2ProtocolDataParser } from '../utils/builder/orderBuilder'
 import { updateOwnership } from './ownership'
+import {
+  approvalEventHandler,
+  buyNowInfoEventHandler,
+  cancelEventHandler,
+  matchEventHandler,
+  matchThreeAEventHandler,
+  matchThreeBEventHandler,
+  matchTwoAEventHandler,
+  matchTwoBEventHandler,
+} from './trading'
 
 const repositories = db.newRepositories()
 const nftResolverInterface = new utils.Interface(contracts.NftResolverABI())
 const looksrareExchangeInterface = new utils.Interface(contracts.looksrareExchangeABI())
 const openseaSeaportInterface = new utils.Interface(contracts.openseaSeaportABI())
 const x2y2Interface = new utils.Interface(contracts.x2y2ABI())
+const nftMarketplaceInterface = new utils.Interface(contracts.marketplaceABIJSON())
+const nftMarketplaceEventInterface = new utils.Interface(contracts.marketplaceEventABI())
+
 const logger = _logger.Factory(_logger.Context.WebsocketProvider)
 
 type KeepAliveParams = {
@@ -47,6 +60,17 @@ enum X2Y2EventName {
   EvProfit = 'EvProfit',
   EvInventory = 'EvInventory',
   EvCancel = 'EvCancel'
+}
+
+enum NFTCOMEventName {
+  Match = 'Match',
+  MatchTwoA = 'Match2A',
+  MatchTwoB = 'Match2B',
+  MatchThreeA = 'Match3A',
+  MatchThreeB = 'Match3B',
+  Approval = 'Approval',
+  Cancel = 'Cancel',
+  BuyNowInfo = 'BuyNowInfo',
 }
 
 const keepAlive = ({
@@ -261,7 +285,7 @@ const keepAlive = ({
       if (evt.name === LooksrareEventName.CancelAllOrders) {
         const [user, newMinNonce] = evt.args
         const newMinNonceInNumber = helper.bigNumberToNumber(newMinNonce)
-        
+
         try {
           const orders: entity.TxOrder[] = await repositories.txOrder.find({
             relations: ['activity'],
@@ -317,7 +341,7 @@ const keepAlive = ({
               },
             },
           })
-  
+
           if (orders.length) {
             const cancelEntityPromises: Promise<Partial<entity.TxCancel>>[] = []
             for (const order of orders) {
@@ -360,14 +384,14 @@ const keepAlive = ({
               },
             },
           })
-          
+
           if (order) {
             order.activity.status = defs.ActivityStatus.Executed
             order.takerAddress = helper.checkSum(taker)
             await repositories.txOrder.save(order)
 
             const checksumContract: string = helper.checkSum(collection)
-            
+
             // new transaction
             const newTx: Partial<entity.TxTransaction> = await txEntityBuilder(
               defs.ActivityType.Sale,
@@ -421,14 +445,14 @@ const keepAlive = ({
               },
             },
           })
-  
+
           if (order) {
             order.activity.status = defs.ActivityStatus.Executed
             order.takerAddress = helper.checkSum(taker)
             await repositories.txOrder.save(order)
 
             const checksumContract: string = helper.checkSum(collection)
-        
+
             // new transaction
             const newTx: Partial<entity.TxTransaction> = await txEntityBuilder(
               defs.ActivityType.Sale,
@@ -510,7 +534,7 @@ const keepAlive = ({
               },
             },
           })
-      
+
           if (order) {
             order.activity.status = defs.ActivityStatus.Cancelled
             await repositories.txOrder.save(order)
@@ -554,7 +578,7 @@ const keepAlive = ({
               },
             },
           })
-      
+
           if (orders.length) {
             const cancelEntityPromises: Promise<Partial<entity.TxCancel>>[] = []
             for (const order of orders) {
@@ -629,7 +653,7 @@ const keepAlive = ({
             const tokenId: string = helper.bigNumberToHex(
               order.protocolData?.parameters?.offer?.[0]?.identifierOrCriteria,
             )
-            
+
             await updateOwnership(
               contract,
               tokenId,
@@ -691,7 +715,7 @@ const keepAlive = ({
               },
             },
           })
-      
+
           if (order) {
             order.activity.status = defs.ActivityStatus.Cancelled
             await repositories.txOrder.save(order)
@@ -719,7 +743,7 @@ const keepAlive = ({
         }
       } else if (evt.name === X2Y2EventName.EvProfit) {
         const [orderHash, currency, to, amount] = evt.args
-  
+
         try {
           const order: entity.TxOrder = await repositories.txOrder.findOne({
             relations: ['activity'],
@@ -924,6 +948,198 @@ const keepAlive = ({
       } else {
         // not relevant in our search space
         logger.error('topic hash not covered: ', e.transactionHash)
+      }
+    })
+
+    // NFTCOM marketplace
+
+    const nftMarketplaceAddress = helper.checkSum(
+      contracts.nftMarketplaceAddress(chainId.toString()),
+    )
+
+    const nftMarketplaceTopicFilter = [
+      [
+        helper.id('Approval(bytes32,address,uint256)'),
+        helper.id('Cancel(bytes32,address)'),
+      ],
+    ]
+
+    const nftMarketplaceFilter = {
+      address: utils.getAddress(nftMarketplaceAddress),
+      topics: nftMarketplaceTopicFilter,
+    }
+
+    provider.on(nftMarketplaceFilter, async (e) => {
+      const evt = nftMarketplaceInterface.parseLog(e)
+      if (evt.name === NFTCOMEventName.Approval) {
+        try {
+          const [structHash, maker] = evt.args
+          await approvalEventHandler(
+            utils.getAddress(maker),
+            structHash,
+            e.transactionHash,
+            e.blockNumber.toString(),
+            chainId.toString(),
+          )
+        } catch (err) {
+          logger.error(`Evt: ${NFTCOMEventName.Approval} -- Err: ${err}`)
+        }
+      } else if (evt.name === NFTCOMEventName.Cancel) {
+        try {
+          const [structHash, maker] = evt.args
+          await cancelEventHandler(
+            structHash,
+            utils.getAddress(maker),
+            e.transactionHash,
+            e.blockNumber.toString(),
+            chainId.toString(),
+          )
+        } catch (err) {
+          logger.error(`Evt: ${NFTCOMEventName.Cancel} -- Err: ${err}`)
+        }
+      }
+    })
+
+    const nftMarketplaceEventAddress = helper.checkSum(
+      contracts.marketplaceEventAddress(chainId.toString()),
+    )
+
+    const nftMarketplaceEventTopicFilter = [
+      [
+        helper.id('Match(bytes32,bytes32,uint8,(uint8,bytes32,bytes32),(uint8,bytes32,bytes32),bool)'),
+        helper.id('Match2A(bytes32,address,address,uint256,uint256,uint256,uint256)'),
+        helper.id('Match2B(bytes32,bytes[],bytes[],bytes4[],bytes[],bytes[],bytes4[])'),
+        helper.id('Match3A(bytes32,address,address,uint256,uint256,uint256,uint256)'),
+        helper.id('Match3B(bytes32,bytes[],bytes[],bytes4[],bytes[],bytes[],bytes4[])'),
+        helper.id('BuyNowInfo(bytes32,address)'),
+      ],
+    ]
+
+    const nftMarketplaceEventFilter = {
+      address: utils.getAddress(nftMarketplaceEventAddress),
+      topics: nftMarketplaceEventTopicFilter,
+    }
+
+    provider.on(nftMarketplaceEventFilter, async (e) => {
+      const evt = nftMarketplaceEventInterface.parseLog(e)
+      if (evt.name === NFTCOMEventName.Match) {
+        try {
+          const [sellHash, buyHash, makerSig, takerSig] = evt.args
+          const privateSale = evt.args.privateSale
+          const auctionType = evt.args.auctionType == 0 ?
+            defs.AuctionType.FixedPrice :
+            evt.args.auctionType == 1 ?
+              defs.AuctionType.English :
+              defs.AuctionType.Decreasing
+          await matchEventHandler(
+            sellHash,
+            buyHash,
+            makerSig,
+            takerSig,
+            auctionType,
+            e.transactionHash,
+            e.blockNumber.toString(),
+            privateSale,
+            chainId.toString(),
+          )
+        } catch (err) {
+          logger.error(`Evt: ${NFTCOMEventName.Match} -- Err: ${err}`)
+        }
+      } else if (evt.name === NFTCOMEventName.MatchTwoA) {
+        try {
+          const makerHash = e.topics[1]
+          const [makerAddress, takerAddress, start, end, nonce, salt] = evt.args
+          await matchTwoAEventHandler(
+            makerHash,
+            utils.getAddress(makerAddress),
+            utils.getAddress(takerAddress),
+            Number(start),
+            Number(end),
+            Number(nonce),
+            Number(salt),
+            e.transactionHash,
+            e.blockNumber.toString(),
+            chainId.toString(),
+          )
+        } catch (err) {
+          logger.error(`Evt: ${NFTCOMEventName.MatchTwoA} -- Err: ${err}`)
+        }
+      } else if (evt.name === NFTCOMEventName.MatchTwoB) {
+        try {
+          const makerHash = e.topics[1]
+
+          const sellerMakerOrderAssetData = evt.args.sellerMakerOrderAssetData as string[]
+          const sellerMakerOrderAssetTypeData = evt.args.sellerMakerOrderAssetTypeData as string[]
+          const sellerMakerOrderAssetClass = evt.args.sellerMakerOrderAssetClass as string[]
+          const sellerTakerOrderAssetData = evt.args.sellerTakerOrderAssetData as string[]
+          const sellerTakerOrderAssetTypeData = evt.args.sellerTakerOrderAssetTypeData as string[]
+          const sellerTakerOrderAssetClass = evt.args.sellerTakerOrderAssetClass as string[]
+          await matchTwoBEventHandler(
+            sellerMakerOrderAssetData,
+            sellerMakerOrderAssetClass,
+            sellerMakerOrderAssetTypeData,
+            sellerTakerOrderAssetData,
+            sellerTakerOrderAssetClass,
+            sellerTakerOrderAssetTypeData,
+            makerHash,
+            e.transactionHash,
+            e.blockNumber.toString(),
+            chainId.toString(),
+          )
+        } catch (err) {
+          logger.error(`Evt: ${NFTCOMEventName.MatchTwoB} -- Err: ${err}`)
+        }
+      } else if (evt.name === NFTCOMEventName.MatchThreeA) {
+        try {
+          const takerHash = e.topics[1]
+          const makerAddress = utils.getAddress(evt.args.makerAddress)
+          const takerAddress = utils.getAddress(evt.args.takerAddress)
+          const start = Number(evt.args.start)
+          const end = Number(evt.args.end)
+          const nonce = Number(evt.args.nonce)
+          const salt = Number(evt.args.salt)
+
+          await matchThreeAEventHandler(
+            takerHash,
+            makerAddress,
+            takerAddress,
+            start,
+            end,
+            nonce,
+            salt,
+            chainId.toString(),
+          )
+        } catch (err) {
+          logger.error(`Evt: ${NFTCOMEventName.MatchThreeA} -- Err: ${err}`)
+        }
+      } else if (evt.name === NFTCOMEventName.MatchThreeB) {
+        try {
+          const takerHash = e.topics[1]
+          const buyerMakerOrderAssetData = evt.args.buyerMakerOrderAssetData as string[]
+          const buyerMakerOrderAssetTypeData = evt.args.buyerMakerOrderAssetTypeData as string[]
+          const buyerMakerOrderAssetClass = evt.args.buyerMakerOrderAssetClass as string[]
+          const buyerTakerOrderAssetData = evt.args.buyerTakerOrderAssetData as string[]
+          const buyerTakerOrderAssetTypeData = evt.args.buyerTakerOrderAssetTypeData as string[]
+          const buyerTakerOrderAssetClass = evt.args.buyerTakerOrderAssetClass as string[]
+
+          await matchThreeBEventHandler(
+            buyerMakerOrderAssetData,
+            buyerMakerOrderAssetClass,
+            buyerMakerOrderAssetTypeData,
+            buyerTakerOrderAssetData,
+            buyerTakerOrderAssetClass,
+            buyerTakerOrderAssetTypeData,
+            takerHash,
+            chainId.toString(),
+          )
+        } catch (err) {
+          logger.error(`Evt: ${NFTCOMEventName.MatchThreeB} -- Err: ${err}`)
+        }
+      } else if (evt.name === NFTCOMEventName.BuyNowInfo) {
+        const makerHash = e.topics[1]
+        const takerAddress = utils.getAddress(evt.args.takerAddress)
+
+        await buyNowInfoEventHandler(makerHash, takerAddress)
       }
     })
   })
