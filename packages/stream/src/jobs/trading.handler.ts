@@ -1,16 +1,18 @@
 import { Job } from 'bull'
-import { BigNumber, ethers, utils } from 'ethers'
-import { defaultAbiCoder } from 'ethers/lib/utils'
+import { ethers, utils } from 'ethers'
 
-import { _logger, contracts, db, defs, entity,helper } from '@nftcom/shared'
+import { _logger, contracts, defs, helper } from '@nftcom/shared'
 
 import { cache } from '../service/cache'
-import { activityBuilder } from '../utils/builder/orderBuilder'
+import {
+  approvalEventHandler, buyNowInfoEventHandler,
+  cancelEventHandler,
+  matchEventHandler, matchThreeAEventHandler, matchThreeBEventHandler,
+  matchTwoAEventHandler, matchTwoBEventHandler,
+} from '../service/trading'
 import { getCachedBlock, getPastLogs, provider } from './mint.handler'
 
 const logger = _logger.Factory(_logger.Context.Bull)
-const repositories = db.newRepositories()
-
 const eventABI = contracts.marketplaceEventABI()
 const marketplaceABI = contracts.marketplaceABIJSON()
 const eventIface = new utils.Interface(eventABI)
@@ -54,85 +56,13 @@ const listenApprovalEvents = async (
       const makerAddress = utils.getAddress(event.args.maker)
 
       logger.log(`approval struct hash: ${structHash}`)
-      let txOrder = await repositories.txOrder.findOne({
-        where: {
-          orderHash: structHash,
-          makerAddress,
-          exchange: defs.ExchangeType.NFTCOM,
-          orderType: defs.ActivityType.Listing,
-          protocol: defs.ProtocolType.NFTCOM,
-        },
-      })
-      logger.log(`approval tx order listing: ${txOrder.id}`)
-      if (txOrder) {
-        const txTransaction = await repositories.txTransaction.findOne({
-          where: {
-            exchange: defs.ExchangeType.NFTCOM,
-            transactionType: defs.ActivityType.Listing,
-            protocol: defs.ProtocolType.NFTCOM,
-            maker: makerAddress,
-            transactionHash: log.transactionHash,
-            chainId: chainId.toString(),
-          },
-        })
-        logger.log(`approval tx listing: ${txTransaction.id, txTransaction.transactionHash}`)
-        if (!txTransaction) {
-          const tx = await repositories.txTransaction.save({
-            activity: txOrder.activity,
-            exchange: defs.ExchangeType.NFTCOM,
-            transactionType: defs.ActivityType.Listing,
-            protocol: defs.ProtocolType.NFTCOM,
-            transactionHash: log.transactionHash,
-            blockNumber: log.blockNumber.toString(),
-            nftContractAddress: '0x',
-            nftContractTokenId: '',
-            maker: makerAddress,
-            taker: '0x',
-            chainId: chainId.toString(),
-          })
-          logger.log(`approval tx listing saved: ${tx.id, tx.transactionHash}`)
-        }
-      } else {
-        txOrder = await repositories.txOrder.findOne({
-          where: {
-            orderHash: structHash,
-            makerAddress,
-            exchange: defs.ExchangeType.NFTCOM,
-            orderType: defs.ActivityType.Bid,
-            protocol: defs.ProtocolType.NFTCOM,
-          },
-        })
-        logger.log(`approval tx order bid: ${txOrder.id}`)
-        if (txOrder) {
-          const txTransaction = await repositories.txTransaction.findOne({
-            where: {
-              exchange: defs.ExchangeType.NFTCOM,
-              transactionType: defs.ActivityType.Bid,
-              protocol: defs.ProtocolType.NFTCOM,
-              maker: makerAddress,
-              transactionHash: log.transactionHash,
-              chainId: chainId.toString(),
-            },
-          })
-          logger.log(`approval tx bid: ${txTransaction.id, txTransaction.transactionHash}`)
-          if (!txTransaction) {
-            await repositories.txTransaction.save({
-              activity: txOrder.activity,
-              exchange: defs.ExchangeType.NFTCOM,
-              transactionType: defs.ActivityType.Bid,
-              protocol: defs.ProtocolType.NFTCOM,
-              transactionHash: log.transactionHash,
-              blockNumber: log.blockNumber.toString(),
-              nftContractAddress: '0x',
-              nftContractTokenId: '',
-              maker: makerAddress,
-              taker: '0x',
-              chainId: chainId.toString(),
-            })
-            logger.log(`approval tx bid: ${txTransaction.id, txTransaction.transactionHash}`)
-          }
-        }
-      }
+      await approvalEventHandler(
+        makerAddress,
+        structHash,
+        log.transactionHash,
+        log.blockNumber.toString(),
+        chainId.toString(),
+      )
     })
 
     await Promise.allSettled(promises)
@@ -239,131 +169,13 @@ const listenCancelEvents = async (
       const makerAddress = utils.getAddress(event.args.maker)
 
       logger.log(`cancellation struct hash: ${structHash}`)
-      let txOrder = await repositories.txOrder.findOne({
-        relations: ['activity'],
-        where: {
-          orderHash: structHash,
-          makerAddress,
-          exchange: defs.ExchangeType.NFTCOM,
-          orderType: defs.ActivityType.Listing,
-          protocol: defs.ProtocolType.NFTCOM,
-        },
-      })
-      logger.log(`cancellation listing order: ${txOrder.orderHash}`)
-      if (txOrder) {
-        const cancelHash = `${log.transactionHash}:${txOrder.orderHash}`
-        try {
-          const txCancel = await repositories.txCancel.findOne({
-            where: {
-              exchange: defs.ExchangeType.NFTCOM,
-              foreignType: defs.CancelActivities[0],
-              foreignKeyId: txOrder.orderHash,
-              transactionHash: cancelHash,
-              chainId: chainId.toString(),
-            },
-          })
-          logger.log(`cancellation listing cancel: ${txCancel}`)
-          if (!txCancel) {
-            try {
-              const timestampFromSource: number = (new Date().getTime())/1000
-              const expirationFromSource = null
-              const cancellationActivity: Partial<entity.TxActivity> = await activityBuilder(
-                defs.ActivityType.Cancel,
-                cancelHash,
-                makerAddress,
-                chainId.toString(),
-                txOrder.activity.nftId,
-                txOrder.activity.nftContract,
-                timestampFromSource,
-                expirationFromSource,
-              )
-
-              try {
-                const cancel = await repositories.txCancel.save({
-                  id: cancelHash,
-                  activity: cancellationActivity,
-                  exchange: defs.ExchangeType.NFTCOM,
-                  foreignType: defs.CancelActivities[0],
-                  foreignKeyId: txOrder.orderHash,
-                  transactionHash: cancelHash,
-                  blockNumber: log.blockNumber.toString(),
-                  chainId: chainId.toString(),
-                })
-                logger.log(`cancellation listing cancel saved: ${cancel.id}, ${cancel.foreignKeyId}`)
-              } catch (err) {
-                logger.error(`cancellation error: ${err}`)
-              }
-            } catch (err) {
-              logger.error(`cancellation activity error: ${err}`)
-            }
-          }
-        } catch (err) {
-          logger.error(`cancel find error: ${err}`)
-        }
-      } else {
-        txOrder = await repositories.txOrder.findOne({
-          relations: ['activity'],
-          where: {
-            orderHash: structHash,
-            makerAddress,
-            exchange: defs.ExchangeType.NFTCOM,
-            orderType: defs.ActivityType.Bid,
-            protocol: defs.ProtocolType.NFTCOM,
-          },
-        })
-        logger.log(`cancellation bid order: ${txOrder.orderHash}`)
-        if (txOrder) {
-          try {
-            const cancelHash = `${log.transactionHash}:${txOrder.orderHash}`
-            const txCancel = await repositories.txCancel.findOne({
-              where: {
-                exchange: defs.ExchangeType.NFTCOM,
-                foreignKeyId: txOrder.orderHash,
-                foreignType: defs.CancelActivities[1],
-                transactionHash: cancelHash,
-                chainId: chainId.toString(),
-              },
-            })
-            logger.log(`cancellation bid cancel: ${txCancel}`)
-            if (!txCancel) {
-              const timestampFromSource: number = (new Date().getTime())/1000
-              const expirationFromSource = null
-              const cancelHash = `${log.transactionHash}:${txOrder.orderHash}`
-              try {
-                const cancellationActivity: Partial<entity.TxActivity> = await activityBuilder(
-                  defs.ActivityType.Cancel,
-                  cancelHash,
-                  makerAddress,
-                  chainId.toString(),
-                  txOrder.activity.nftId,
-                  txOrder.activity.nftContract,
-                  timestampFromSource,
-                  expirationFromSource,
-                )
-                try {
-                  const cancel = await repositories.txCancel.save({
-                    id: cancelHash,
-                    activity: cancellationActivity,
-                    exchange: defs.ExchangeType.NFTCOM,
-                    foreignType: defs.CancelActivities[1],
-                    foreignKeyId: txOrder.orderHash,
-                    transactionHash: cancelHash,
-                    blockNumber: log.blockNumber.toString(),
-                    chainId: chainId.toString(),
-                  })
-                  logger.log(`cancellation bid cancel saved: ${cancel.id}, ${cancel.foreignKeyId}`)
-                } catch (err) {
-                  logger.error(`cancellation err: ${err}`)
-                }
-              } catch(err) {
-                logger.error(`cancellation activity err: ${err}`)
-              }
-            }
-          } catch (err) {
-            logger.error(`cancel find error: ${err}`)
-          }
-        }
-      }
+      await cancelEventHandler(
+        structHash,
+        makerAddress,
+        log.transactionHash,
+        log.blockNumber.toString(),
+        chainId.toString(),
+      )
     })
 
     await Promise.allSettled(promises)
@@ -371,90 +183,6 @@ const listenCancelEvents = async (
     logger.error(`Error in listenCancelEvents: ${e}`)
   }
   return
-}
-
-const parseAsset = async (
-  assetData: string[],
-  assetClass: string[],
-  assetType: string[],
-): Promise<defs.MarketplaceAsset[]> => {
-  const asset: defs.MarketplaceAsset[] = []
-  const promises = assetData.map(async (data, index) => {
-    const parsedAssetData = defaultAbiCoder.decode(['uint256','uint256'], data)
-    let assetClassData
-    let assetTypeData
-    switch (assetClass[index]) {
-    case helper.ETH_ASSET_CLASS:
-      assetClassData = defs.AssetClass.ETH
-      assetTypeData = [helper.AddressZero()]
-      break
-    case helper.ERC20_ASSET_CLASS:
-      assetClassData = defs.AssetClass.ERC20
-      assetTypeData = defaultAbiCoder.decode(['address'], assetType[index])
-      break
-    case helper.ERC721_ASSET_CLASS:
-      assetClassData = defs.AssetClass.ERC721
-      assetTypeData = defaultAbiCoder.decode(['address', 'uint256', 'bool'], assetType[index])
-      break
-    case helper.ERC1155_ASSET_CLASS:
-      assetClassData = defs.AssetClass.ERC1155
-      assetTypeData = defaultAbiCoder.decode(['address', 'uint256', 'bool'], assetType[index])
-      break
-    default:
-      break
-    }
-
-    // fetch ID from nft table...
-    const nfts = await repositories.nft.find({
-      where: {
-        contract: utils.getAddress(assetTypeData[0]),
-      },
-    })
-    const nft = nfts.find((nft) => BigNumber.from(nft.tokenId).toHexString()
-      === (assetTypeData[1] as BigNumber).toHexString())
-
-    asset.push({
-      nftId: nft ? nft.id : '',
-      bytes: data,
-      value: (parsedAssetData[0] as BigNumber).toString(),
-      minimumBid: (parsedAssetData[1] as BigNumber).toString(),
-      standard: {
-        assetClass: assetClassData,
-        bytes: assetType[index],
-        contractAddress: utils.getAddress(assetTypeData[0]),
-        tokenId: assetTypeData[1] ? (assetTypeData[1] as BigNumber).toHexString() : '',
-        allowAll: assetTypeData[2] ? assetTypeData[2] : true,
-      },
-    })
-  })
-
-  await Promise.allSettled(promises)
-  return asset
-}
-
-const parseNFTIdsFromNativeAsset = (
-  assets: Array<defs.MarketplaceAsset>,
-): string[] => {
-  const nftIds: string[] = []
-  for (const asset of assets) {
-    nftIds.push(`ethereum/${ethers.utils.getAddress(asset.standard.contractAddress)}/${helper.bigNumberToHex(asset.standard.tokenId)}`)
-  }
-  return nftIds
-}
-
-const parseContractsFromNativeAsset = (
-  assets: Array<defs.MarketplaceAsset>,
-): string[] => {
-  const contracts: string[] = []
-  const seen = {}
-  for (const asset of assets) {
-    const contract = ethers.utils.getAddress(asset.standard.contractAddress)
-    if (!seen[contract]) {
-      contracts.push(contract)
-      seen[contract] = true
-    }
-  }
-  return contracts
 }
 
 /**
@@ -495,190 +223,17 @@ const listenMatchEvents = async (
         const makerSig = event.args.makerSig
         const takerSig = event.args.takerSig
 
-        let txListingOrder, txBidOrder
-        txListingOrder = await repositories.txOrder.findOne({
-          where: {
-            orderHash: sellHash,
-            exchange: defs.ExchangeType.NFTCOM,
-            orderType: defs.ActivityType.Listing,
-            protocol: defs.ProtocolType.NFTCOM,
-            chainId: chainId.toString(),
-          },
-        })
-        txBidOrder = await repositories.txOrder.findOne({
-          where: {
-            orderHash: buyHash,
-            exchange: defs.ExchangeType.NFTCOM,
-            orderType: defs.ActivityType.Bid,
-            protocol: defs.ProtocolType.NFTCOM,
-            chainId: chainId.toString(),
-          },
-        })
-
-        if (!txListingOrder) {
-          const activity = await activityBuilder(
-            defs.ActivityType.Listing,
-            sellHash,
-            '0x',
-            chainId.toString(),
-            [],
-            '0x',
-            0,
-            null,
-          )
-          txListingOrder = await repositories.txOrder.save({
-            activity,
-            orderHash: sellHash,
-            exchange: defs.ExchangeType.NFTCOM,
-            orderType: defs.ActivityType.Listing,
-            protocol: defs.ProtocolType.NFTCOM,
-            makerAddress: '0x',
-            takerAddress: '0x',
-            nonce: -1,
-            protocolData: {
-              signature: {
-                v: makerSig.v,
-                r: makerSig.r,
-                s: makerSig.s,
-              },
-              auctionType,
-              salt: -1,
-              start: 0,
-              end: -1,
-              makeAsset: [],
-              takeAsset: [],
-            },
-            chainId: chainId.toString(),
-            createdInternally: true,
-          })
-        }
-
-        if (!txBidOrder && buyHash != '0x0000000000000000000000000000000000000000000000000000000000000000') {
-          const activity = await activityBuilder(
-            defs.ActivityType.Bid,
-            buyHash,
-            '0x',
-            chainId.toString(),
-            [],
-            '0x',
-            0,
-            null,
-          )
-          txBidOrder = await repositories.txOrder.save({
-            activity,
-            orderHash: buyHash,
-            exchange: defs.ExchangeType.NFTCOM,
-            orderType: defs.ActivityType.Bid,
-            protocol: defs.ProtocolType.NFTCOM,
-            makerAddress: '0x',
-            takerAddress: '0x',
-            nonce: -1,
-            protocolData: {
-              signature: {
-                v: takerSig.v,
-                r: takerSig.r,
-                s: takerSig.s,
-              },
-              auctionType,
-              salt: -1,
-              start: 0,
-              end: -1,
-              makeAsset: [],
-              takeAsset: [],
-            },
-            chainId: chainId.toString(),
-            createdInternally: true,
-          })
-
-          logger.info(`created new bid order ${txBidOrder.id}`)
-        }
-
-        let txSwapTransaction = await repositories.txTransaction.findOne({
-          where: {
-            exchange: defs.ExchangeType.NFTCOM,
-            transactionType: defs.ActivityType.Swap,
-            protocol: defs.ProtocolType.NFTCOM,
-            transactionHash: log.transactionHash,
-            chainId: chainId.toString(),
-          },
-        })
-        const timestamp = await blockNumberToTimestamp(log.blockNumber, chainId.toString())
-        if (!txSwapTransaction) {
-          const listingActivity = await repositories.txActivity.findOne({
-            where: {
-              activityTypeId: txListingOrder.orderHash,
-            },
-          })
-          const activity = await activityBuilder(
-            defs.ActivityType.Swap,
-            log.transactionHash,
-            '0x',
-            chainId.toString(),
-            listingActivity.nftId,
-            listingActivity.nftContract,
-            0,
-            null,
-          )
-          txSwapTransaction = await repositories.txTransaction.save({
-            activity: activity,
-            exchange: defs.ExchangeType.NFTCOM,
-            transactionType: defs.ActivityType.Swap,
-            protocol: defs.ProtocolType.NFTCOM,
-            protocolData: {
-              private: helper.parseBoolean(privateSale),
-              listingOrderId: txListingOrder.id,
-              bidOrderId: txBidOrder ? txBidOrder.id : null,
-            },
-            transactionHash: log.transactionHash,
-            blockNumber: log.blockNumber.toString(),
-            maker: txListingOrder.makerAddress,
-            taker: txBidOrder.makerAddress,
-            chainId: chainId.toString(),
-          })
-
-          await repositories.txActivity.updateOneById(listingActivity.id, {
-            status: defs.ActivityStatus.Executed,
-          })
-
-          await repositories.txOrder.updateOneById(txListingOrder.id, {
-            protocolData: {
-              ...txListingOrder.protocolData,
-              signature: {
-                v: makerSig.v,
-                r: makerSig.r,
-                s: makerSig.s,
-              },
-              auctionType,
-              swapTransactionId: txSwapTransaction.id,
-              acceptedAt: new Date(timestamp),
-            },
-          })
-
-          if (txBidOrder) {
-            const bidActivity = await repositories.txActivity.findOne({
-              where: {
-                activityTypeId: txBidOrder.orderHash,
-              },
-            })
-            await repositories.txActivity.updateOneById(bidActivity.id, {
-              status: defs.ActivityStatus.Executed,
-            })
-            await repositories.txOrder.updateOneById(txBidOrder.id, {
-              protocolData: {
-                ...txBidOrder.protocolData,
-                signature: {
-                  v: takerSig.v,
-                  r: takerSig.r,
-                  s: takerSig.s,
-                },
-                swapTransactionId: txSwapTransaction.id,
-                auctionType,
-                acceptedAt: new Date(timestamp),
-              },
-            })
-          }
-          logger.info(`created new swap transaction ${txSwapTransaction.id}`)
-        }
+        await matchEventHandler(
+          sellHash,
+          buyHash,
+          makerSig,
+          takerSig,
+          auctionType,
+          log.transactionHash,
+          log.blockNumber.toString(),
+          privateSale,
+          chainId.toString(),
+        )
       } catch (e) {
         logger.error('Error while parsing match event: ', e)
       }
@@ -724,170 +279,18 @@ const listenMatchTwoAEvents = async (
         const nonce = Number(event.args.nonce)
         const salt = Number(event.args.salt)
 
-        let txListingOrder = await repositories.txOrder.findOne({
-          where: {
-            orderHash: makerHash,
-            exchange: defs.ExchangeType.NFTCOM,
-            orderType: defs.ActivityType.Listing,
-            protocol: defs.ProtocolType.NFTCOM,
-            chainId: chainId.toString(),
-          },
-        })
-        if (!txListingOrder) {
-          const activity = await activityBuilder(
-            defs.ActivityType.Listing,
-            makerHash,
-            makerAddress,
-            chainId.toString(),
-            [],
-            '0x',
-            start,
-            end,
-          )
-          txListingOrder = await repositories.txOrder.save({
-            activity: {
-              ...activity,
-              status: defs.ActivityStatus.Executed,
-            },
-            orderHash: makerHash,
-            exchange: defs.ExchangeType.NFTCOM,
-            orderType: defs.ActivityType.Listing,
-            protocol: defs.ProtocolType.NFTCOM,
-            nonce,
-            protocolData: {
-              auctionType: defs.AuctionType.FixedPrice,
-              signature: {
-                v: 0,
-                r: '0x0000000000000000000000000000000000000000000000000000000000000000',
-                s: '0x0000000000000000000000000000000000000000000000000000000000000000',
-              },
-              salt,
-              start,
-              end,
-              makeAsset: [],
-              takeAsset: [],
-            },
-            makerAddress,
-            takerAddress,
-            chainId: chainId.toString(),
-            createdInternally: true,
-          })
-          logger.info(`created new listing order from Match2A ${txListingOrder.id}`)
-        } else {
-          const activity = await repositories.txActivity.findOne({
-            where: {
-              activityTypeId: makerHash,
-            },
-          })
-          if (activity) {
-            await repositories.txActivity.updateOneById(activity.id, {
-              timestamp: new Date(start * 1000),
-              expiration: new Date(end * 1000),
-            })
-          }
-
-          await repositories.txOrder.updateOneById(txListingOrder.id, {
-            makerAddress,
-            takerAddress,
-            nonce,
-            activity: {
-              ...activity,
-              status: defs.ActivityStatus.Executed,
-            },
-            protocolData: {
-              ...txListingOrder.protocolData,
-              salt,
-              start,
-              end,
-            },
-          })
-
-          logger.info(`updated existing listing order from Match2A ${txListingOrder.id}`)
-        }
-
-        const txHashId = `${log.transactionHash}:${txListingOrder.orderHash}`
-        try {
-          const txTransaction = await repositories.txTransaction.findOne({
-            where: {
-              exchange: defs.ExchangeType.NFTCOM,
-              transactionType: defs.ActivityType.Sale,
-              protocol: defs.ProtocolType.NFTCOM,
-              maker: makerAddress,
-              transactionHash: txHashId,
-              chainId: chainId.toString(),
-            },
-          })
-
-          logger.info(`tx exists: ${txTransaction}`)
-
-          if (!txTransaction) {
-            try {
-              const timestampFromSource: number = (new Date().getTime())/1000
-              const expirationFromSource = null
-              const txActivity: Partial<entity.TxActivity> = await activityBuilder(
-                defs.ActivityType.Sale,
-                txHashId,
-                makerAddress,
-                chainId.toString(),
-                txListingOrder?.activity?.nftId || [],
-                txListingOrder?.activity?.nftContract || '0x',
-                timestampFromSource,
-                expirationFromSource,
-              )
-              try {
-                const tx = await repositories.txTransaction.save({
-                  id: txHashId,
-                  activity: txActivity,
-                  exchange: defs.ExchangeType.NFTCOM,
-                  transactionType: defs.ActivityType.Sale,
-                  protocol: defs.ProtocolType.NFTCOM,
-                  transactionHash: txHashId,
-                  blockNumber: log.blockNumber.toString(),
-                  nftContractAddress: txListingOrder?.activity?.nftContract || '0x',
-                  nftContractTokenId: '',
-                  maker: makerAddress,
-                  taker: takerAddress,
-                  chainId: chainId.toString(),
-                  protocolData: {
-                    ...txListingOrder.protocolData,
-                    salt,
-                    start,
-                    end,
-                  },
-                })
-
-                logger.log(`tx saved: ${tx.id} for order ${txListingOrder.id}`)
-              } catch (err) {
-                logger.error(`Tx err: ${err}`)
-              }
-            } catch (err) {
-              logger.error(`Tx activity err: ${err}`)
-            }
-          } else {
-            const activity = await repositories.txActivity.findOne({
-              where: {
-                activityTypeId: txHashId,
-              },
-            })
-            if (activity) {
-              await repositories.txActivity.updateOneById(activity.id, {
-                walletAddress: makerAddress,
-              })
-            }
-            await repositories.txTransaction.updateOneById(txTransaction.id, {
-              maker: makerAddress,
-              taker: takerAddress,
-              protocolData: {
-                ...txTransaction.protocolData,
-                salt,
-                start,
-                end,
-              },
-            })
-          }
-        } catch (err) {
-          logger.error(`tx find error: ${err}`)
-        }
+        await matchTwoAEventHandler(
+          makerHash,
+          makerAddress,
+          takerAddress,
+          start,
+          end,
+          nonce,
+          salt,
+          log.transactionHash,
+          log.blockNumber.toString(),
+          chainId.toString(),
+        )
       }),
     )
   } catch (e) {
@@ -930,169 +333,18 @@ const listenMatchTwoBEvents = async (
       const sellerTakerOrderAssetTypeData = event.args.sellerTakerOrderAssetTypeData as string[]
       const sellerTakerOrderAssetClass = event.args.sellerTakerOrderAssetClass as string[]
 
-      const makeAsset = await parseAsset(
+      await matchTwoBEventHandler(
         sellerMakerOrderAssetData,
         sellerMakerOrderAssetClass,
         sellerMakerOrderAssetTypeData,
-      )
-      const takeAsset = await parseAsset(
         sellerTakerOrderAssetData,
         sellerTakerOrderAssetClass,
         sellerTakerOrderAssetTypeData,
+        makerHash,
+        log.transactionHash,
+        log.blockNumber.toString(),
+        chainId.toString(),
       )
-
-      let txListingOrder = await repositories.txOrder.findOne({
-        where: {
-          orderHash: makerHash,
-          exchange: defs.ExchangeType.NFTCOM,
-          orderType: defs.ActivityType.Listing,
-          protocol: defs.ProtocolType.NFTCOM,
-          chainId: chainId.toString(),
-        },
-      })
-      const nftIds = parseNFTIdsFromNativeAsset(makeAsset)
-      const contracts = parseContractsFromNativeAsset(makeAsset)
-      const contract = contracts.length === 1 ? contracts[0] : '0x'
-      if (!txListingOrder) {
-        const activity = await activityBuilder(
-          defs.ActivityType.Listing,
-          makerHash,
-          '0x',
-          chainId.toString(),
-          nftIds,
-          contract,
-          0,
-          null,
-        )
-        txListingOrder = await repositories.txOrder.save({
-          activity,
-          orderHash: makerHash,
-          exchange: defs.ExchangeType.NFTCOM,
-          orderType: defs.ActivityType.Listing,
-          protocol: defs.ProtocolType.NFTCOM,
-          nonce: -1,
-          protocolData: {
-            auctionType: defs.AuctionType.FixedPrice,
-            signature: {
-              v: 0,
-              r: '0x0000000000000000000000000000000000000000000000000000000000000000',
-              s: '0x0000000000000000000000000000000000000000000000000000000000000000',
-            },
-            salt: -1,
-            start: 0,
-            end: -1,
-            makeAsset,
-            takeAsset,
-          },
-          makerAddress: '0x',
-          takerAddress: '0x',
-          chainId: chainId.toString(),
-          createdInternally: true,
-        })
-
-        logger.info(`created new listing order from Match2B ${txListingOrder.id}`)
-      } else {
-        const activity = await repositories.txActivity.findOne({
-          where: {
-            activityTypeId: txListingOrder.orderHash,
-          },
-        })
-        if (activity) {
-          await repositories.txActivity.updateOneById(activity.id, {
-            nftId: [...nftIds],
-            nftContract: contract === '0x' ? '0x' : helper.checkSum(contract),
-          })
-        }
-        await repositories.txOrder.updateOneById(txListingOrder.id, {
-          protocolData: {
-            ...txListingOrder.protocolData,
-            makeAsset,
-            takeAsset,
-          },
-        })
-        logger.info(`updated existing listing order from Match2B ${txListingOrder.id}`)
-      }
-
-      const txHashId = `${log.transactionHash}:${txListingOrder.orderHash}`
-      try {
-        const txTransaction = await repositories.txTransaction.findOne({
-          where: {
-            exchange: defs.ExchangeType.NFTCOM,
-            transactionType: defs.ActivityType.Sale,
-            protocol: defs.ProtocolType.NFTCOM,
-            maker: txListingOrder.makerAddress,
-            transactionHash: txHashId,
-            chainId: chainId.toString(),
-          },
-        })
-
-        logger.info(`tx exists: ${txTransaction}`)
-
-        if (!txTransaction) {
-          try {
-            const timestampFromSource: number = (new Date().getTime())/1000
-            const expirationFromSource = null
-            const txActivity: Partial<entity.TxActivity> = await activityBuilder(
-              defs.ActivityType.Sale,
-              txHashId,
-              txListingOrder.makerAddress,
-              chainId.toString(),
-              nftIds,
-              contract,
-              timestampFromSource,
-              expirationFromSource,
-            )
-            try {
-              const tx = await repositories.txTransaction.save({
-                id: txHashId,
-                activity: txActivity,
-                exchange: defs.ExchangeType.NFTCOM,
-                transactionType: defs.ActivityType.Sale,
-                protocol: defs.ProtocolType.NFTCOM,
-                transactionHash: txHashId,
-                blockNumber: log.blockNumber.toString(),
-                nftContractAddress: txListingOrder?.activity?.nftContract || '0x',
-                nftContractTokenId: '',
-                maker: txListingOrder.makerAddress,
-                taker: txListingOrder.takerAddress,
-                chainId: chainId.toString(),
-                protocolData: {
-                  ...txListingOrder.protocolData,
-                  makeAsset,
-                  takeAsset,
-                },
-              })
-
-              logger.log(`tx saved: ${tx.id} for order ${txListingOrder.id}`)
-            } catch (err) {
-              logger.error(`Tx err: ${err}`)
-            }
-          } catch (err) {
-            logger.error(`Tx activity err: ${err}`)
-          }
-        } else {
-          const activity = await repositories.txActivity.findOne({
-            where: {
-              activityTypeId: txHashId,
-            },
-          })
-          if (activity) {
-            await repositories.txActivity.updateOneById(activity.id, {
-              nftId: [...nftIds],
-              nftContract: contract === '0x' ? '0x' : helper.checkSum(contract),
-            })
-          }
-          await repositories.txTransaction.updateOneById(txTransaction.id, {
-            protocolData: {
-              ...txTransaction.protocolData,
-              makeAsset,
-              takeAsset,
-            },
-          })
-        }
-      } catch (err) {
-        logger.error(`tx find error: ${err}`)
-      }
     })
 
     await Promise.allSettled(promises)
@@ -1134,79 +386,16 @@ const listenMatchThreeAEvents = async (
       const nonce = Number(event.args.nonce)
       const salt = Number(event.args.salt)
 
-      let txBidOrder = await repositories.txOrder.findOne({
-        where: {
-          orderHash: takerHash,
-          exchange: defs.ExchangeType.NFTCOM,
-          orderType: defs.ActivityType.Bid,
-          protocol: defs.ProtocolType.NFTCOM,
-          chainId: chainId.toString(),
-        },
-      })
-      if (!txBidOrder) {
-        const activity = await activityBuilder(
-          defs.ActivityType.Bid,
-          takerHash,
-          makerAddress,
-          chainId.toString(),
-          [],
-          '0x',
-          start,
-          end,
-        )
-        txBidOrder = await repositories.txOrder.save({
-          activity,
-          orderHash: takerHash,
-          exchange: defs.ExchangeType.NFTCOM,
-          orderType: defs.ActivityType.Bid,
-          protocol: defs.ProtocolType.NFTCOM,
-          nonce,
-          protocolData: {
-            auctionType: defs.AuctionType.FixedPrice,
-            signature: {
-              v: 0,
-              r: '0x0000000000000000000000000000000000000000000000000000000000000000',
-              s: '0x0000000000000000000000000000000000000000000000000000000000000000',
-            },
-            salt,
-            start,
-            end,
-            makeAsset: [],
-            takeAsset: [],
-          },
-          makerAddress,
-          takerAddress,
-          chainId: chainId.toString(),
-          createdInternally: true,
-        })
-        logger.info(`created new bid order from Match3A ${txBidOrder.id}`)
-      } else {
-        const activity = await repositories.txActivity.findOne({
-          where: {
-            activityTypeId: takerHash,
-          },
-        })
-        if (activity) {
-          await repositories.txActivity.updateOneById(activity.id, {
-            timestamp: new Date(start * 1000),
-            expiration: new Date(end * 1000),
-          })
-        }
-
-        await repositories.txOrder.updateOneById(txBidOrder.id, {
-          makerAddress,
-          takerAddress,
-          nonce,
-          protocolData: {
-            ...txBidOrder.protocolData,
-            salt,
-            start,
-            end,
-          },
-        })
-
-        logger.info(`updated existing bid order from Match3A ${txBidOrder.id}`)
-      }
+      await matchThreeAEventHandler(
+        takerHash,
+        makerAddress,
+        takerAddress,
+        start,
+        end,
+        nonce,
+        salt,
+        chainId.toString(),
+      )
     })
 
     await Promise.allSettled(promises)
@@ -1249,88 +438,16 @@ const listenMatchThreeBEvents = async (
       const buyerTakerOrderAssetTypeData = event.args.buyerTakerOrderAssetTypeData as string[]
       const buyerTakerOrderAssetClass = event.args.buyerTakerOrderAssetClass as string[]
 
-      const makeAsset = await parseAsset(
+      await matchThreeBEventHandler(
         buyerMakerOrderAssetData,
         buyerMakerOrderAssetClass,
         buyerMakerOrderAssetTypeData,
-      )
-      const takeAsset = await parseAsset(
         buyerTakerOrderAssetData,
         buyerTakerOrderAssetClass,
         buyerTakerOrderAssetTypeData,
+        takerHash,
+        chainId.toString(),
       )
-
-      const nftIds = parseNFTIdsFromNativeAsset(takeAsset)
-      const contracts = parseContractsFromNativeAsset(takeAsset)
-      const contract = contracts.length === 1 ? contracts[0] : '0x'
-      let txBidOrder = await repositories.txOrder.findOne({
-        where: {
-          orderHash: takerHash,
-          exchange: defs.ExchangeType.NFTCOM,
-          orderType: defs.ActivityType.Bid,
-          protocol: defs.ProtocolType.NFTCOM,
-          chainId: chainId.toString(),
-        },
-      })
-      if (!txBidOrder) {
-        const activity = await activityBuilder(
-          defs.ActivityType.Bid,
-          takerHash,
-          '0x',
-          chainId.toString(),
-          nftIds,
-          contract,
-          0,
-          null,
-        )
-        txBidOrder = await repositories.txOrder.save({
-          activity,
-          orderHash: takerHash,
-          exchange: defs.ExchangeType.NFTCOM,
-          orderType: defs.ActivityType.Bid,
-          protocol: defs.ProtocolType.NFTCOM,
-          nonce: -1,
-          protocolData: {
-            auctionType: defs.AuctionType.FixedPrice,
-            signature: {
-              v: 0,
-              r: '0x0000000000000000000000000000000000000000000000000000000000000000',
-              s: '0x0000000000000000000000000000000000000000000000000000000000000000',
-            },
-            salt: -1,
-            start: 0,
-            end: -1,
-            makeAsset,
-            takeAsset,
-          },
-          makerAddress: '0x',
-          takerAddress: '0x',
-          chainId: chainId.toString(),
-          createdInternally: true,
-        })
-
-        logger.info(`created new bid order from Match3B ${txBidOrder.id}`)
-      } else {
-        const activity = await repositories.txActivity.findOne({
-          where: {
-            activityTypeId: txBidOrder.orderHash,
-          },
-        })
-        if (activity) {
-          await repositories.txActivity.updateOneById(activity.id, {
-            nftId: [...nftIds],
-            nftContract: contract === '0x' ? '0x' : helper.checkSum(contract),
-          })
-        }
-        await repositories.txOrder.updateOneById(txBidOrder.id, {
-          protocolData: {
-            ...txBidOrder.protocolData,
-            makeAsset,
-            takeAsset,
-          },
-        })
-        logger.info(`updated existing bid order from Match3B ${txBidOrder.id}`)
-      }
     })
 
     await Promise.allSettled(promises)
@@ -1366,35 +483,9 @@ const listenBuyNowInfoEvents = async (
       const event = eventIface.parseLog(log)
 
       const makerHash = log.topics[1]
-      const takerAddress = event.args.takerAddress
+      const takerAddress = utils.getAddress(event.args.takerAddress)
 
-      const txOrder = await repositories.txOrder.findOne({
-        where: {
-          orderHash: makerHash,
-          exchange: defs.ExchangeType.NFTCOM,
-          orderType: defs.ActivityType.Listing,
-          protocol: defs.ProtocolType.NFTCOM,
-        },
-      })
-      if (txOrder) {
-        const activity = await repositories.txActivity.findOne({
-          where: {
-            activityTypeId: makerHash,
-            activityType: defs.ActivityType.Listing,
-          },
-        })
-        await repositories.txActivity.updateOneById(activity.id, {
-          status: defs.ActivityStatus.Executed,
-        })
-        await repositories.txOrder.updateOneById(txOrder.id, {
-          protocolData: {
-            ...txOrder.protocolData,
-            buyNowTaker: utils.getAddress(takerAddress),
-          },
-        })
-
-        logger.info(`updated existing listing order from BuyNowInfo: ${txOrder.id}`)
-      }
+      await buyNowInfoEventHandler(makerHash, takerAddress)
     })
 
     await Promise.allSettled(promises)
