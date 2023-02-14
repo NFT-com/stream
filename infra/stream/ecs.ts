@@ -502,6 +502,10 @@ const createEcsTaskDefinition = (
                   Name: 'MAX_BATCHES_NFTPORT',
                   Value: process.env.MAX_BATCHES_NFTPORT,
                 },
+                {
+                  Name: 'MAX_PROFILE_BATCH_SIZE',
+                  Value: process.env.MAX_PROFILE_BATCH_SIZE,
+                },
               ],
               dependsOn: [
                 {
