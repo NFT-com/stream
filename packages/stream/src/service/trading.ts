@@ -706,23 +706,6 @@ export const matchTwoAEventHandler = async (
           },
         })
       }
-      // find transfer event and update taker with recipient address
-      const chainProvider = provider(Number(chainId))
-      const receipt = await chainProvider.getTransactionReceipt(transactionHash)
-      await Promise.allSettled(
-        receipt.logs.map(async (log) => {
-          if (log.topics[0] === TOKEN_TRANSFER_TOPIC) {
-            const evt = eventIface.parseLog(log)
-            const [from, to, tokenId] = evt.args
-            logger.log(`transfer NFT: from ${from} to ${to} tokenId ${tokenId}`)
-            if (utils.getAddress(from) === makerAddress) {
-              await repositories.txTransaction.updateOneById(txTransaction.id, {
-                taker: utils.getAddress(to),
-              })
-            }
-          }
-        }),
-      )
     } catch (err) {
       logger.error(`tx find error: ${err}`)
     }
@@ -908,20 +891,32 @@ export const matchTwoBEventHandler = async (
       // find transfer event
       const chainProvider = provider(Number(chainId))
       const receipt = await chainProvider.getTransactionReceipt(transactionHash)
-      await Promise.allSettled(
-        receipt.logs.map(async (log) => {
-          if (log.topics[0] === TOKEN_TRANSFER_TOPIC) {
-            const evt = eventIface.parseLog(log)
-            const [from, to, tokenId] = evt.args
-            logger.log(`transfer NFT: from ${from} to ${to} tokenId ${tokenId}`)
-            if (utils.getAddress(from) === txTransaction.maker) {
-              await repositories.txTransaction.updateOneById(txTransaction.id, {
-                taker: utils.getAddress(to),
+      logger.info(`transferred NFTs count: ${receipt.logs.length}`)
+      logger.info(`TOKEN_TRANSFER_TOPIC: ${TOKEN_TRANSFER_TOPIC}`)
+      if (txListingOrder.makerAddress !== '0x') {
+        await Promise.allSettled(
+          receipt.logs.map(async (log) => {
+            if (log.topics[0] === TOKEN_TRANSFER_TOPIC) {
+              const evt = eventIface.parseLog(log)
+              const [from, to, tokenId] = evt.args
+              let taker = '0x'
+              makeAsset.map((asset) => {
+                if (BigNumber.from(asset.standard.tokenId) === BigNumber.from(tokenId)
+                  && utils.getAddress(txListingOrder.makerAddress) === utils.getAddress(from)
+                ) {
+                  logger.log(`NFTCOM transfer: from ${from} to ${to} tokenId ${tokenId}`)
+                  taker = utils.getAddress(to)
+                }
               })
+              if (taker !== '0x') {
+                await repositories.txTransaction.updateOneById(txTransaction.id, {
+                  taker: utils.getAddress(to),
+                })
+              }
             }
-          }
-        }),
-      )
+          }),
+        )
+      }
     } catch (err) {
       logger.error(`tx find error: ${err}`)
     }
