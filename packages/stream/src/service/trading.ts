@@ -894,7 +894,7 @@ export const matchTwoBEventHandler = async (
           const chainProvider = provider(Number(chainId))
           const txResponse = await chainProvider.getTransaction(transactionHash)
           const receipt = await txResponse.wait()
-          logger.info(`transferred NFTs count: ${receipt.logs.length}`)
+          logger.info(`Logs count: ${receipt.logs.length}`)
           logger.info(`TOKEN_TRANSFER_TOPIC: ${TOKEN_TRANSFER_TOPIC}`)
           const seen = {}
           for (const asset of makeAsset) {
