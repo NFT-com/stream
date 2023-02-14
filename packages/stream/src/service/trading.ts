@@ -894,21 +894,19 @@ export const matchTwoBEventHandler = async (
       logger.info(`transferred NFTs count: ${receipt.logs.length}`)
       logger.info(`TOKEN_TRANSFER_TOPIC: ${TOKEN_TRANSFER_TOPIC}`)
       if (txListingOrder.makerAddress !== '0x') {
+        const seen = {}
+        for (const asset of makeAsset) {
+          const key = `${txListingOrder.makerAddress}-${helper.bigNumberToHex(asset.standard.tokenId)}`
+          seen[key] = true
+        }
         await Promise.allSettled(
           receipt.logs.map(async (log) => {
             if (log.topics[0] === TOKEN_TRANSFER_TOPIC) {
               const evt = eventIface.parseLog(log)
               const [from, to, tokenId] = evt.args
-              let taker = '0x'
-              makeAsset.map((asset) => {
-                if (BigNumber.from(asset.standard.tokenId) === BigNumber.from(tokenId)
-                  && utils.getAddress(txListingOrder.makerAddress) === utils.getAddress(from)
-                ) {
-                  logger.log(`NFTCOM transfer: from ${from} to ${to} tokenId ${tokenId}`)
-                  taker = utils.getAddress(to)
-                }
-              })
-              if (taker !== '0x') {
+              const key = `${utils.getAddress(from)}-${helper.bigNumberToHex(tokenId)}`
+              if (seen[key]) {
+                logger.info(`NFTCOM Transfer: from ${from} to ${to} tokenId ${helper.bigNumberToHex(tokenId)}`)
                 await repositories.txTransaction.updateOneById(txTransaction.id, {
                   taker: utils.getAddress(to),
                 })
