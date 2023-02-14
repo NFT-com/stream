@@ -7,7 +7,7 @@ import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
 import { cache, CacheKeys } from './cache'
 
-const MAX_PROCESS_BATCH_SIZE = 100
+const MAX_PROCESS_BATCH_SIZE = parseInt(process.env.MAX_PROFILE_BATCH_SIZE) || 5
 const logger = _logger.Factory(_logger.Context.NFT)
 const repositories = db.newRepositories()
 

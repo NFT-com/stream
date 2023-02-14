@@ -143,4 +143,5 @@ runs:
         NODE_ENV: ${{ fromJSON(inputs.secrets).NODE_ENV }}
         DATADOG_API_KEY: ${{ fromJSON(inputs.secrets).DATADOG_API_KEY }}
         MAX_BATCHES_NFTPORT: ${{ fromJSON(inputs.secrets).MAX_BATCHES_NFTPORT }}
+        MAX_PROFILE_BATCH_SIZE: ${{ fromJSON(inputs.secrets).MAX_PROFILE_BATCH_SIZE }}
       run: npm run deploy:stream
