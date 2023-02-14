@@ -84,7 +84,7 @@ export const updateOwnership = async (
             const oldOwnerProfileCount: number = await repositories.profile
               .count(oldOwnerProfileQuery)
   
-            logger.log(`Old owner profiles count: ${oldOwnerProfileCount}`)
+            logger.log(`Old owner profiles count: ${oldOwnerProfileCount}.`)
   
             for (let i=0; i < oldOwnerProfileCount; i+= MAX_PROCESS_BATCH_SIZE) {
               const oldOwnerProfiles: entity.Profile[] = await repositories.profile.find({
