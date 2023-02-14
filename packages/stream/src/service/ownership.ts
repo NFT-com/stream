@@ -128,8 +128,8 @@ export const updateOwnership = async (
             // if this NFT is a profile NFT...
             if (ethers.utils.getAddress(existingNFT.contract) ==
                       ethers.utils.getAddress(contracts.nftProfileAddress(chainId))) {
+              logger.log(`Profile is being processed as a Profile NFT - contract ${existingNFT.contract}, tokenId: ${hexTokenId}`)
               const previousWallet = await repositories.wallet.findById(existingNFT.walletId)
-  
               if (previousWallet) {
                 const profile: entity.Profile = await repositories.profile.findOne({ where: {
                   tokenId: BigNumber.from(existingNFT.tokenId).toString(),
