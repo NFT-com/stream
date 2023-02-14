@@ -239,6 +239,10 @@ const createEcsTaskDefinition = (
                   Value: process.env.STAGE,
                 },
                 {
+                  Name: 'NODE_OPTIONS',
+                  Value: process.env.NODE_OPTIONS,
+                },
+                {
                   Name: 'PULUMI_CONFIG_PASSPHRASE',
                   Value: process.env.PULUMI_CONFIG_PASSPHRASE,
                 },
