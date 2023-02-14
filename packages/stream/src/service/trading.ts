@@ -896,7 +896,7 @@ export const matchTwoBEventHandler = async (
         logger.info(`TOKEN_TRANSFER_TOPIC: ${TOKEN_TRANSFER_TOPIC}`)
         const seen = {}
         for (const asset of makeAsset) {
-          const key = `${txListingOrder.makerAddress}-${helper.bigNumberToHex(asset.standard.tokenId)}`
+          const key = `${utils.getAddress(txListingOrder.makerAddress)}-${helper.bigNumberToHex(asset.standard.tokenId)}`
           seen[key] = true
         }
         await Promise.allSettled(
