@@ -888,12 +888,12 @@ export const matchTwoBEventHandler = async (
           },
         })
       }
-      // find transfer event
-      const chainProvider = provider(Number(chainId))
-      const receipt = await chainProvider.getTransactionReceipt(transactionHash)
-      logger.info(`transferred NFTs count: ${receipt.logs.length}`)
-      logger.info(`TOKEN_TRANSFER_TOPIC: ${TOKEN_TRANSFER_TOPIC}`)
       if (txListingOrder.makerAddress !== '0x') {
+        // find transfer event
+        const chainProvider = provider(Number(chainId))
+        const receipt = await chainProvider.getTransactionReceipt(transactionHash)
+        logger.info(`transferred NFTs count: ${receipt.logs.length}`)
+        logger.info(`TOKEN_TRANSFER_TOPIC: ${TOKEN_TRANSFER_TOPIC}`)
         const seen = {}
         for (const asset of makeAsset) {
           const key = `${txListingOrder.makerAddress}-${helper.bigNumberToHex(asset.standard.tokenId)}`
