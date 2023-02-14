@@ -1,7 +1,7 @@
 import { BigNumber, ethers, utils } from 'ethers'
 import { defaultAbiCoder } from 'ethers/lib/utils'
 
-import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
+import { _logger, db, defs, entity, helper } from '@nftcom/shared'
 
 import { provider } from '../jobs/mint.handler'
 import { blockNumberToTimestamp } from '../jobs/trading.handler'
@@ -9,7 +9,10 @@ import { activityBuilder } from '../utils/builder/orderBuilder'
 
 const logger = _logger.Factory('NFTCOM')
 const repositories = db.newRepositories()
-const eventIface = new utils.Interface(contracts.marketplaceEventABI())
+const abiTransfer = [
+  'event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)',
+]
+const eventIface = new utils.Interface(abiTransfer)
 export const TOKEN_TRANSFER_TOPIC = ethers.utils.id(
   'Transfer(address,address,uint256)',
 )
@@ -902,7 +905,6 @@ export const matchTwoBEventHandler = async (
           }
           await Promise.allSettled(
             receipt.logs.map(async (log) => {
-              logger.info(`Topics[0]: ${log.topics[0]}`)
               if (log.topics[0] === TOKEN_TRANSFER_TOPIC) {
                 try {
                   const evt = eventIface.parseLog(log)
