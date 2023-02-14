@@ -706,23 +706,6 @@ export const matchTwoAEventHandler = async (
           },
         })
       }
-      // find transfer event and update taker with recipient address
-      const chainProvider = provider(Number(chainId))
-      const receipt = await chainProvider.getTransactionReceipt(transactionHash)
-      await Promise.allSettled(
-        receipt.logs.map(async (log) => {
-          if (log.topics[0] === TOKEN_TRANSFER_TOPIC) {
-            const evt = eventIface.parseLog(log)
-            const [from, to, tokenId] = evt.args
-            logger.log(`transfer NFT: from ${from} to ${to} tokenId ${tokenId}`)
-            if (utils.getAddress(from) === makerAddress) {
-              await repositories.txTransaction.updateOneById(txTransaction.id, {
-                taker: utils.getAddress(to),
-              })
-            }
-          }
-        }),
-      )
     } catch (err) {
       logger.error(`tx find error: ${err}`)
     }
@@ -905,23 +888,33 @@ export const matchTwoBEventHandler = async (
           },
         })
       }
-      // find transfer event
-      const chainProvider = provider(Number(chainId))
-      const receipt = await chainProvider.getTransactionReceipt(transactionHash)
-      await Promise.allSettled(
-        receipt.logs.map(async (log) => {
-          if (log.topics[0] === TOKEN_TRANSFER_TOPIC) {
-            const evt = eventIface.parseLog(log)
-            const [from, to, tokenId] = evt.args
-            logger.log(`transfer NFT: from ${from} to ${to} tokenId ${tokenId}`)
-            if (utils.getAddress(from) === txTransaction.maker) {
-              await repositories.txTransaction.updateOneById(txTransaction.id, {
-                taker: utils.getAddress(to),
-              })
+      if (txListingOrder.makerAddress !== '0x') {
+        // find transfer event
+        const chainProvider = provider(Number(chainId))
+        const receipt = await chainProvider.getTransactionReceipt(transactionHash)
+        logger.info(`transferred NFTs count: ${receipt.logs.length}`)
+        logger.info(`TOKEN_TRANSFER_TOPIC: ${TOKEN_TRANSFER_TOPIC}`)
+        const seen = {}
+        for (const asset of makeAsset) {
+          const key = `${utils.getAddress(txListingOrder.makerAddress)}-${helper.bigNumberToHex(asset.standard.tokenId)}`
+          seen[key] = true
+        }
+        await Promise.allSettled(
+          receipt.logs.map(async (log) => {
+            if (log.topics[0] === TOKEN_TRANSFER_TOPIC) {
+              const evt = eventIface.parseLog(log)
+              const [from, to, tokenId] = evt.args
+              const key = `${utils.getAddress(from)}-${helper.bigNumberToHex(tokenId)}`
+              if (seen[key]) {
+                logger.info(`NFTCOM Transfer: from ${from} to ${to} tokenId ${helper.bigNumberToHex(tokenId)}`)
+                await repositories.txTransaction.updateOneById(txTransaction.id, {
+                  taker: utils.getAddress(to),
+                })
+              }
             }
-          }
-        }),
-      )
+          }),
+        )
+      }
     } catch (err) {
       logger.error(`tx find error: ${err}`)
     }
