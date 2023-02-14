@@ -902,6 +902,7 @@ export const matchTwoBEventHandler = async (
           }
           await Promise.allSettled(
             receipt.logs.map(async (log) => {
+              logger.info(`Topics[0]: ${log.topics[0]}`)
               if (log.topics[0] === TOKEN_TRANSFER_TOPIC) {
                 try {
                   const evt = eventIface.parseLog(log)
