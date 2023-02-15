@@ -700,6 +700,8 @@ export const matchTwoAEventHandler = async (
           })
         }
         await repositories.txTransaction.updateOneById(txTransaction.id, {
+          maker: makerAddress,
+          taker: takerAddress,
           protocolData: {
             ...txTransaction.protocolData,
             salt,
