@@ -5,7 +5,7 @@ import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
 import { delay } from '../utils'
 import { cancelEntityBuilder, txEntityBuilder, txX2Y2ProtocolDataParser } from '../utils/builder/orderBuilder'
-import { updateOwnership } from './ownership'
+import { checksumAddress, updateOwnership } from './ownership'
 import {
   approvalEventHandler,
   buyNowInfoEventHandler,
@@ -975,7 +975,7 @@ const keepAlive = ({
         try {
           const [structHash, maker] = evt.args
           await approvalEventHandler(
-            utils.getAddress(maker),
+            checksumAddress(maker),
             structHash,
             e.transactionHash,
             e.blockNumber.toString(),
@@ -989,7 +989,7 @@ const keepAlive = ({
           const [structHash, maker] = evt.args
           await cancelEventHandler(
             structHash,
-            utils.getAddress(maker),
+            checksumAddress(maker),
             e.transactionHash,
             e.blockNumber.toString(),
             chainId.toString(),
@@ -1051,8 +1051,8 @@ const keepAlive = ({
           const [makerAddress, takerAddress, start, end, nonce, salt] = evt.args
           await matchTwoAEventHandler(
             makerHash,
-            utils.getAddress(makerAddress),
-            utils.getAddress(takerAddress),
+            checksumAddress(makerAddress),
+            checksumAddress(takerAddress),
             Number(start),
             Number(end),
             Number(nonce),
@@ -1092,8 +1092,8 @@ const keepAlive = ({
       } else if (evt.name === NFTCOMEventName.MatchThreeA) {
         try {
           const takerHash = e.topics[1]
-          const makerAddress = utils.getAddress(evt.args.makerAddress)
-          const takerAddress = utils.getAddress(evt.args.takerAddress)
+          const makerAddress = checksumAddress(evt.args.makerAddress)
+          const takerAddress = checksumAddress(evt.args.takerAddress)
           const start = Number(evt.args.start)
           const end = Number(evt.args.end)
           const nonce = Number(evt.args.nonce)
@@ -1137,7 +1137,7 @@ const keepAlive = ({
         }
       } else if (evt.name === NFTCOMEventName.BuyNowInfo) {
         const makerHash = e.topics[1]
-        const takerAddress = utils.getAddress(evt.args.takerAddress)
+        const takerAddress = checksumAddress(evt.args.takerAddress)
 
         await buyNowInfoEventHandler(makerHash, takerAddress)
       }
