@@ -926,6 +926,7 @@ export const matchTwoBEventHandler = async (
                       utils.getAddress(to),
                       chainId,
                     )
+                    logger.info(`Match2B: NFT contract - ${seen[key]} tokenId ${BigNumber.from(tokenId).toHexString()} ownership updated`)
                   }
                 } catch (err) {
                   logger.error(`transfer parse error: ${err}`)
