@@ -706,6 +706,7 @@ export const matchTwoAEventHandler = async (
             end,
           },
         })
+        logger.log(`tx updated: ${txTransaction.id} for order ${txListingOrder.id}`)
       }
     } catch (err) {
       logger.error(`tx find error: ${err}`)
