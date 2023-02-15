@@ -11,7 +11,7 @@ const MAX_PROCESS_BATCH_SIZE = parseInt(process.env.MAX_PROFILE_BATCH_SIZE) || 5
 const logger = _logger.Factory(_logger.Context.NFT)
 const repositories = db.newRepositories()
 
-const checksumAddress = (address: string): string | undefined => {
+export const checksumAddress = (address: string): string | undefined => {
   try {
     return helper.checkSum(address)
   } catch (err) {
@@ -70,7 +70,7 @@ export const updateOwnership = async (
           if (existingNFT.userId !== wallet.userId || existingNFT.walletId !== wallet.id) {
             // we remove edge of previous profile
             // logger.log(`&&& updateNFTOwnershipAndMetadata: existingNFT.userId ${existingNFT.userId}, userId ${userId}, existingNFT.walletId ${existingNFT.walletId}, walletId ${walletId}`)
-           
+
             await repositories.edge.hardDelete({
               thatEntityId: existingNFT.id,
               edgeType: defs.EdgeType.Displays,
@@ -150,7 +150,7 @@ export const updateOwnership = async (
                 logger.info(`previous wallet for existing NFT ${existingNFT.id} is undefined`)
               }
             }
-         
+
             updatedNFT = await repositories.nft.updateOneById(existingNFT.id, {
               owner: csNewOwner,
               userId: wallet.userId,
@@ -159,7 +159,7 @@ export const updateOwnership = async (
             if(updatedNFT) {
               await nftService.indexNFTsOnSearchEngine([updatedNFT])
             }
-  
+
             // new owner profile
             const profileQuery = {
               ownerWalletId: wallet.id,
@@ -183,7 +183,7 @@ export const updateOwnership = async (
               logger.log(`New owner profiles length: ${newOwnerProfiles.length}, batch: ${i}`)
   
               for (const profile of newOwnerProfiles) {
-                // 
+                //
                 try {
                   await repositories.edge.save({
                     thisEntityType: defs.EntityType.Profile,
@@ -197,14 +197,14 @@ export const updateOwnership = async (
                 } catch (err) {
                   logger.error(err, `Error in updateEdgesWeightForProfile in ownership for profileId:${profile.id}, url: ${profile.url}`)
                 }
-    
+
                 try {
                   await nftService.syncEdgesWithNFTs(profile.id)
                   logger.info(`synced edges with NFTs for profile in ownership for profileId: ${profile.id}, url: ${profile.url}`)
                 } catch (err) {
                   logger.error(err, `Error in syncEdgesWithNFTs in ownership for profileId:${profile.id}, url: ${profile.url}`)
                 }
-                 
+
                 try {
                   await Promise.all([
                     cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id]),
