@@ -6,7 +6,7 @@ import { _logger, db, defs, entity, helper } from '@nftcom/shared'
 import { provider } from '../jobs/mint.handler'
 import { blockNumberToTimestamp } from '../jobs/trading.handler'
 import { activityBuilder } from '../utils/builder/orderBuilder'
-import { updateOwnership } from './ownership'
+import { checksumAddress, updateOwnership } from './ownership'
 
 const logger = _logger.Factory('NFTCOM')
 const repositories = db.newRepositories()
@@ -284,7 +284,7 @@ const parseAsset = async (
     // fetch ID from nft table...
     const nfts = await repositories.nft.find({
       where: {
-        contract: utils.getAddress(assetTypeData[0]),
+        contract: checksumAddress(assetTypeData[0]),
       },
     })
     const nft = nfts.find((nft) => BigNumber.from(nft.tokenId).toHexString()
@@ -298,7 +298,7 @@ const parseAsset = async (
       standard: {
         assetClass: assetClassData,
         bytes: assetType[index],
-        contractAddress: utils.getAddress(assetTypeData[0]),
+        contractAddress: checksumAddress(assetTypeData[0]),
         tokenId: assetTypeData[1] ? (assetTypeData[1] as BigNumber).toHexString() : '',
         allowAll: assetTypeData[2] ? assetTypeData[2] : true,
       },
@@ -314,7 +314,7 @@ const parseNFTIdsFromNativeAsset = (
 ): string[] => {
   const nftIds: string[] = []
   for (const asset of assets) {
-    nftIds.push(`ethereum/${ethers.utils.getAddress(asset.standard.contractAddress)}/${helper.bigNumberToHex(asset.standard.tokenId)}`)
+    nftIds.push(`ethereum/${checksumAddress(asset.standard.contractAddress)}/${helper.bigNumberToHex(asset.standard.tokenId)}`)
   }
   return nftIds
 }
@@ -325,7 +325,7 @@ const parseContractsFromNativeAsset = (
   const contracts: string[] = []
   const seen = {}
   for (const asset of assets) {
-    const contract = ethers.utils.getAddress(asset.standard.contractAddress)
+    const contract = checksumAddress(asset.standard.contractAddress)
     if (!seen[contract]) {
       contracts.push(contract)
       seen[contract] = true
@@ -882,7 +882,7 @@ export const matchTwoBEventHandler = async (
         if (activity) {
           await repositories.txActivity.updateOneById(activity.id, {
             nftId: [...nftIds],
-            nftContract: contract === '0x' ? '0x' : helper.checkSum(contract),
+            nftContract: contract === '0x' ? '0x' : checksumAddress(contract),
           })
         }
         await repositories.txTransaction.updateOneById(txTransaction.id, {
@@ -903,8 +903,8 @@ export const matchTwoBEventHandler = async (
           logger.info(`Logs count: ${receipt.logs.length}`)
           const seen = {}
           for (const asset of makeAsset) {
-            const key = `${utils.getAddress(txListingOrder.makerAddress)}-${helper.bigNumberToHex(asset.standard.tokenId)}`
-            seen[key] = utils.getAddress(asset.standard.contractAddress)
+            const key = `${checksumAddress(txListingOrder.makerAddress)}-${helper.bigNumberToHex(asset.standard.tokenId)}`
+            seen[key] = checksumAddress(asset.standard.contractAddress)
           }
           await Promise.allSettled(
             receipt.logs.map(async (log) => {
@@ -913,19 +913,19 @@ export const matchTwoBEventHandler = async (
                   const evt = eventIface.parseLog(log)
                   const [from, to, tokenId] = evt.args
                   logger.info(`from ${from} to ${to} tokenId ${BigNumber.from(tokenId).toHexString()}`)
-                  const key = `${utils.getAddress(from)}-${BigNumber.from(tokenId).toHexString()}`
+                  const key = `${checksumAddress(from)}-${BigNumber.from(tokenId).toHexString()}`
                   if (seen[key]) {
                     logger.info(`NFTCOM Transfer: from ${from} to ${to} tokenId ${BigNumber.from(tokenId).toHexString()}`)
                     await repositories.txTransaction.updateOneById(txTransaction.id, {
-                      taker: utils.getAddress(to),
+                      taker: checksumAddress(to),
                     })
                     logger.info(`updated recipient of tx_transaction from Match2B ${txTransaction.id}`)
                     // Update NFT ownership
                     await updateOwnership(
                       seen[key],
                       BigNumber.from(tokenId).toHexString(),
-                      utils.getAddress(from),
-                      utils.getAddress(to),
+                      checksumAddress(from),
+                      checksumAddress(to),
                       chainId,
                     )
                     logger.info(`Match2B: NFT contract - ${seen[key]} tokenId ${BigNumber.from(tokenId).toHexString()} ownership updated`)
@@ -1120,7 +1120,7 @@ export const matchThreeBEventHandler = async (
       if (activity) {
         await repositories.txActivity.updateOneById(activity.id, {
           nftId: [...nftIds],
-          nftContract: contract === '0x' ? '0x' : helper.checkSum(contract),
+          nftContract: contract === '0x' ? '0x' : checksumAddress(contract),
         })
       }
       await repositories.txOrder.updateOneById(txBidOrder.id, {
@@ -1164,7 +1164,7 @@ export const buyNowInfoEventHandler = async (
       await repositories.txOrder.updateOneById(txOrder.id, {
         protocolData: {
           ...txOrder.protocolData,
-          buyNowTaker: utils.getAddress(takerAddress),
+          buyNowTaker: checksumAddress(takerAddress),
         },
       })
 
