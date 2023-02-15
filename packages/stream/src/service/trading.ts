@@ -699,8 +699,6 @@ export const matchTwoAEventHandler = async (
           })
         }
         await repositories.txTransaction.updateOneById(txTransaction.id, {
-          maker: makerAddress,
-          taker: takerAddress,
           protocolData: {
             ...txTransaction.protocolData,
             salt,
@@ -827,7 +825,7 @@ export const matchTwoBEventHandler = async (
         },
       })
 
-      logger.info(`tx exists: ${txTransaction}`)
+      logger.info(`tx exists: ${txTransaction?.id}`)
 
       if (!txTransaction) {
         try {
@@ -890,6 +888,7 @@ export const matchTwoBEventHandler = async (
             takeAsset,
           },
         })
+        logger.info(`updated existing tx_transaction from Match2B ${txTransaction.id}`)
       }
       if (txListingOrder.makerAddress !== '0x') {
         try {
@@ -916,6 +915,7 @@ export const matchTwoBEventHandler = async (
                     await repositories.txTransaction.updateOneById(txTransaction.id, {
                       taker: utils.getAddress(to),
                     })
+                    logger.info(`updated recipient of tx_transaction from Match2B ${txTransaction.id}`)
                   }
                 } catch (err) {
                   logger.error(`transfer parse error: ${err}`)
