@@ -75,56 +75,62 @@ export const updateOwnership = async (
               thatEntityId: existingNFT.id,
               edgeType: defs.EdgeType.Displays,
             })
-
-            const oldOwnerProfileQuery = {
-              ownerWalletId: existingNFT.walletId,
-              ownerUserId: existingNFT.userId,
-            }
-
-            const oldOwnerProfileCount: number = await repositories.profile
-              .count(oldOwnerProfileQuery)
-
-            logger.log(`Old owner profiles count: ${oldOwnerProfileCount}.`)
-
-            for (let i=0; i < oldOwnerProfileCount; i+= MAX_PROCESS_BATCH_SIZE) {
-              const oldOwnerProfiles: entity.Profile[] = await repositories.profile.find({
-                where:  oldOwnerProfileQuery,
-                skip: i,
-                take: MAX_PROCESS_BATCH_SIZE,
-                select: {
-                  id: true,
-                  url: true,
-                },
-              })
-
-              logger.log(`Old owner profiles length: ${oldOwnerProfiles.length}, batch: ${i}`)
-              for (const profile of oldOwnerProfiles) {
-                const key1 = `${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${profile.id}`,
-                  key2 = `${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${profile.id}`
-                cachePromise.push(
-                  cache.keys(`${key1}*`),
-                  cache.keys(`${key2}*`),
-                )
-                logger.log(`old profileId: ${profile.id}, key1: ${key1}, key2: ${key2}.`)
+            
+            // delete cache keys only when nft userId or walletId exist
+            if (existingNFT.userId || existingNFT.walletId) {
+              const oldOwnerProfileQuery = {
+                ownerWalletId: existingNFT.walletId,
+                ownerUserId: existingNFT.userId,
               }
-
-              if (cachePromise.length) {
-                try {
-                  const keysArray = await Promise.all(cachePromise)
-                  if (keysArray.length) {
-                    for (const keys of keysArray) {
-                      if (keys?.length) {
-                        await cache.del(...keys)
-                        logger.log(`Key deleted: ${keys}`)
+             
+              const oldOwnerProfileCount: number = await repositories.profile
+                .count(oldOwnerProfileQuery)
+    
+              logger.log(`Old owner profiles count: ${oldOwnerProfileCount} - query: ${JSON.stringify(oldOwnerProfileQuery)}`)
+    
+              for (let i=0; i < oldOwnerProfileCount; i+= MAX_PROCESS_BATCH_SIZE) {
+                const oldOwnerProfiles: entity.Profile[] = await repositories.profile.find({
+                  where:  oldOwnerProfileQuery,
+                  skip: i,
+                  take: MAX_PROCESS_BATCH_SIZE,
+                  select: {
+                    id: true,
+                    url: true,
+                  },
+                })
+              
+                logger.log(`Old owner profiles length: ${oldOwnerProfiles.length}, batch: ${i}`)
+                for (const profile of oldOwnerProfiles) {
+                  const key1 = `${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${profile.id}`,
+                    key2 = `${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${profile.id}`
+                  cachePromise.push(
+                    cache.keys(`${key1}*`),
+                    cache.keys(`${key2}*`),
+                  )
+                  logger.log(`Old profileId: ${profile.id}, key1: ${key1}, key2: ${key2}.`)
+                }
+    
+                if (cachePromise.length) {
+                  try {
+                    const keysArray = await Promise.all(cachePromise)
+                    if (keysArray.length) {
+                      for (const keys of keysArray) {
+                        if (keys?.length) {
+                          await cache.del(...keys)
+                          logger.log(`Key deleted: ${keys}`)
+                        }
                       }
                     }
+                    cachePromise = []
+                  } catch (err) {
+                    logger.log(err, 'Error while clearing cache...')
                   }
-                  cachePromise = []
-                } catch (err) {
-                  logger.log(err, 'Error while clearing cache...')
                 }
               }
+            } else {
+              logger.log(`NFT wallet id and user id are null or undefined. WalletId: ${existingNFT.walletId}, UserId: ${existingNFT.userId}`)
             }
+         
             // if this NFT is a profile NFT...
             if (ethers.utils.getAddress(existingNFT.contract) ==
                       ethers.utils.getAddress(contracts.nftProfileAddress(chainId))) {
@@ -162,9 +168,9 @@ export const updateOwnership = async (
               ownerUserId: wallet.userId,
             }
             const newOwnerProfileCount: number = await repositories.profile.count(profileQuery)
-
-            logger.log(`New owner profiles count: ${oldOwnerProfileCount}`)
-
+  
+            logger.log(`New owner profiles count: ${newOwnerProfileCount}`)
+  
             for (let i=0; i < newOwnerProfileCount; i += MAX_PROCESS_BATCH_SIZE) {
               const newOwnerProfiles: entity.Profile[] = await repositories.profile.find({
                 where:  profileQuery,
@@ -175,9 +181,9 @@ export const updateOwnership = async (
                   url: true,
                 },
               })
-
+  
               logger.log(`New owner profiles length: ${newOwnerProfiles.length}, batch: ${i}`)
-
+  
               for (const profile of newOwnerProfiles) {
                 //
                 try {
