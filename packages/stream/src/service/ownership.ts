@@ -176,7 +176,7 @@ export const updateOwnership = async (
                 },
               })
 
-              logger.log(`Old owner profiles length: ${newOwnerProfiles.length}, batch: ${i}`)
+              logger.log(`New owner profiles length: ${newOwnerProfiles.length}, batch: ${i}`)
 
               for (const profile of newOwnerProfiles) {
                 //
