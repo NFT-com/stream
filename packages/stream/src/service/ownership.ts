@@ -76,8 +76,8 @@ export const updateOwnership = async (
               edgeType: defs.EdgeType.Displays,
             })
             
-            // delete cache keys only when nft userId and walletId exist
-            if (existingNFT.userId && existingNFT.walletId) {
+            // delete cache keys only when nft userId or walletId exist
+            if (existingNFT.userId || existingNFT.walletId) {
               const oldOwnerProfileQuery = {
                 ownerWalletId: existingNFT.walletId,
                 ownerUserId: existingNFT.userId,
@@ -86,7 +86,7 @@ export const updateOwnership = async (
               const oldOwnerProfileCount: number = await repositories.profile
                 .count(oldOwnerProfileQuery)
     
-              logger.log(`Old owner profiles count: ${oldOwnerProfileCount}.`)
+              logger.log(`Old owner profiles count: ${oldOwnerProfileCount} - query: ${JSON.stringify(oldOwnerProfileQuery)}`)
     
               for (let i=0; i < oldOwnerProfileCount; i+= MAX_PROCESS_BATCH_SIZE) {
                 const oldOwnerProfiles: entity.Profile[] = await repositories.profile.find({
@@ -127,6 +127,8 @@ export const updateOwnership = async (
                   }
                 }
               }
+            } else {
+              logger.log(`NFT wallet id and user id are null or undefined. WalletId: ${existingNFT.walletId}, UserId: ${existingNFT.userId}`)
             }
          
             // if this NFT is a profile NFT...
