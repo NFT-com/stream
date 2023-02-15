@@ -6,6 +6,7 @@ import { _logger, db, defs, entity, helper } from '@nftcom/shared'
 import { provider } from '../jobs/mint.handler'
 import { blockNumberToTimestamp } from '../jobs/trading.handler'
 import { activityBuilder } from '../utils/builder/orderBuilder'
+import { updateOwnership } from './ownership'
 
 const logger = _logger.Factory('NFTCOM')
 const repositories = db.newRepositories()
@@ -901,7 +902,7 @@ export const matchTwoBEventHandler = async (
           const seen = {}
           for (const asset of makeAsset) {
             const key = `${utils.getAddress(txListingOrder.makerAddress)}-${helper.bigNumberToHex(asset.standard.tokenId)}`
-            seen[key] = true
+            seen[key] = utils.getAddress(asset.standard.contractAddress)
           }
           await Promise.allSettled(
             receipt.logs.map(async (log) => {
@@ -917,6 +918,14 @@ export const matchTwoBEventHandler = async (
                       taker: utils.getAddress(to),
                     })
                     logger.info(`updated recipient of tx_transaction from Match2B ${txTransaction.id}`)
+                    // Update NFT ownership
+                    await updateOwnership(
+                      seen[key],
+                      BigNumber.from(tokenId).toHexString(),
+                      utils.getAddress(from),
+                      utils.getAddress(to),
+                      chainId,
+                    )
                   }
                 } catch (err) {
                   logger.error(`transfer parse error: ${err}`)
