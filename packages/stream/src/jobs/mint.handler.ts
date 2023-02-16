@@ -623,6 +623,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                   profileUrl,
                   true,
                 )
+                await core.sendSlackMessage('sub-nftdotcom-analytics', `New profile created: ${profileUrl} by ${owner} (https://etherscan.io/tx/${unparsedEvent.transactionHash})`)
               } catch (err) {
                 logger.error(`Profile mint error: ${err}`)
               }
