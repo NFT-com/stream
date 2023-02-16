@@ -383,7 +383,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
             }
           }
         }
-        await cache.set(chainIdToCacheKeyProfile(chainId), log3.latestBlockNumber)
+        await cache.set(chainIdToCacheKeyProfile(Number(chainId)), log3.latestBlockNumber)
       } catch (err) {
         logger.error(err, 'error parsing profile event')
       }
@@ -549,7 +549,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
             await repositories.profile.updateOneById(profile.id, { associatedContract })
           }
         }
-        await cache.set(chainIdToCacheKeyResolverAssociate(chainId), log2.latestBlockNumber)
+        await cache.set(chainIdToCacheKeyResolverAssociate(Number(chainId)), log2.latestBlockNumber)
       } catch (err) {
         if (err.code != 'BUFFER_OVERRUN' && err.code != 'INVALID_ARGUMENT') { // error parsing old event on goerli, and chainId mismatch
           logger.error(err, 'error parsing resolver')
@@ -640,7 +640,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
             }
           }
         }
-        await cache.set(chainIdToCacheKeyProfileAuction(chainId), log.latestBlockNumber)
+        await cache.set(chainIdToCacheKeyProfileAuction(Number(chainId)), log.latestBlockNumber)
         logger.info(`saved all minted profiles and their events counts=${log.logs.length}`)
       } catch (err) {
         logger.error(err, 'error parsing minted profiles: ')
