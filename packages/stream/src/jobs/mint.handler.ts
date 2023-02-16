@@ -80,7 +80,7 @@ export const getPastLogs = async (
   try {
     // if there are too many blocks, we will split it up...
     if ((toBlock - fromBlock) > max_Blocks) {
-      logger.debug(`recursive getting logs from ${fromBlock} to ${toBlock}`)
+      logger.info(`recursive getting logs from ${fromBlock} to ${toBlock}`)
       // eslint-disable-next-line no-use-before-define
       return await splitGetLogs(
         provider,
@@ -93,7 +93,7 @@ export const getPastLogs = async (
       )
     } else {
       // we just get logs using provider...
-      logger.debug(`getting logs from ${fromBlock} to ${toBlock}`)
+      logger.info(`getting logs from ${fromBlock} to ${toBlock}`)
       const filter = {
         address: utils.getAddress(address),
         fromBlock: fromBlock,
@@ -182,7 +182,6 @@ export const getResolverEvents = async (
       latestBlockNumber: latestBlock.number,
     }
   } catch (e) {
-    logger.debug(e)
     logger.error(`Error in getResolverEvents: ${e}`)
     return {
       logs: [],
@@ -215,7 +214,6 @@ export const getMintedProfileEvents = async (
       latestBlockNumber: latestBlock.number,
     }
   } catch (e) {
-    logger.debug(e)
     logger.error(`Error in getMintedProfileEvents: ${e}`)
     return {
       logs: [],
@@ -248,7 +246,6 @@ export const getProfileEvents = async (
       latestBlockNumber: latestBlock.number,
     }
   } catch (e) {
-    logger.debug(e)
     logger.error(`Error in getProfileEvents: ${e}`)
     return {
       logs: [],
@@ -299,7 +296,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
     const nftResolverAddress = helper.checkSum(contracts.nftResolverAddress(chainId))
     const profileAddress = helper.checkSum(contracts.nftProfileAddress(chainId))
 
-    logger.debug(`👾 getting Ethereum Events chainId=${chainId}`)
+    logger.info(`👾 getting Ethereum Events chainId=${chainId}`)
 
     const log = await getMintedProfileEvents(topics, Number(chainId), chainProvider, address)
     const log2 = await getResolverEvents(
@@ -315,7 +312,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
       profileAddress,
     )
 
-    logger.debug({ log3: log3.logs.length }, `profile extend expiry events chainId=${chainId}`)
+    logger.info(`profile extend expiry events chainId=${chainId} length=${log3.logs.length}`)
     log3.logs.map(async (unparsedEvent) => {
       try {
         const evt = profileParseLog(unparsedEvent)
@@ -390,7 +387,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
         logger.error(err, 'error parsing profile event')
       }
     })
-    logger.debug({ log2: log2.logs.length }, `nft resolver outgoing associate events chainId=${chainId}`)
+    logger.info(`nft resolver outgoing associate events chainId=${chainId} length=${log2.logs.length}`)
     log2.logs.map(async (unparsedEvent) => {
       let evt
       try {
@@ -424,7 +421,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                 destinationAddress: helper.checkSum(destinationAddress),
               },
             )
-            logger.debug(`New NFT Resolver AssociateEvmUser event found. ${ profileUrl } (owner = ${owner}) is associating ${ destinationAddress }. chainId=${chainId}`)
+            logger.info(`New NFT Resolver AssociateEvmUser event found. ${ profileUrl } (owner = ${owner}) is associating ${ destinationAddress }. chainId=${chainId}`)
           }
         } else if (evt.name == EventName.CancelledEvmAssociation) {
           const [owner,profileUrl,destinationAddress] = evt.args
@@ -453,7 +450,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                 destinationAddress: helper.checkSum(destinationAddress),
               },
             )
-            logger.debug(`New NFT Resolver ${evt.name} event found. ${ profileUrl } (owner = ${owner}) is cancelling ${ destinationAddress }. chainId=${chainId}`)
+            logger.info(`New NFT Resolver ${evt.name} event found. ${ profileUrl } (owner = ${owner}) is cancelling ${ destinationAddress }. chainId=${chainId}`)
           }
         } else if (evt.name == EventName.ClearAllAssociatedAddresses) {
           const [owner,profileUrl] = evt.args
@@ -480,7 +477,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                 profileUrl: profileUrl,
               },
             )
-            logger.debug(`New NFT Resolver ${evt.name} event found. ${ profileUrl } (owner = ${owner}) cancelled all associations. chainId=${chainId}`)
+            logger.info(`New NFT Resolver ${evt.name} event found. ${ profileUrl } (owner = ${owner}) cancelled all associations. chainId=${chainId}`)
           }
         } else if (evt.name === EventName.AssociateSelfWithUser ||
           evt.name === EventName.RemovedAssociateProfile) {
@@ -510,7 +507,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                 destinationAddress: helper.checkSum(receiver),
               },
             )
-            logger.debug(`New NFT Resolver ${evt.name} event found. profileUrl = ${profileUrl} (receiver = ${receiver}) profileOwner = ${[profileOwner]}. chainId=${chainId}`)
+            logger.info(`New NFT Resolver ${evt.name} event found. profileUrl = ${profileUrl} (receiver = ${receiver}) profileOwner = ${[profileOwner]}. chainId=${chainId}`)
           }
         } else if (evt.name === EventName.SetAssociatedContract) {
           const [owner, profileUrl, associatedContract] = evt.args
@@ -539,7 +536,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                 destinationAddress: helper.checkSum(associatedContract),
               },
             )
-            logger.debug(`New NFT Resolver ${evt.name} event found. profileUrl = ${profileUrl} (owner = ${owner}) associatedContract = ${associatedContract}. chainId=${chainId}`)
+            logger.info(`New NFT Resolver ${evt.name} event found. profileUrl = ${profileUrl} (owner = ${owner}) associatedContract = ${associatedContract}. chainId=${chainId}`)
           }
           const profile = await repositories.profile.findOne({
             where: {
@@ -623,11 +620,12 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                   profileUrl,
                   true,
                 )
+                await core.sendSlackMessage('sub-nftdotcom-analytics', `New profile created: ${profileUrl} by ${owner} (https://www.etherscan.io/tx/${unparsedEvent.transactionHash})`)
               } catch (err) {
                 logger.error(`Profile mint error: ${err}`)
               }
 
-              logger.debug(`Profile ${ profileUrl } was minted by address ${ owner }`)
+              logger.info(`Profile ${ profileUrl } was minted by address ${ owner }`)
               await HederaConsensusService.submitMessage(
                 `Profile ${ profileUrl } was minted by address ${ owner }`,
               )
@@ -641,7 +639,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
           }
         }
         await cache.set(chainIdToCacheKeyProfileAuction(chainId), log.latestBlockNumber)
-        logger.debug({ counts: log.logs.length }, 'saved all minted profiles and their events')
+        logger.info(`saved all minted profiles and their events counts=${log.logs.length}`)
       } catch (err) {
         logger.error(err, 'error parsing minted profiles: ')
       }
