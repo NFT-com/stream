@@ -201,6 +201,7 @@ export const getMintedProfileEvents = async (
     const maxBlocks = process.env.MINTED_PROFILE_EVENTS_MAX_BLOCKS
     const key = chainIdToCacheKeyProfileAuction(chainId)
     const cachedBlock = await getCachedBlock(chainId, key)
+    logger.info(`minted_profile_cached_block: ${cachedBlock}`)
     const logs = await getPastLogs(
       provider,
       address,
@@ -299,6 +300,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
     logger.info(`👾 getting Ethereum Events chainId=${chainId}`)
 
     const log = await getMintedProfileEvents(topics, Number(chainId), chainProvider, address)
+    logger.info(`minted profile events ${log.latestBlockNumber}`)
     const log2 = await getResolverEvents(
       topics2,
       Number(chainId),
@@ -382,7 +384,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
             }
           }
         }
-        await cache.set(chainIdToCacheKeyProfile(chainId), log3.latestBlockNumber)
+        await cache.set(chainIdToCacheKeyProfile(Number(chainId)), log3.latestBlockNumber)
       } catch (err) {
         logger.error(err, 'error parsing profile event')
       }
@@ -548,7 +550,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
             await repositories.profile.updateOneById(profile.id, { associatedContract })
           }
         }
-        await cache.set(chainIdToCacheKeyResolverAssociate(chainId), log2.latestBlockNumber)
+        await cache.set(chainIdToCacheKeyResolverAssociate(Number(chainId)), log2.latestBlockNumber)
       } catch (err) {
         if (err.code != 'BUFFER_OVERRUN' && err.code != 'INVALID_ARGUMENT') { // error parsing old event on goerli, and chainId mismatch
           logger.error(err, 'error parsing resolver')
@@ -556,21 +558,20 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
       }
     })
 
+    logger.info(`minted profile events chainId=${chainId} length=${log.logs.length}`)
     log.logs.map(async (unparsedEvent) => {
       try {
         const evt = profileAuctionParseLog(unparsedEvent)
-        logger.info(evt.args, `Found event MintedProfile with chainId: ${chainId}`)
+        logger.info(`Found event MintedProfile with chainId: ${chainId}`)
         const [owner,profileUrl,tokenId,,] = evt.args
 
         if (evt.name === 'MintedProfile') {
           const tx = await chainProvider.getTransaction(unparsedEvent.transactionHash)
-          const claimFace = new ethers.utils.Interface(['function genesisKeyClaimProfile(string,uint256,address,bytes32,bytes)'])
+          logger.info(`minted profile tx data: ${tx.data}`)
+          logger.info(`minted profile tx hash: ${unparsedEvent.transactionHash}`)
           const batchClaimFace = new ethers.utils.Interface(['function genesisKeyBatchClaimProfile((string,uint256,address,bytes32,bytes)[])'])
           let gkTokenId
           try {
-            const res = claimFace.decodeFunctionData('genesisKeyClaimProfile', tx.data)
-            gkTokenId = res[1]
-          } catch (err) {
             const res = batchClaimFace.decodeFunctionData('genesisKeyBatchClaimProfile', tx.data)
             if (Array.isArray(res[0])) {
               for (const r of res[0]) {
@@ -580,6 +581,8 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                 }
               }
             }
+          } catch (err) {
+            logger.error(`decodeFunctionData-genesisKeyBatchClaimProfile: ${err}`)
           }
           const existsBool = await repositories.event.exists({
             chainId,
@@ -597,10 +600,11 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                 eventName: evt.name,
                 txHash: unparsedEvent.transactionHash,
                 ownerAddress: owner,
-                profileUrl: profileUrl,
+                profileUrl,
                 tokenId: gkTokenId ? BigNumber.from(gkTokenId).toHexString() : null,
               },
             )
+            logger.info(`MintedProfile event saved for profileUrl : ${profileUrl}`)
             // find and mark profile status as minted
             const profile = await repositories.profile.findOne({
               where: {
@@ -638,7 +642,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
             }
           }
         }
-        await cache.set(chainIdToCacheKeyProfileAuction(chainId), log.latestBlockNumber)
+        await cache.set(chainIdToCacheKeyProfileAuction(Number(chainId)), log.latestBlockNumber)
         logger.info(`saved all minted profiles and their events counts=${log.logs.length}`)
       } catch (err) {
         logger.error(err, 'error parsing minted profiles: ')
