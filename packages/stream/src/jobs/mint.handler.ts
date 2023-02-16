@@ -566,6 +566,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
 
         if (evt.name === 'MintedProfile') {
           const tx = await chainProvider.getTransaction(unparsedEvent.transactionHash)
+          logger.info(`tx : ${tx.data}`)
           const claimFace = new ethers.utils.Interface(['function genesisKeyClaimProfile(string,uint256,address,bytes32,bytes)'])
           const batchClaimFace = new ethers.utils.Interface(['function genesisKeyBatchClaimProfile((string,uint256,address,bytes32,bytes)[])'])
           let gkTokenId
