@@ -299,6 +299,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
     logger.info(`👾 getting Ethereum Events chainId=${chainId}`)
 
     const log = await getMintedProfileEvents(topics, Number(chainId), chainProvider, address)
+    logger.info(`minted profile events ${log.latestBlockNumber}`)
     const log2 = await getResolverEvents(
       topics2,
       Number(chainId),
