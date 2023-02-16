@@ -567,14 +567,9 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
         if (evt.name === 'MintedProfile') {
           const tx = await chainProvider.getTransaction(unparsedEvent.transactionHash)
           logger.info(`tx data: ${tx.data}`)
-          const claimFace = new ethers.utils.Interface(['function genesisKeyClaimProfile(string,uint256,address,bytes32,bytes)'])
           const batchClaimFace = new ethers.utils.Interface(['function genesisKeyBatchClaimProfile((string,uint256,address,bytes32,bytes)[])'])
           let gkTokenId
           try {
-            const res = claimFace.decodeFunctionData('genesisKeyClaimProfile', tx.data)
-            gkTokenId = res[1]
-          } catch (err) {
-            logger.info(`decodeFunctionData: ${err}`)
             const res = batchClaimFace.decodeFunctionData('genesisKeyBatchClaimProfile', tx.data)
             if (Array.isArray(res[0])) {
               for (const r of res[0]) {
@@ -584,6 +579,8 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                 }
               }
             }
+          } catch (err) {
+            logger.error(`decodeFunctionData-genesisKeyBatchClaimProfile: ${err}`)
           }
           const existsBool = await repositories.event.exists({
             chainId,
