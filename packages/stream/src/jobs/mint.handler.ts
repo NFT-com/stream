@@ -566,7 +566,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
 
         if (evt.name === 'MintedProfile') {
           const tx = await chainProvider.getTransaction(unparsedEvent.transactionHash)
-          logger.info(`tx : ${tx.data}`)
+          logger.info(`tx data: ${tx.data}`)
           const claimFace = new ethers.utils.Interface(['function genesisKeyClaimProfile(string,uint256,address,bytes32,bytes)'])
           const batchClaimFace = new ethers.utils.Interface(['function genesisKeyBatchClaimProfile((string,uint256,address,bytes32,bytes)[])'])
           let gkTokenId
@@ -574,6 +574,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
             const res = claimFace.decodeFunctionData('genesisKeyClaimProfile', tx.data)
             gkTokenId = res[1]
           } catch (err) {
+            logger.info(`decodeFunctionData: ${err}`)
             const res = batchClaimFace.decodeFunctionData('genesisKeyBatchClaimProfile', tx.data)
             if (Array.isArray(res[0])) {
               for (const r of res[0]) {
@@ -600,10 +601,11 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                 eventName: evt.name,
                 txHash: unparsedEvent.transactionHash,
                 ownerAddress: owner,
-                profileUrl: profileUrl,
+                profileUrl,
                 tokenId: gkTokenId ? BigNumber.from(gkTokenId).toHexString() : null,
               },
             )
+            logger.info(`MintedProfile event saved for profileUrl : ${profileUrl}`)
             // find and mark profile status as minted
             const profile = await repositories.profile.findOne({
               where: {
