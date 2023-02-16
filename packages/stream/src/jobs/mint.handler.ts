@@ -563,7 +563,8 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
       try {
         const evt = profileAuctionParseLog(unparsedEvent)
         logger.info(`Found event MintedProfile with chainId: ${chainId}`)
-        const [owner,profileUrl,tokenId,,] = evt.args
+        const [owner, profileUrl, tokenId] = evt.args.user
+        logger.info(`minted profile owner=${owner} profileUrl=${profileUrl} tokenId=${BigNumber.from(tokenId).toString()}`)
 
         if (evt.name === 'MintedProfile') {
           const tx = await chainProvider.getTransaction(unparsedEvent.transactionHash)
@@ -608,7 +609,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
             // find and mark profile status as minted
             const profile = await repositories.profile.findOne({
               where: {
-                tokenId: tokenId.toString(),
+                tokenId: BigNumber.from(tokenId).toString(),
                 url: profileUrl,
                 chainId,
               },
