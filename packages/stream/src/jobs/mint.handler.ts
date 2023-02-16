@@ -272,7 +272,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
     const { chainId } = job.data
 
     const topics = [
-      helper.id('MintedProfile(address,string,uint256,uint256,uint256)'),
+      helper.id('MintedProfile(address,string,uint256,uint256,uint256,string)'),
     ]
 
     const topics2 = [
