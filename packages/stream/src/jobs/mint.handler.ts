@@ -201,6 +201,7 @@ export const getMintedProfileEvents = async (
     const maxBlocks = process.env.MINTED_PROFILE_EVENTS_MAX_BLOCKS
     const key = chainIdToCacheKeyProfileAuction(chainId)
     const cachedBlock = await getCachedBlock(chainId, key)
+    logger.info(`minted_profile_cached_block: ${cachedBlock}`)
     const logs = await getPastLogs(
       provider,
       address,
