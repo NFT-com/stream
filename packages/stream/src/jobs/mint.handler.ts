@@ -7,6 +7,7 @@ import {  core, HederaConsensusService, nftService } from '@nftcom/gql/service'
 import { _logger, contracts, db, defs, helper } from '@nftcom/shared'
 
 import { cache } from '../service/cache'
+import { checksumAddress } from '../service/ownership'
 
 const logger = _logger.Factory(_logger.Context.Bull)
 const repositories = db.newRepositories()
@@ -293,9 +294,9 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
     ]
 
     const chainProvider = provider(Number(chainId))
-    const address = helper.checkSum(contracts.profileAuctionAddress(chainId))
-    const nftResolverAddress = helper.checkSum(contracts.nftResolverAddress(chainId))
-    const profileAddress = helper.checkSum(contracts.nftProfileAddress(chainId))
+    const address = checksumAddress(contracts.profileAuctionAddress(chainId))
+    const nftResolverAddress = checksumAddress(contracts.nftResolverAddress(chainId))
+    const profileAddress = checksumAddress(contracts.nftProfileAddress(chainId))
 
     logger.info(`👾 getting Ethereum Events chainId=${chainId}`)
 
@@ -404,26 +405,26 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
             const event = await repositories.event.findOne({
               where: {
                 chainId,
-                contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
+                contract: checksumAddress(contracts.nftResolverAddress(chainId)),
                 eventName: evt.name,
                 txHash: unparsedEvent.transactionHash,
                 ownerAddress: owner,
                 blockNumber: Number(unparsedEvent.blockNumber),
                 profileUrl: profileUrl,
-                destinationAddress: helper.checkSum(destinationAddress),
+                destinationAddress: checksumAddress(destinationAddress),
               },
             })
             if (!event) {
               await repositories.event.save(
                 {
                   chainId,
-                  contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
+                  contract: checksumAddress(contracts.nftResolverAddress(chainId)),
                   eventName: evt.name,
                   txHash: unparsedEvent.transactionHash,
                   ownerAddress: owner,
                   blockNumber: Number(unparsedEvent.blockNumber),
                   profileUrl: profileUrl,
-                  destinationAddress: helper.checkSum(destinationAddress),
+                  destinationAddress: checksumAddress(destinationAddress),
                 },
               )
               logger.info(`New NFT Resolver AssociateEvmUser event found. ${ profileUrl } (owner = ${owner}) is associating ${ destinationAddress }. chainId=${chainId}`)
@@ -433,26 +434,26 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
             const event = await repositories.event.findOne({
               where: {
                 chainId,
-                contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
+                contract: checksumAddress(contracts.nftResolverAddress(chainId)),
                 eventName: evt.name,
                 txHash: unparsedEvent.transactionHash,
                 ownerAddress: owner,
                 blockNumber: Number(unparsedEvent.blockNumber),
                 profileUrl: profileUrl,
-                destinationAddress: helper.checkSum(destinationAddress),
+                destinationAddress: checksumAddress(destinationAddress),
               },
             })
             if (!event) {
               await repositories.event.save(
                 {
                   chainId,
-                  contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
+                  contract: checksumAddress(contracts.nftResolverAddress(chainId)),
                   eventName: evt.name,
                   txHash: unparsedEvent.transactionHash,
                   ownerAddress: owner,
                   blockNumber: Number(unparsedEvent.blockNumber),
                   profileUrl: profileUrl,
-                  destinationAddress: helper.checkSum(destinationAddress),
+                  destinationAddress: checksumAddress(destinationAddress),
                 },
               )
               logger.info(`New NFT Resolver ${evt.name} event found. ${ profileUrl } (owner = ${owner}) is cancelling ${ destinationAddress }. chainId=${chainId}`)
@@ -462,7 +463,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
             const event = await repositories.event.findOne({
               where: {
                 chainId,
-                contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
+                contract: checksumAddress(contracts.nftResolverAddress(chainId)),
                 eventName: evt.name,
                 txHash: unparsedEvent.transactionHash,
                 ownerAddress: owner,
@@ -474,7 +475,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
               await repositories.event.save(
                 {
                   chainId,
-                  contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
+                  contract: checksumAddress(contracts.nftResolverAddress(chainId)),
                   eventName: evt.name,
                   txHash: unparsedEvent.transactionHash,
                   ownerAddress: owner,
@@ -490,26 +491,26 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
             const event = await repositories.event.findOne({
               where: {
                 chainId,
-                contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
+                contract: checksumAddress(contracts.nftResolverAddress(chainId)),
                 eventName: evt.name,
                 txHash: unparsedEvent.transactionHash,
                 ownerAddress: profileOwner,
                 blockNumber: Number(unparsedEvent.blockNumber),
                 profileUrl: profileUrl,
-                destinationAddress: helper.checkSum(receiver),
+                destinationAddress: checksumAddress(receiver),
               },
             })
             if (!event) {
               await repositories.event.save(
                 {
                   chainId,
-                  contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
+                  contract: checksumAddress(contracts.nftResolverAddress(chainId)),
                   eventName: evt.name,
                   txHash: unparsedEvent.transactionHash,
                   ownerAddress: profileOwner,
                   blockNumber: Number(unparsedEvent.blockNumber),
                   profileUrl: profileUrl,
-                  destinationAddress: helper.checkSum(receiver),
+                  destinationAddress: checksumAddress(receiver),
                 },
               )
               logger.info(`New NFT Resolver ${evt.name} event found. profileUrl = ${profileUrl} (receiver = ${receiver}) profileOwner = ${[profileOwner]}. chainId=${chainId}`)
@@ -519,26 +520,26 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
             const event = await repositories.event.findOne({
               where: {
                 chainId,
-                contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
+                contract: checksumAddress(contracts.nftResolverAddress(chainId)),
                 eventName: evt.name,
                 txHash: unparsedEvent.transactionHash,
                 ownerAddress: owner,
                 blockNumber: Number(unparsedEvent.blockNumber),
                 profileUrl: profileUrl,
-                destinationAddress: helper.checkSum(associatedContract),
+                destinationAddress: checksumAddress(associatedContract),
               },
             })
             if (!event) {
               await repositories.event.save(
                 {
                   chainId,
-                  contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
+                  contract: checksumAddress(contracts.nftResolverAddress(chainId)),
                   eventName: evt.name,
                   txHash: unparsedEvent.transactionHash,
                   ownerAddress: owner,
                   blockNumber: Number(unparsedEvent.blockNumber),
                   profileUrl: profileUrl,
-                  destinationAddress: helper.checkSum(associatedContract),
+                  destinationAddress: checksumAddress(associatedContract),
                 },
               )
               logger.info(`New NFT Resolver ${evt.name} event found. profileUrl = ${profileUrl} (owner = ${owner}) associatedContract = ${associatedContract}. chainId=${chainId}`)
@@ -595,7 +596,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
             }
             const existsBool = await repositories.event.exists({
               chainId,
-              contract: helper.checkSum(contracts.profileAuctionAddress(chainId)),
+              contract: checksumAddress(contracts.profileAuctionAddress(chainId)),
               eventName: evt.name,
               txHash: unparsedEvent.transactionHash,
               ownerAddress: owner,
@@ -605,7 +606,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
               await repositories.event.save(
                 {
                   chainId,
-                  contract: helper.checkSum(contracts.profileAuctionAddress(chainId)),
+                  contract: checksumAddress(contracts.profileAuctionAddress(chainId)),
                   eventName: evt.name,
                   txHash: unparsedEvent.transactionHash,
                   ownerAddress: owner,
