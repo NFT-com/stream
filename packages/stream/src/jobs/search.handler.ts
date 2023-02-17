@@ -1,5 +1,5 @@
 import { Job } from 'bull'
-import { LessThanOrEqual, MoreThanOrEqual } from 'typeorm'
+import { Between, MoreThanOrEqual } from 'typeorm'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -20,7 +20,10 @@ export const searchListingIndexHandler = async (job: Job): Promise<boolean> => {
         updatedAt: MoreThanOrEqual(new Date(job.timestamp)),
       }, {
         activityType: defs.ActivityType.Listing,
-        expiration: LessThanOrEqual(new Date()),
+        expiration: Between(
+          new Date(job.timestamp),
+          new Date(),
+        ),
       }],
       })
     logger.log(`total listings in search index sync: ${listings.length}`)
