@@ -20,7 +20,7 @@ export const searchListingIndexHandler = async (job: Job): Promise<boolean> => {
         updatedAt: MoreThanOrEqual(new Date(job.timestamp)),
       }, {
         activityType: defs.ActivityType.Listing,
-        updatedAt: LessThanOrEqual(new Date(job.timestamp)),
+        updatedAt: LessThanOrEqual(Date.now()),
       }],
       })
     logger.log(`total listings in search index sync: ${listings.length}`)
