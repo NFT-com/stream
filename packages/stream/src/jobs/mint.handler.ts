@@ -632,7 +632,6 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                     tokenId,
                     repositories,
                     profileUrl,
-                    true,
                   )
                   await core.sendSlackMessage('sub-nftdotcom-analytics', `New profile created: ${profileUrl} by ${owner} (https://www.etherscan.io/tx/${unparsedEvent.transactionHash})`)
                 } catch (err) {
