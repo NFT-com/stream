@@ -1,5 +1,5 @@
 import { Job } from 'bull'
-import { Between, MoreThanOrEqual } from 'typeorm'
+import { MoreThanOrEqual } from 'typeorm'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -15,16 +15,10 @@ export const searchListingIndexHandler = async (job: Job): Promise<boolean> => {
   try {
     const listings: entity.TxActivity[] = await repos
       .txActivity
-      .find({ where: [{
+      .find({ where: {
         activityType: defs.ActivityType.Listing,
         updatedAt: MoreThanOrEqual(new Date(job.timestamp)),
-      }, {
-        activityType: defs.ActivityType.Listing,
-        expiration: Between(
-          new Date(job.timestamp),
-          new Date(),
-        ),
-      }],
+      },
       })
     logger.log(`total listings in search index sync: ${listings.length}`)
     if (listings) {
