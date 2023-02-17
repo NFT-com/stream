@@ -18,7 +18,8 @@ export const searchListingIndexHandler = async (job: Job): Promise<boolean> => {
       .find({ where: {
         activityType: defs.ActivityType.Listing,
         updatedAt: MoreThanOrEqual(new Date(job.timestamp)),
-      } })
+      },
+      })
     logger.log(`total listings in search index sync: ${listings.length}`)
     if (listings) {
       try {

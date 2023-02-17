@@ -1,7 +1,7 @@
 // Tracing needs to be set up early to ensure everything gets picked up
 import { setupTracing } from './tracer'
 if (['development','staging','production'].includes(process.env.NODE_ENV)) {
-  setupTracing(`${process.env.NODE_ENV}-gql`)
+  setupTracing(`${process.env.NODE_ENV}-stream`)
 }
 
 import Bull from 'bull'
@@ -651,7 +651,7 @@ const killPort = (): Promise<unknown> => {
 }
 
 const logExit = (): void => {
-  logger.info('Exited!')
+  logger.info('Exited!!')
 }
 
 const gracefulShutdown = (): Promise<void> => {
