@@ -315,104 +315,123 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
     )
 
     logger.info(`profile extend expiry events chainId=${chainId} length=${log3.logs.length}`)
-    log3.logs.map(async (unparsedEvent) => {
-      try {
-        const evt = profileParseLog(unparsedEvent)
-        logger.info(evt.args, `Found event ${evt.name} with chainId: ${chainId}`)
-        if (evt.name === EventName.ExtendExpiry) {
-          const [profileUrl,extendExpiry] = evt.args
-          const profile = await repositories.profile.findByURL(profileUrl, chainId)
-          if (profile) {
-            const timestamp = BigNumber.from(extendExpiry).toString()
-            if (Number(timestamp) !== 0) {
-              const expireAt = new Date(Number(timestamp) * 1000)
-              await repositories.profile.updateOneById(profile.id, { expireAt })
-              logger.info(`New ExtendExpiry event found. profileURL=${profileUrl} expireAt=${timestamp} chainId=${chainId}`)
+    await Promise.allSettled(
+      log3.logs.map(async (unparsedEvent) => {
+        try {
+          const evt = profileParseLog(unparsedEvent)
+          logger.info(evt.args, `Found event ${evt.name} with chainId: ${chainId}`)
+          if (evt.name === EventName.ExtendExpiry) {
+            const [profileUrl,extendExpiry] = evt.args
+            const profile = await repositories.profile.findByURL(profileUrl, chainId)
+            if (profile) {
+              const timestamp = BigNumber.from(extendExpiry).toString()
+              if (Number(timestamp) !== 0) {
+                const expireAt = new Date(Number(timestamp) * 1000)
+                await repositories.profile.updateOneById(profile.id, { expireAt })
+                logger.info(`New ExtendExpiry event found. profileURL=${profileUrl} expireAt=${timestamp} chainId=${chainId}`)
+              }
+            }
+          } else if (evt.name === EventName.Transfer) {
+            const [from, to, tokenIdBN] = evt.args
+            const tokenId = BigNumber.from(tokenIdBN).toString()
+            if (from !== helper.AddressZero() && to !== helper.AddressZero() &&
+              ethers.utils.getAddress(from) !== ethers.utils.getAddress(to)
+            ) {
+              const profile = await repositories.profile.findOne({
+                where: {
+                  tokenId,
+                  chainId,
+                },
+              })
+              if (profile) {
+                if (profile.ownerWalletId) {
+                  const wallet = await repositories.wallet.findById(profile.ownerWalletId)
+                  if (ethers.utils.getAddress(from) !== ethers.utils.getAddress(wallet.address)) {
+                    logger.info(`Something's wrong with Transfer event from=${from} url=${profile.url}`)
+                  }
+                }
+                let imageUrl = profile.photoURL
+                const bannerUrl = profile.bannerURL
+                const description = profile.description
+                if (!imageUrl) {
+                  imageUrl = await core.generateCompositeImage(
+                    profile.url,
+                    core.DEFAULT_NFT_IMAGE,
+                  )
+                }
+                const toWallet = await repositories.wallet.findByChainAddress(
+                  chainId,
+                  ethers.utils.getAddress(to),
+                )
+                if (!toWallet) {
+                  await repositories.profile.updateOneById(profile.id, {
+                    ownerUserId: null,
+                    ownerWalletId: null,
+                    photoURL: imageUrl,
+                    bannerURL: bannerUrl ?? 'https://cdn.nft.com/profile-banner-default-logo-key.png',
+                    description: description ?? `NFT.com profile for ${profile.url}`,
+                  })
+                } else {
+                  await repositories.profile.updateOneById(profile.id, {
+                    ownerUserId: toWallet.userId,
+                    ownerWalletId: toWallet.id,
+                    photoURL: imageUrl,
+                    bannerURL: bannerUrl ?? 'https://cdn.nft.com/profile-banner-default-logo-key.png',
+                    description: description ?? `NFT.com profile for ${profile.url}`,
+                  })
+                }
+                await nftService.executeUpdateNFTsForProfile(profile.id, chainId)
+                logger.info(`New profile transfer event found. profileURL=${profile.url} from=${from} to=${to} chainId=${chainId}`)
+              }
             }
           }
-        } else if (evt.name === EventName.Transfer) {
-          const [from, to, tokenIdBN] = evt.args
-          const tokenId = BigNumber.from(tokenIdBN).toString()
-          if (from !== helper.AddressZero() && to !== helper.AddressZero() &&
-            ethers.utils.getAddress(from) !== ethers.utils.getAddress(to)
-          ) {
-            const profile = await repositories.profile.findOne({
+          await cache.set(chainIdToCacheKeyProfile(Number(chainId)), log3.latestBlockNumber)
+        } catch (err) {
+          logger.error(`error parsing profile event: ${err}`)
+        }
+      }),
+    )
+    logger.info(`nft resolver outgoing associate events chainId=${chainId} length=${log2.logs.length}`)
+    await Promise.allSettled(
+      log2.logs.map(async (unparsedEvent) => {
+        let evt
+        try {
+          evt = nftResolverParseLog(unparsedEvent)
+          logger.info(`Found event ${evt.name} with chainId: ${chainId}`)
+
+          if (evt.name === EventName.AssociateEvmUser) {
+            const [owner,profileUrl,destinationAddress] = evt.args
+            const event = await repositories.event.findOne({
               where: {
-                tokenId,
                 chainId,
+                contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
+                eventName: evt.name,
+                txHash: unparsedEvent.transactionHash,
+                ownerAddress: owner,
+                blockNumber: Number(unparsedEvent.blockNumber),
+                profileUrl: profileUrl,
+                destinationAddress: helper.checkSum(destinationAddress),
               },
             })
-            if (profile) {
-              if (profile.ownerWalletId) {
-                const wallet = await repositories.wallet.findById(profile.ownerWalletId)
-                if (ethers.utils.getAddress(from) !== ethers.utils.getAddress(wallet.address)) {
-                  logger.info(`Something's wrong with Transfer event from=${from} url=${profile.url}`)
-                }
-              }
-              let imageUrl = profile.photoURL
-              const bannerUrl = profile.bannerURL
-              const description = profile.description
-              if (!imageUrl) {
-                imageUrl = await core.generateCompositeImage(
-                  profile.url,
-                  core.DEFAULT_NFT_IMAGE,
-                )
-              }
-              const toWallet = await repositories.wallet.findByChainAddress(
-                chainId,
-                ethers.utils.getAddress(to),
+            if (!event) {
+              await repositories.event.save(
+                {
+                  chainId,
+                  contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
+                  eventName: evt.name,
+                  txHash: unparsedEvent.transactionHash,
+                  ownerAddress: owner,
+                  blockNumber: Number(unparsedEvent.blockNumber),
+                  profileUrl: profileUrl,
+                  destinationAddress: helper.checkSum(destinationAddress),
+                },
               )
-              if (!toWallet) {
-                await repositories.profile.updateOneById(profile.id, {
-                  ownerUserId: null,
-                  ownerWalletId: null,
-                  photoURL: imageUrl,
-                  bannerURL: bannerUrl ?? 'https://cdn.nft.com/profile-banner-default-logo-key.png',
-                  description: description ?? `NFT.com profile for ${profile.url}`,
-                })
-              } else {
-                await repositories.profile.updateOneById(profile.id, {
-                  ownerUserId: toWallet.userId,
-                  ownerWalletId: toWallet.id,
-                  photoURL: imageUrl,
-                  bannerURL: bannerUrl ?? 'https://cdn.nft.com/profile-banner-default-logo-key.png',
-                  description: description ?? `NFT.com profile for ${profile.url}`,
-                })
-              }
-              await nftService.executeUpdateNFTsForProfile(profile.id, chainId)
-              logger.info(`New profile transfer event found. profileURL=${profile.url} from=${from} to=${to} chainId=${chainId}`)
+              logger.info(`New NFT Resolver AssociateEvmUser event found. ${ profileUrl } (owner = ${owner}) is associating ${ destinationAddress }. chainId=${chainId}`)
             }
-          }
-        }
-        await cache.set(chainIdToCacheKeyProfile(Number(chainId)), log3.latestBlockNumber)
-      } catch (err) {
-        logger.error(err, 'error parsing profile event')
-      }
-    })
-    logger.info(`nft resolver outgoing associate events chainId=${chainId} length=${log2.logs.length}`)
-    log2.logs.map(async (unparsedEvent) => {
-      let evt
-      try {
-        evt = nftResolverParseLog(unparsedEvent)
-        logger.info(evt.args, `Found event ${evt.name} with chainId: ${chainId}`)
-
-        if (evt.name === EventName.AssociateEvmUser) {
-          const [owner,profileUrl,destinationAddress] = evt.args
-          const event = await repositories.event.findOne({
-            where: {
-              chainId,
-              contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
-              eventName: evt.name,
-              txHash: unparsedEvent.transactionHash,
-              ownerAddress: owner,
-              blockNumber: Number(unparsedEvent.blockNumber),
-              profileUrl: profileUrl,
-              destinationAddress: helper.checkSum(destinationAddress),
-            },
-          })
-          if (!event) {
-            await repositories.event.save(
-              {
+          } else if (evt.name == EventName.CancelledEvmAssociation) {
+            const [owner,profileUrl,destinationAddress] = evt.args
+            const event = await repositories.event.findOne({
+              where: {
                 chainId,
                 contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
                 eventName: evt.name,
@@ -422,54 +441,26 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                 profileUrl: profileUrl,
                 destinationAddress: helper.checkSum(destinationAddress),
               },
-            )
-            logger.info(`New NFT Resolver AssociateEvmUser event found. ${ profileUrl } (owner = ${owner}) is associating ${ destinationAddress }. chainId=${chainId}`)
-          }
-        } else if (evt.name == EventName.CancelledEvmAssociation) {
-          const [owner,profileUrl,destinationAddress] = evt.args
-          const event = await repositories.event.findOne({
-            where: {
-              chainId,
-              contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
-              eventName: evt.name,
-              txHash: unparsedEvent.transactionHash,
-              ownerAddress: owner,
-              blockNumber: Number(unparsedEvent.blockNumber),
-              profileUrl: profileUrl,
-              destinationAddress: helper.checkSum(destinationAddress),
-            },
-          })
-          if (!event) {
-            await repositories.event.save(
-              {
-                chainId,
-                contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
-                eventName: evt.name,
-                txHash: unparsedEvent.transactionHash,
-                ownerAddress: owner,
-                blockNumber: Number(unparsedEvent.blockNumber),
-                profileUrl: profileUrl,
-                destinationAddress: helper.checkSum(destinationAddress),
-              },
-            )
-            logger.info(`New NFT Resolver ${evt.name} event found. ${ profileUrl } (owner = ${owner}) is cancelling ${ destinationAddress }. chainId=${chainId}`)
-          }
-        } else if (evt.name == EventName.ClearAllAssociatedAddresses) {
-          const [owner,profileUrl] = evt.args
-          const event = await repositories.event.findOne({
-            where: {
-              chainId,
-              contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
-              eventName: evt.name,
-              txHash: unparsedEvent.transactionHash,
-              ownerAddress: owner,
-              blockNumber: Number(unparsedEvent.blockNumber),
-              profileUrl: profileUrl,
-            },
-          })
-          if (!event) {
-            await repositories.event.save(
-              {
+            })
+            if (!event) {
+              await repositories.event.save(
+                {
+                  chainId,
+                  contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
+                  eventName: evt.name,
+                  txHash: unparsedEvent.transactionHash,
+                  ownerAddress: owner,
+                  blockNumber: Number(unparsedEvent.blockNumber),
+                  profileUrl: profileUrl,
+                  destinationAddress: helper.checkSum(destinationAddress),
+                },
+              )
+              logger.info(`New NFT Resolver ${evt.name} event found. ${ profileUrl } (owner = ${owner}) is cancelling ${ destinationAddress }. chainId=${chainId}`)
+            }
+          } else if (evt.name == EventName.ClearAllAssociatedAddresses) {
+            const [owner,profileUrl] = evt.args
+            const event = await repositories.event.findOne({
+              where: {
                 chainId,
                 contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
                 eventName: evt.name,
@@ -478,27 +469,26 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                 blockNumber: Number(unparsedEvent.blockNumber),
                 profileUrl: profileUrl,
               },
-            )
-            logger.info(`New NFT Resolver ${evt.name} event found. ${ profileUrl } (owner = ${owner}) cancelled all associations. chainId=${chainId}`)
-          }
-        } else if (evt.name === EventName.AssociateSelfWithUser ||
-          evt.name === EventName.RemovedAssociateProfile) {
-          const [receiver, profileUrl, profileOwner] = evt.args
-          const event = await repositories.event.findOne({
-            where: {
-              chainId,
-              contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
-              eventName: evt.name,
-              txHash: unparsedEvent.transactionHash,
-              ownerAddress: profileOwner,
-              blockNumber: Number(unparsedEvent.blockNumber),
-              profileUrl: profileUrl,
-              destinationAddress: helper.checkSum(receiver),
-            },
-          })
-          if (!event) {
-            await repositories.event.save(
-              {
+            })
+            if (!event) {
+              await repositories.event.save(
+                {
+                  chainId,
+                  contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
+                  eventName: evt.name,
+                  txHash: unparsedEvent.transactionHash,
+                  ownerAddress: owner,
+                  blockNumber: Number(unparsedEvent.blockNumber),
+                  profileUrl: profileUrl,
+                },
+              )
+              logger.info(`New NFT Resolver ${evt.name} event found. ${ profileUrl } (owner = ${owner}) cancelled all associations. chainId=${chainId}`)
+            }
+          } else if (evt.name === EventName.AssociateSelfWithUser ||
+            evt.name === EventName.RemovedAssociateProfile) {
+            const [receiver, profileUrl, profileOwner] = evt.args
+            const event = await repositories.event.findOne({
+              where: {
                 chainId,
                 contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
                 eventName: evt.name,
@@ -508,26 +498,26 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                 profileUrl: profileUrl,
                 destinationAddress: helper.checkSum(receiver),
               },
-            )
-            logger.info(`New NFT Resolver ${evt.name} event found. profileUrl = ${profileUrl} (receiver = ${receiver}) profileOwner = ${[profileOwner]}. chainId=${chainId}`)
-          }
-        } else if (evt.name === EventName.SetAssociatedContract) {
-          const [owner, profileUrl, associatedContract] = evt.args
-          const event = await repositories.event.findOne({
-            where: {
-              chainId,
-              contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
-              eventName: evt.name,
-              txHash: unparsedEvent.transactionHash,
-              ownerAddress: owner,
-              blockNumber: Number(unparsedEvent.blockNumber),
-              profileUrl: profileUrl,
-              destinationAddress: helper.checkSum(associatedContract),
-            },
-          })
-          if (!event) {
-            await repositories.event.save(
-              {
+            })
+            if (!event) {
+              await repositories.event.save(
+                {
+                  chainId,
+                  contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
+                  eventName: evt.name,
+                  txHash: unparsedEvent.transactionHash,
+                  ownerAddress: profileOwner,
+                  blockNumber: Number(unparsedEvent.blockNumber),
+                  profileUrl: profileUrl,
+                  destinationAddress: helper.checkSum(receiver),
+                },
+              )
+              logger.info(`New NFT Resolver ${evt.name} event found. profileUrl = ${profileUrl} (receiver = ${receiver}) profileOwner = ${[profileOwner]}. chainId=${chainId}`)
+            }
+          } else if (evt.name === EventName.SetAssociatedContract) {
+            const [owner, profileUrl, associatedContract] = evt.args
+            const event = await repositories.event.findOne({
+              where: {
                 chainId,
                 contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
                 eventName: evt.name,
@@ -537,117 +527,137 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
                 profileUrl: profileUrl,
                 destinationAddress: helper.checkSum(associatedContract),
               },
-            )
-            logger.info(`New NFT Resolver ${evt.name} event found. profileUrl = ${profileUrl} (owner = ${owner}) associatedContract = ${associatedContract}. chainId=${chainId}`)
-          }
-          const profile = await repositories.profile.findOne({
-            where: {
-              url: profileUrl,
-              chainId,
-            },
-          })
-          if (profile) {
-            await repositories.profile.updateOneById(profile.id, { associatedContract })
-          }
-        }
-        await cache.set(chainIdToCacheKeyResolverAssociate(Number(chainId)), log2.latestBlockNumber)
-      } catch (err) {
-        if (err.code != 'BUFFER_OVERRUN' && err.code != 'INVALID_ARGUMENT') { // error parsing old event on goerli, and chainId mismatch
-          logger.error(err, 'error parsing resolver')
-        }
-      }
-    })
-
-    logger.info(`minted profile events chainId=${chainId} length=${log.logs.length}`)
-    log.logs.map(async (unparsedEvent) => {
-      try {
-        const evt = profileAuctionParseLog(unparsedEvent)
-        logger.info(`Found event MintedProfile with chainId: ${chainId}`)
-        const [owner,profileUrl,tokenId,,] = evt.args
-
-        if (evt.name === 'MintedProfile') {
-          const tx = await chainProvider.getTransaction(unparsedEvent.transactionHash)
-          logger.info(`minted profile tx data: ${tx.data}`)
-          logger.info(`minted profile tx hash: ${unparsedEvent.transactionHash}`)
-          const batchClaimFace = new ethers.utils.Interface(['function genesisKeyBatchClaimProfile((string,uint256,address,bytes32,bytes)[])'])
-          let gkTokenId
-          try {
-            const res = batchClaimFace.decodeFunctionData('genesisKeyBatchClaimProfile', tx.data)
-            if (Array.isArray(res[0])) {
-              for (const r of res[0]) {
-                if (r[0] === profileUrl) {
-                  gkTokenId = r[1]
-                  break
-                }
-              }
+            })
+            if (!event) {
+              await repositories.event.save(
+                {
+                  chainId,
+                  contract: helper.checkSum(contracts.nftResolverAddress(chainId)),
+                  eventName: evt.name,
+                  txHash: unparsedEvent.transactionHash,
+                  ownerAddress: owner,
+                  blockNumber: Number(unparsedEvent.blockNumber),
+                  profileUrl: profileUrl,
+                  destinationAddress: helper.checkSum(associatedContract),
+                },
+              )
+              logger.info(`New NFT Resolver ${evt.name} event found. profileUrl = ${profileUrl} (owner = ${owner}) associatedContract = ${associatedContract}. chainId=${chainId}`)
             }
-          } catch (err) {
-            logger.error(`decodeFunctionData-genesisKeyBatchClaimProfile: ${err}`)
-          }
-          const existsBool = await repositories.event.exists({
-            chainId,
-            contract: helper.checkSum(contracts.profileAuctionAddress(chainId)),
-            eventName: evt.name,
-            txHash: unparsedEvent.transactionHash,
-            ownerAddress: owner,
-            profileUrl: profileUrl,
-          })
-          if (!existsBool) {
-            await repositories.event.save(
-              {
-                chainId,
-                contract: helper.checkSum(contracts.profileAuctionAddress(chainId)),
-                eventName: evt.name,
-                txHash: unparsedEvent.transactionHash,
-                ownerAddress: owner,
-                profileUrl,
-                tokenId: gkTokenId ? BigNumber.from(gkTokenId).toHexString() : null,
-              },
-            )
-            logger.info(`MintedProfile event saved for profileUrl : ${profileUrl}`)
-            // find and mark profile status as minted
             const profile = await repositories.profile.findOne({
               where: {
-                tokenId: tokenId.toString(),
                 url: profileUrl,
                 chainId,
               },
             })
-            if (!profile) {
-              // profile + incentive action
-              try {
-                await core.createProfileFromEvent(
-                  chainId,
-                  owner,
-                  tokenId,
-                  repositories,
-                  profileUrl,
-                  true,
-                )
-                await core.sendSlackMessage('sub-nftdotcom-analytics', `New profile created: ${profileUrl} by ${owner} (https://www.etherscan.io/tx/${unparsedEvent.transactionHash})`)
-              } catch (err) {
-                logger.error(`Profile mint error: ${err}`)
-              }
+            if (profile) {
+              await repositories.profile.updateOneById(profile.id, { associatedContract })
+            }
+          }
+          await cache.set(
+            chainIdToCacheKeyResolverAssociate(Number(chainId)),
+            log2.latestBlockNumber,
+          )
+        } catch (err) {
+          if (err.code != 'BUFFER_OVERRUN' && err.code != 'INVALID_ARGUMENT') { // error parsing old event on goerli, and chainId mismatch
+            logger.error(`error parsing resolver: ${err}`)
+          }
+        }
+      }),
+    )
 
-              logger.info(`Profile ${ profileUrl } was minted by address ${ owner }`)
-              await HederaConsensusService.submitMessage(
-                `Profile ${ profileUrl } was minted by address ${ owner }`,
+    logger.info(`minted profile events chainId=${chainId} length=${log.logs.length}`)
+    await Promise.allSettled(
+      log.logs.map(async (unparsedEvent) => {
+        try {
+          const evt = profileAuctionParseLog(unparsedEvent)
+          logger.info(`Found event MintedProfile with chainId: ${chainId}`)
+          const [owner, profileUrl, tokenId] = evt.args
+          logger.info(`minted profile owner=${owner} profileUrl=${profileUrl} tokenId=${BigNumber.from(tokenId).toString()}`)
+
+          if (evt.name === 'MintedProfile') {
+            const tx = await chainProvider.getTransaction(unparsedEvent.transactionHash)
+            logger.info(`minted profile tx data: ${tx.data}`)
+            logger.info(`minted profile tx hash: ${unparsedEvent.transactionHash}`)
+            const batchClaimFace = new ethers.utils.Interface(['function genesisKeyBatchClaimProfile((string,uint256,address,bytes32,bytes)[])'])
+            let gkTokenId
+            try {
+              const res = batchClaimFace.decodeFunctionData('genesisKeyBatchClaimProfile', tx.data)
+              if (Array.isArray(res[0])) {
+                for (const r of res[0]) {
+                  if (r[0] === profileUrl) {
+                    gkTokenId = r[1]
+                    break
+                  }
+                }
+              }
+            } catch (err) {
+              logger.error(`decodeFunctionData-genesisKeyBatchClaimProfile: ${err}`)
+            }
+            const existsBool = await repositories.event.exists({
+              chainId,
+              contract: helper.checkSum(contracts.profileAuctionAddress(chainId)),
+              eventName: evt.name,
+              txHash: unparsedEvent.transactionHash,
+              ownerAddress: owner,
+              profileUrl: profileUrl,
+            })
+            if (!existsBool) {
+              await repositories.event.save(
+                {
+                  chainId,
+                  contract: helper.checkSum(contracts.profileAuctionAddress(chainId)),
+                  eventName: evt.name,
+                  txHash: unparsedEvent.transactionHash,
+                  ownerAddress: owner,
+                  profileUrl,
+                  tokenId: gkTokenId ? BigNumber.from(gkTokenId).toHexString() : null,
+                },
               )
-            } else {
-              if (profile.status !== defs.ProfileStatus.Owned) {
-                await repositories.profile.updateOneById(profile.id, {
-                  status: defs.ProfileStatus.Owned,
-                })
+              logger.info(`MintedProfile event saved for profileUrl : ${profileUrl}`)
+              // find and mark profile status as minted
+              const profile = await repositories.profile.findOne({
+                where: {
+                  tokenId: BigNumber.from(tokenId).toString(),
+                  url: profileUrl,
+                  chainId,
+                },
+              })
+              if (!profile) {
+                // profile + incentive action
+                try {
+                  await core.createProfileFromEvent(
+                    chainId,
+                    owner,
+                    tokenId,
+                    repositories,
+                    profileUrl,
+                    true,
+                  )
+                  await core.sendSlackMessage('sub-nftdotcom-analytics', `New profile created: ${profileUrl} by ${owner} (https://www.etherscan.io/tx/${unparsedEvent.transactionHash})`)
+                } catch (err) {
+                  logger.error(`Profile mint error: ${err}`)
+                }
+
+                logger.info(`Profile ${ profileUrl } was minted by address ${ owner }`)
+                await HederaConsensusService.submitMessage(
+                  `Profile ${ profileUrl } was minted by address ${ owner }`,
+                )
+              } else {
+                if (profile.status !== defs.ProfileStatus.Owned) {
+                  await repositories.profile.updateOneById(profile.id, {
+                    status: defs.ProfileStatus.Owned,
+                  })
+                }
               }
             }
           }
+          await cache.set(chainIdToCacheKeyProfileAuction(Number(chainId)), log.latestBlockNumber)
+          logger.info(`saved all minted profiles and their events counts=${log.logs.length}`)
+        } catch (err) {
+          logger.error(`error parsing minted profiles: ${err}`)
         }
-        await cache.set(chainIdToCacheKeyProfileAuction(Number(chainId)), log.latestBlockNumber)
-        logger.info(`saved all minted profiles and their events counts=${log.logs.length}`)
-      } catch (err) {
-        logger.error(err, 'error parsing minted profiles: ')
-      }
-    })
+      }),
+    )
   } catch (err) {
     logger.error(`Error in getEthereumEvents Job: ${err}`)
   }
