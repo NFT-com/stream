@@ -563,7 +563,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
       try {
         const evt = profileAuctionParseLog(unparsedEvent)
         logger.info(`Found event MintedProfile with chainId: ${chainId}`)
-        const [owner, profileUrl, tokenId] = evt.args.user
+        const [owner, profileUrl, tokenId] = evt.args
         logger.info(`minted profile owner=${owner} profileUrl=${profileUrl} tokenId=${BigNumber.from(tokenId).toString()}`)
 
         if (evt.name === 'MintedProfile') {
