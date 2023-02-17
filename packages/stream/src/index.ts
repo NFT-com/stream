@@ -651,7 +651,7 @@ const killPort = (): Promise<unknown> => {
 }
 
 const logExit = (): void => {
-  logger.info('Exited!')
+  logger.info('Exited!!')
 }
 
 const gracefulShutdown = (): Promise<void> => {
