@@ -8,7 +8,7 @@ import { getEthereumEvents } from './mint.handler'
 import { syncTxsFromNFTPortHandler } from './nftport.handler'
 import { nftExternalOrdersOnDemand, orderReconciliationHandler } from './order.handler'
 import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
-import { profileGKOwnersHandler, saveProfileExpireAt } from './profile.handler'
+import { profileGKOwnersHandler, saveProfileExpireAt, updateNFTsForProfilesHandler } from './profile.handler'
 import { searchListingIndexHandler } from './search.handler'
 import { nftExternalOrders } from './sync.handler'
 import { syncTrading } from './trading.handler'
@@ -287,19 +287,19 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
     const chainIds = [...queues.keys()]
     return Promise.all(chainIds.map((chainId) => {
       switch (chainId) {
-      // case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
-      //   return queues.get(QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS)
-      //     .add({
-      //       UPDATE_PROFILES_NFTS_STREAMS: QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS,
-      //       chainId: process.env.CHAIN_ID,
-      //     },
-      //     {
-      //       removeOnComplete: true,
-      //       removeOnFail: true,
-      //       // repeat every minute
-      //       repeat: { every: 1 * 60000 },
-      //       jobId: 'update_profiles_nfts_streams',
-      //     })
+      case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
+        return queues.get(QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS)
+          .add({
+            UPDATE_PROFILES_NFTS_STREAMS: QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS,
+            chainId: process.env.CHAIN_ID,
+          },
+          {
+            removeOnComplete: true,
+            removeOnFail: true,
+            // repeat every minute
+            repeat: { every: 1 * 60000 },
+            jobId: 'update_profiles_nfts_streams',
+          })
       case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
         return queues.get(QUEUE_TYPES.SYNC_COLLECTION_RARITY)
           .add({
@@ -443,64 +443,68 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
 }
 
 const listenToJobs = async (): Promise<void> => {
-  for (const queue of queues.values()) {
-    switch (queue.name) {
-    case QUEUE_TYPES.SYNC_CONTRACTS:
-      queue.process(nftExternalOrders)
-      break
-    case QUEUE_TYPES.SYNC_COLLECTION_IMAGES:
-      queue.process(collectionBannerImageSync)
-      break
-    case QUEUE_TYPES.SYNC_TRADING:
-      queue.process(syncTrading)
-      break
-    case QUEUE_TYPES.SYNC_COLLECTION_NAME:
-      queue.process(collectionNameSync)
-      break
-    case QUEUE_TYPES.SYNC_TXS_NFTPORT:
-      queue.process(syncTxsFromNFTPortHandler)
-      break
-    case QUEUE_TYPES.SYNC_COLLECTIONS:
-      queue.process(collectionSyncHandler)
-      break
-    case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
-      queue.process(raritySync)
-      break
-    case QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY:
-      queue.process(nftRaritySyncHandler)
-      break
-    case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
-      queue.process(spamCollectionSyncHandler)
-      break
-    case QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND:
-      queue.process(nftExternalOrdersOnDemand)
-      break
-    case QUEUE_TYPES.REGISTER_OS_STREAMS:
-      queue.process(registerStreamHandler)
-      break
-    case QUEUE_TYPES.DEREGISTER_OS_STREAMS:
-      queue.process(deregisterStreamHandler)
-      break
-    // case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
-    //   queue.process(updateNFTsForProfilesHandler)
-    //   break
-    case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
-      queue.process(collectionIssuanceDateSync)
-      break
-    case QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT:
-      queue.process(saveProfileExpireAt)
-      break
-    case QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS:
-      queue.process(profileGKOwnersHandler)
-      break
-    case QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE:
-      queue.process(searchListingIndexHandler)
-      break
-    case QUEUE_TYPES.RECONCILE_ORDERS:
-      queue.process(orderReconciliationHandler)
-      break
-    default:
-      queue.process(getEthereumEvents)
+  if (process.env.UPDATE_NFTS_PROFILE === 'true') {
+    queues[QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS].process(updateNFTsForProfilesHandler)
+  } else {
+    for (const queue of queues.values()) {
+      switch (queue.name) {
+      case QUEUE_TYPES.SYNC_CONTRACTS:
+        queue.process(nftExternalOrders)
+        break
+      case QUEUE_TYPES.SYNC_COLLECTION_IMAGES:
+        queue.process(collectionBannerImageSync)
+        break
+      case QUEUE_TYPES.SYNC_TRADING:
+        queue.process(syncTrading)
+        break
+      case QUEUE_TYPES.SYNC_COLLECTION_NAME:
+        queue.process(collectionNameSync)
+        break
+      case QUEUE_TYPES.SYNC_TXS_NFTPORT:
+        queue.process(syncTxsFromNFTPortHandler)
+        break
+      case QUEUE_TYPES.SYNC_COLLECTIONS:
+        queue.process(collectionSyncHandler)
+        break
+      case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
+        queue.process(raritySync)
+        break
+      case QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY:
+        queue.process(nftRaritySyncHandler)
+        break
+      case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
+        queue.process(spamCollectionSyncHandler)
+        break
+      case QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND:
+        queue.process(nftExternalOrdersOnDemand)
+        break
+      case QUEUE_TYPES.REGISTER_OS_STREAMS:
+        queue.process(registerStreamHandler)
+        break
+      case QUEUE_TYPES.DEREGISTER_OS_STREAMS:
+        queue.process(deregisterStreamHandler)
+        break
+      // case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
+      //   queue.process(updateNFTsForProfilesHandler)
+      //   break
+      case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
+        queue.process(collectionIssuanceDateSync)
+        break
+      case QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT:
+        queue.process(saveProfileExpireAt)
+        break
+      case QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS:
+        queue.process(profileGKOwnersHandler)
+        break
+      case QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE:
+        queue.process(searchListingIndexHandler)
+        break
+      case QUEUE_TYPES.RECONCILE_ORDERS:
+        queue.process(orderReconciliationHandler)
+        break
+      default:
+        queue.process(getEthereumEvents)
+      }
     }
   }
 }

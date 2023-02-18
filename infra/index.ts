@@ -8,6 +8,7 @@ import * as pulumi from '@pulumi/pulumi'
 import { SharedInfraOutput, sharedOutputFileName } from './defs'
 import { createSharedInfra } from './shared'
 import { createStreamCluster } from './stream'
+import { createStreamClusterUpdateNftsProfile } from './stream2'
 
 export const sharedOutToJSONFile = (outMap: pulumi.automation.OutputMap): void => {
   const dbHost = outMap.dbHost.value
@@ -39,7 +40,9 @@ const main = async (): Promise<any> => {
   }
 
   if (deployStream) {
-    return createStreamCluster()
+    return createStreamCluster().then(() => {
+      return createStreamClusterUpdateNftsProfile()
+    })
   }
 }
 

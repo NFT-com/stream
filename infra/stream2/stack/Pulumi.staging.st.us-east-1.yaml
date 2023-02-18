@@ -1,0 +1,7 @@
+encryptionsalt: v1:yj8nzwXF1Uo=:v1:J2mwOg3P4SKSsGGX:XXS4eLEKImJEC4cG4ves/XhpLfZ4DA==
+config:
+  nftcom:ecsAutoScaleMin: 2
+  nftcom:ecsAutoScaleMax: 3
+  nftcom:ecsTaskCpu: 8192
+  nftcom:ecsTaskMemory: 16384
+  nftcom:nodeEnv: staging
