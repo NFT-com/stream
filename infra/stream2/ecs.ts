@@ -5,7 +5,7 @@ import { SharedInfraOutput } from '../defs'
 import { getResourceName, getStage, getTags, isProduction } from '../helper'
 
 const tags = {
-  service: 'st',
+  service: 'update-nfts',
 }
 
 const attachLBListeners = (
@@ -58,7 +58,7 @@ const createEcsTargetGroup = (
       timeout: 30,
       unhealthyThreshold: 5,
     },
-    name: getResourceName('st-ecs'),
+    name: getResourceName('update-nfts-profile-ecs'),
     port: 8080,
     protocol: 'HTTP',
     protocolVersion: 'HTTP1',
@@ -77,7 +77,7 @@ const createEcsLoadBalancer = (
 ): aws.lb.LoadBalancer => {
   return new aws.lb.LoadBalancer('lb_st_ecs', {
     ipAddressType: 'ipv4',
-    name: getResourceName('st-ecs'),
+    name: getResourceName('update-nfts-profile-ecs'),
     securityGroups: [infraOutput.webSGId],
     subnets: infraOutput.publicSubnets,
     tags: getTags(tags),
@@ -86,7 +86,7 @@ const createEcsLoadBalancer = (
 
 const createEcsCluster = (): aws.ecs.Cluster => {
   const cluster = new aws.ecs.Cluster('cluster_st', {
-    name: getResourceName('st'),
+    name: getResourceName('update-nfts-profile'),
     settings: [
       {
         name: 'containerInsights',
@@ -112,7 +112,7 @@ const createEcsCluster = (): aws.ecs.Cluster => {
 
 const createEcsTaskRole = (): aws.iam.Role => {
   const role = new aws.iam.Role('role_st_ecs', {
-    name: getResourceName('st-ar.us-east-1'),
+    name: getResourceName('update-nfts-profile-ar.us-east-1'),
     description: 'Role for st ECS Task',
     assumeRolePolicy: {
       Version: '2012-10-17',
@@ -207,7 +207,7 @@ const createEcsTaskDefinition = (
   const ecrImage = `${process.env.ECR_REGISTRY}/${stECRRepo}:${process.env.GIT_SHA || 'latest'}`
   const role = createEcsTaskRole()
   console.log(role)
-  const resourceName = getResourceName('st')
+  const resourceName = getResourceName('update-nfts-profile')
   const ssmParam = createAOTCollectorSSMParameter()
 
   return new aws.ecs.TaskDefinition(
@@ -626,12 +626,12 @@ export const createEcsService = (
     launchType: 'FARGATE',
     loadBalancers: [
       {
-        containerName: getResourceName('st'),
+        containerName: getResourceName('update-nfts-profile'),
         containerPort: 8080,
         targetGroupArn: targetGroup.arn,
       },
     ],
-    name: getResourceName('st'),
+    name: getResourceName('update-nfts-profile'),
     networkConfiguration: {
       assignPublicIp: true,
       securityGroups: [infraOutput.webSGId],
