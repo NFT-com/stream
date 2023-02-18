@@ -230,16 +230,6 @@ export const profileGKOwnersHandler = async (job: Job): Promise<any> => {
     logger.info('Sync profile gk owners')
     const chainId: string =  job.data?.chainId || process.env.CHAIN_ID
     const ownersOfGK = await nftService.getOwnersOfGenesisKeys(chainId)
-    const checksumedOwners: string[] = []
-    for (const owner of ownersOfGK) {
-      try {
-        const checksumedOwner = helper.checkSum(owner)
-        checksumedOwners.push(checksumedOwner)
-      } catch(err) {
-        logger.error(`Error in sync profile owner for alchemy GK owner address: ${owner}, ${err}`)
-      }
-    }
-    //console.log('owners', ownersOfGK.map((ownerWallet: string) => etherUtils.getAddress(ownerWallet)).reverse())
     let profileUpdatePromise = []
     const cacheProfiles = []
     const profiles: entity.Profile[] = await repositories.profile.findAllWithRelations()
@@ -247,7 +237,7 @@ export const profileGKOwnersHandler = async (job: Job): Promise<any> => {
     for (const profile of profiles) {
       const profileWallet: entity.Wallet = (profile as any)?.wallet
       const isIncludedInGKOwners: boolean = profileWallet?.address
-        && checksumedOwners?.includes(helper.checkSum(profileWallet?.address))
+        && ownersOfGK[helper.checkSum(profileWallet?.address)]
 
       if(isIncludedInGKOwners) {
         if (!profile?.gkIconVisible
