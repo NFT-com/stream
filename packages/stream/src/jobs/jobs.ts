@@ -287,19 +287,19 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
     const chainIds = [...queues.keys()]
     return Promise.all(chainIds.map((chainId) => {
       switch (chainId) {
-      // case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
-      //   return queues.get(QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS)
-      //     .add({
-      //       UPDATE_PROFILES_NFTS_STREAMS: QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS,
-      //       chainId: process.env.CHAIN_ID,
-      //     },
-      //     {
-      //       removeOnComplete: true,
-      //       removeOnFail: true,
-      //       // repeat every minute
-      //       repeat: { every: 1 * 60000 },
-      //       jobId: 'update_profiles_nfts_streams',
-      //     })
+      case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
+        return queues.get(QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS)
+          .add({
+            UPDATE_PROFILES_NFTS_STREAMS: QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS,
+            chainId: process.env.CHAIN_ID,
+          },
+          {
+            removeOnComplete: true,
+            removeOnFail: true,
+            // repeat every minute
+            repeat: { every: 1 * 60000 },
+            jobId: 'update_profiles_nfts_streams',
+          })
       case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
         return queues.get(QUEUE_TYPES.SYNC_COLLECTION_RARITY)
           .add({
@@ -481,9 +481,9 @@ const listenToJobs = async (): Promise<void> => {
     case QUEUE_TYPES.DEREGISTER_OS_STREAMS:
       queue.process(deregisterStreamHandler)
       break
-    // case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
-    //   queue.process(updateNFTsForProfilesHandler)
-    //   break
+    case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
+      queue.process(updateNFTsForProfilesHandler)
+      break
     case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
       queue.process(collectionIssuanceDateSync)
       break

@@ -56,12 +56,13 @@ const updateWalletNFTs = async (
     await nftService.updateWalletNFTs(userId, wallet, chainId)
     logger.info(`updated wallet NFTs for profile ${profileId}`)
     await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
-    logger.info(`updated edges for profile ${profile.id}`)
-    await nftService.syncEdgesWithNFTs(profile.id)
+    // TODO this fn is being called again in updateNFTsForAssociatedAddresses, so remove for optimization
+    // logger.info(`updated edges for profile ${profile.id}`)
+    // await nftService.syncEdgesWithNFTs(profile.id)
     logger.info(`synced edges with NFTs for profile ${profile.id}`)
     await Promise.all([
       nftService.saveVisibleNFTsForProfile(profile.id, repositories),
-      nftService.saveProfileScore(repositories, profile),
+      // nftService.saveProfileScore(repositories, profile), // TODO: to re-enable at a future date
     ])
     logger.info(`saved amount of visible NFTs and score for profile ${profile.id}`)
     // refresh NFTs for associated addresses and contract
@@ -70,14 +71,14 @@ const updateWalletNFTs = async (
       profile,
       chainId,
     )
-    logger.info(msg)
+    logger.info(`after updateNFTsForAssociatedAddresses ${msg}`)
     msg = await nftService.updateCollectionForAssociatedContract(
       repositories,
       profile,
       chainId,
       wallet.address,
     )
-    logger.info(msg)
+    logger.info(`updateCollectionForAssociatedContract ${msg}`)
     // if gkIconVisible is true, we check if this profile owner still owns genesis key,
     if (profile.gkIconVisible) {
       await nftService.updateGKIconVisibleStatus(repositories, chainId, profile)
