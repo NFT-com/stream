@@ -587,9 +587,8 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
       }
     }
   } catch (err) {
-    logger.log(`Error in collection banner image sync: ${err}`)
+    logger.error(`Error in collection banner image sync: ${err}`)
   }
-  logger.log('completed collection banner image sync')
 }
 
 // collection image sync

@@ -543,7 +543,6 @@ export const retrieveMultipleOrdersOpensea = async (
     }
   } catch (err) {
     logger.error(`Error in retrieveMultipleOrdersOpensea: ${err}`)
-    // Sentry.captureMessage(`Error in retrieveOrdersOpensea: ${err}`)
   }
 }
 

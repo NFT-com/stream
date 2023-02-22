@@ -84,7 +84,7 @@ const keepAlive = ({
   let keepAliveInterval: NodeJS.Timeout | null = null
 
   provider._websocket.on('open', () => {
-    logger.log(`---------> 🎬 websocket started on chainId: ${Number(chainId)}`)
+    logger.debug(`---------> 🎬 websocket started on chainId: ${Number(chainId)}`)
     keepAliveInterval = setInterval(() => {
       provider._websocket.ping()
 
@@ -420,7 +420,7 @@ const keepAlive = ({
               chainId.toString(),
             )
 
-            logger.log(`
+            logger.debug(`
                 updated ${orderHash} for collection ${collection} -- strategy:
                 ${strategy}, currency:${currency} orderNonce:${orderNonce}
                 `)
@@ -481,7 +481,7 @@ const keepAlive = ({
               chainId.toString(),
             )
 
-            logger.log(`
+            logger.debug(`
             updated ${orderHash} for collection ${collection} -- strategy:
             ${strategy}, currency:${currency} orderNonce:${orderNonce}
             `)
@@ -553,7 +553,7 @@ const keepAlive = ({
             )
 
             await repositories.txCancel.save(cancelledEntity)
-            logger.log(`
+            logger.debug(`
                 Evt Saved: ${OSSeaportEventName.OrderCancelled} for orderHash ${orderHash},
                 offerer ${offerer},
                 zone ${zone}
@@ -599,7 +599,7 @@ const keepAlive = ({
             await repositories.txOrder.saveMany(orders)
             const cancelEntities = await Promise.all(cancelEntityPromises)
             await repositories.txCancel.saveMany(cancelEntities)
-            logger.log(`
+            logger.debug(`
                   Evt Saved: ${OSSeaportEventName.CounterIncremented} for
                   offerer ${offerer}
             `)
@@ -661,7 +661,7 @@ const keepAlive = ({
               recipient,
               chainId.toString(),
             )
-            logger.log(`
+            logger.debug(`
             Evt Saved: ${OSSeaportEventName.OrderFulfilled} for orderHash ${orderHash},
             offerer ${offerer},
             zone ${zone}
@@ -734,7 +734,7 @@ const keepAlive = ({
             )
 
             await repositories.txCancel.save(cancelledEntity)
-            logger.log(`
+            logger.debug(`
                 Evt Saved: ${X2Y2EventName.EvCancel} for orderHash ${orderHash}
             `)
           }
@@ -796,7 +796,7 @@ const keepAlive = ({
               chainId.toString(),
             )
 
-            logger.log(`
+            logger.debug(`
                   Evt Saved: ${X2Y2EventName.EvProfit} for orderHash ${orderHash}
                   and ownership updated
               `)
@@ -828,7 +828,7 @@ const keepAlive = ({
               { protocolData: { ...protocolDataFormatted },
               })
 
-            logger.log(`
+            logger.debug(`
                   Evt Updated: ${X2Y2EventName.EvProfit} for orderHash ${orderHash}
               `)
           }
@@ -906,7 +906,7 @@ const keepAlive = ({
               taker,
               chainId.toString(),
             )
-            logger.log(`
+            logger.debug(`
               Evt Saved: ${X2Y2EventName.EvInventory} for orderHash ${orderHash}
               and ownership updated
               `)
@@ -938,7 +938,7 @@ const keepAlive = ({
               { protocolData: { ...protocolDataFormatted },
               })
 
-            logger.log(`
+            logger.debug(`
                   Evt Updated: ${X2Y2EventName.EvInventory} for orderHash ${orderHash}
               `)
           }
@@ -1156,7 +1156,7 @@ const keepAlive = ({
   })
 
   // ws error
-  provider._websocket.on('error', (err) => logger.log('Alchemy provider error', err))
+  provider._websocket.on('error', (err) => logger.debug('Alchemy provider error', err))
 
   return Promise.resolve()
 }
@@ -1167,7 +1167,7 @@ export const startProvider = (
   chainId: providers.Networkish = 1, //mainnet default
 ): Promise<void> => {
   if (!process.env.DISABLE_WEBSOCKET) {
-    logger.log(`---------> 🎬 starting websocket on chainId: ${Number(chainId)}`)
+    logger.debug(`---------> 🎬 starting websocket on chainId: ${Number(chainId)}`)
     try {
       provider = ethers.providers.AlchemyProvider.getWebSocketProvider(
         Number(chainId),

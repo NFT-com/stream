@@ -74,9 +74,6 @@ export const deployInfra = async (
   }
 
   const stack = await pulumi.automation.LocalWorkspace.createOrSelectStack(args, { workDir })
-  console.info('Successfully initialized stack')
-
-  console.info('Installing plugins...')
   await stack.workspace.installPlugin('aws', 'v4.29.0')
 
   if (preview) {
@@ -84,7 +81,6 @@ export const deployInfra = async (
   }
 
   const result = await stack.up({ onOutput: console.info })
-  // console.log('Update summary', JSON.stringify(result.summary))
   return result.outputs
 }
 
