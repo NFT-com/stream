@@ -55,7 +55,6 @@ export const txEventLogs = async (
   }
   const eventLogs: ethers.providers.Log[] = await provider.getLogs(filter)
 
-  console.log('eventlogs', eventLogs)
   return eventLogs
 }
 
@@ -104,7 +103,7 @@ export const fulfillOrCancelSeaport = async (
         )
 
         await repositories.txCancel.save(cancelledEntity)
-        logger.log(`
+        logger.debug(`
             Evt Saved: ${OSSeaportEventName.OrderCancelled} for orderHash ${orderHash},
             offerer ${offerer},
             zone ${zone}
@@ -150,7 +149,7 @@ export const fulfillOrCancelSeaport = async (
         await repositories.txOrder.saveMany(orders)
         const cancelEntities = await Promise.all(cancelEntityPromises)
         await repositories.txCancel.saveMany(cancelEntities)
-        logger.log(`
+        logger.debug(`
               Evt Saved: ${OSSeaportEventName.CounterIncremented} for
               offerer ${offerer}
         `)
@@ -221,7 +220,7 @@ export const fulfillOrCancelSeaport = async (
             obj, wallet.userId, wallet.id, chainId.toString(),
           )
         }
-        logger.log(`
+        logger.debug(`
         Evt Saved: ${OSSeaportEventName.OrderFulfilled} for orderHash ${orderHash},
         offerer ${offerer},
         zone ${zone}
@@ -421,7 +420,7 @@ export const fulfillOrCancelLooksrare = async (
           )
         }
 
-        logger.log(`
+        logger.debug(`
             updated ${orderHash} for collection ${collection} -- strategy:
             ${strategy}, currency:${currency} orderNonce:${orderNonce}
             `)
@@ -493,7 +492,7 @@ export const fulfillOrCancelLooksrare = async (
           )
         }
 
-        logger.log(`
+        logger.debug(`
         updated ${orderHash} for collection ${collection} -- strategy:
         ${strategy}, currency:${currency} orderNonce:${orderNonce}
         `)
@@ -583,7 +582,7 @@ export const fulfillOrCancelX2Y2 = async (
         )
 
         await repositories.txCancel.save(cancelledEntity)
-        logger.log(`
+        logger.debug(`
             Evt Saved: ${X2Y2EventName.EvCancel} for orderHash ${orderHash}
         `)
       }
@@ -655,7 +654,7 @@ export const fulfillOrCancelX2Y2 = async (
           )
         }
 
-        logger.log(`
+        logger.debug(`
               Evt Saved: ${X2Y2EventName.EvProfit} for orderHash ${orderHash}
               and ownership updated
           `)
@@ -687,7 +686,7 @@ export const fulfillOrCancelX2Y2 = async (
           { protocolData: { ...protocolDataFormatted },
           })
 
-        logger.log(`
+        logger.debug(`
               Evt Updated: ${X2Y2EventName.EvProfit} for orderHash ${orderHash}
           `)
       }
@@ -775,7 +774,7 @@ export const fulfillOrCancelX2Y2 = async (
             obj, wallet.userId, wallet.id, chainId.toString(),
           )
         }
-        logger.log(`
+        logger.debug(`
           Evt Saved: ${X2Y2EventName.EvInventory} for orderHash ${orderHash}
           and ownership updated
           `)
@@ -807,7 +806,7 @@ export const fulfillOrCancelX2Y2 = async (
           { protocolData: { ...protocolDataFormatted },
           })
 
-        logger.log(`
+        logger.debug(`
               Evt Updated: ${X2Y2EventName.EvInventory} for orderHash ${orderHash}
           `)
       }
