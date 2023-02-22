@@ -84,6 +84,7 @@ export const deployInfra = async (
   }
 
   const result = await stack.up({ onOutput: console.info })
+  // console.log('Update summary', JSON.stringify(result.summary))
   return result.outputs
 }
 
