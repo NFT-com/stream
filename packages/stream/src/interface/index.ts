@@ -265,3 +265,8 @@ export interface NFT_NftPort {
   updated_date: string
   owner: string
 }
+
+export interface MulticallResponse {
+  success: boolean
+  returnData: string
+}

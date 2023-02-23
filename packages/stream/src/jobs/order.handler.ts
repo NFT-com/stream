@@ -1,7 +1,7 @@
 
 import { Job } from 'bull'
 import { ethers } from 'ethers'
-import { In, MoreThan } from 'typeorm'
+import { In, MoreThanOrEqual } from 'typeorm'
 
 import { Result } from '@ethersproject/abi'
 import { Contract } from '@ethersproject/contracts'
@@ -10,7 +10,9 @@ import { Contract } from '@ethersproject/contracts'
 import { core, looksrareService, openseaService, x2y2Service } from '@nftcom/gql/service'
 import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
+import { MulticallResponse } from '../interface'
 import { cache, CacheKeys, removeExpiredTimestampedZsetMembers, ttlForTimestampedZsetMembers } from '../service/cache'
+import { checksumAddress } from '../service/ownership'
 import { provider } from '../utils/logParser/eventLogParser'
 
 // exported for tests
@@ -304,9 +306,139 @@ interface OSCallResponse {
   totalSize: number
 }
 
+const fetchDataUsingMulticall = async (
+  calls: Array<core.Call>,
+  abi: any[],
+  chainId: string,
+): Promise<Array<MulticallResponse | undefined>> => {
+  try {
+    const multicall2ABI = contracts.Multicall2ABI()
+    // 1. create contract using multicall contract address and abi...
+    const multicallAddress = process.env.MULTICALL_CONTRACT
+    const multicallContract = new Contract(
+      multicallAddress.toLowerCase(),
+      multicall2ABI,
+      provider(Number(chainId), true),
+    )
+    const abiInterface = new ethers.utils.Interface(abi)
+    const callData = calls.map((call) =>
+    {
+      return [
+        call.contract.toLowerCase(),
+        abiInterface.encodeFunctionData(call.name, call.params),
+      ]})
+    // 2. get bytes array from multicall contract by process aggregate method...
+    const results: MulticallResponse[] =
+      await multicallContract.tryAggregate(false, callData)
+    return results
+  } catch (err) {
+    return []
+  }
+}
+
+const reconcileInvalidCounterOrdersOpenSea = async (
+  openSeaInvalidCounterArray: string[],
+  chainId: string,
+): Promise<void> => {
+  try {
+    const seaportAbi = contracts.openseaSeaportABI()
+    const abiInterface = new ethers.utils.Interface(seaportAbi)
+    // at any instant not pulling more than call_batch_size
+    const openSeaListings = await repositories.txOrder.find({
+      relations: ['activity'],
+      where: {
+        activity: {
+          activityType: defs.ActivityType.Listing,
+          status: defs.ActivityStatus.Valid,
+          expiration: MoreThanOrEqual(new Date()),
+          chainId,
+        },
+        exchange: defs.ExchangeType.OpenSea,
+        orderHash: In([...openSeaInvalidCounterArray]),
+      },
+      select: {
+        id: true,
+        activity: {
+          id: true,
+          walletAddress: true,
+          status: true,
+          expiration: true,
+        },
+        orderHash: true,
+        makerAddress: true,
+        nonce: true,
+      },
+    })
+
+    const nonceCalls = []
+    const makerHighestNonceMap = {}
+    for (const listing of openSeaListings) {
+      if ((listing.nonce >= 0)
+            && !makerHighestNonceMap[listing.makerAddress]
+            || (makerHighestNonceMap[listing.makerAddress] < listing.nonce)) {
+        makerHighestNonceMap[listing.makerAddress] = listing.nonce
+      }
+
+      nonceCalls.push({
+        contract: contracts.openseaSeaportAddress(chainId),
+        name: 'getCounter',
+        params: [listing.makerAddress],
+      })
+    }
+
+    let listingsToBeUpdated = []
+    if (nonceCalls.length) {
+      const results = await fetchDataUsingMulticall(
+        nonceCalls,
+        seaportAbi,
+        chainId,
+      )
+
+      for (let i=0; i < results.length; i++) {
+        const result = results?.[i]
+        const callName: string = nonceCalls[i]?.name
+        const callParams: any = nonceCalls[i].params
+        if (result.returnData !== '0x') {
+          const resultDecoded = abiInterface.decodeFunctionResult(
+            callName,
+            result.returnData,
+          )
+          const maker: string = checksumAddress(callParams?.[0])
+          let currentNonceInNumber = 0
+
+          if (resultDecoded?.counter) {
+            currentNonceInNumber = helper.bigNumberToNumber(
+              resultDecoded?.counter,
+            )
+          }
+
+          if (maker && (currentNonceInNumber > makerHighestNonceMap[maker])) {
+            for (const listing of openSeaListings) {
+              if (listing.makerAddress === maker) {
+                listing.activity.status = defs.ActivityStatus.Cancelled
+                listingsToBeUpdated.push(listing)
+              }
+            }
+            logger.log(`maker: ${maker} has ${listingsToBeUpdated}`)
+          }
+          if (listingsToBeUpdated.length) {
+            await repositories.txOrder.saveMany(listingsToBeUpdated, { chunk: 20 })
+            logger.log(`Successfully cancelled ${listingsToBeUpdated.length} lower counter listings for maker: ${maker}`)
+            listingsToBeUpdated = []
+          }
+        }
+      }
+    }
+  } catch (err) {
+    logger.error(err, 'error in reconcileInvalidCounterOrdersOpenSea')
+  }
+}
+
 const fulfillOrCancelOpenSea = async (
   orderHash: string,
-  callResponse: OSCallResponse): Promise<void> => {
+  callResponse: OSCallResponse,
+  openSeaInvalidCounterArray: string[],
+): Promise<void> => {
   let status: defs.ActivityStatus
   if (callResponse?.isCancelled) {
     status = defs.ActivityStatus.Cancelled
@@ -334,6 +466,9 @@ const fulfillOrCancelOpenSea = async (
     , {
       status,
     })
+  } else {
+    // collect all
+    openSeaInvalidCounterArray.push(orderHash)
   }
 }
 
@@ -417,25 +552,18 @@ const fetchDataUsingMulticallAndReconcile = async (
   chainId: string,
 ): Promise<Array<Result | undefined>> => {
   try {
-    const multicall2ABI = contracts.Multicall2ABI()
-    // 1. create contract using multicall contract address and abi...
-    const multicallAddress = process.env.MULTICALL_CONTRACT
-    const multicallContract = new Contract(
-      multicallAddress.toLowerCase(),
-      multicall2ABI,
-      provider(Number(chainId), true),
-    )
     const abiInterface = new ethers.utils.Interface(abi)
-    const callData = calls.map((call) =>
-    {
-      return [
-        call.contract.toLowerCase(),
-        abiInterface.encodeFunctionData(call.name, call.params),
-      ]})
-    // 2. get bytes array from multicall contract by process aggregate method...
-    const results: { success: boolean; returnData: string }[] =
-      await multicallContract.tryAggregate(false, callData)
-    let openSeaPromiseArray = [], looksrarePromiseArray = [], x2y2PromiseArray = []
+    const results: MulticallResponse[] =
+      await fetchDataUsingMulticall(
+        calls,
+        abi,
+        chainId,
+      )
+
+    let openSeaPromiseArray = [],
+      looksrarePromiseArray = [],
+      x2y2PromiseArray = [],
+      openSeaInvalidCounterArray = []
     // 3. decode bytes array to useful data array...
     for (let i=0; i < results.length; i++) {
       const result = results?.[i]
@@ -456,6 +584,7 @@ const fetchDataUsingMulticallAndReconcile = async (
               totalFilled,
               totalSize,
             },
+            openSeaInvalidCounterArray,
           ),
           )
           break
@@ -486,6 +615,13 @@ const fetchDataUsingMulticallAndReconcile = async (
           await Promise.all(x2y2PromiseArray)
           x2y2PromiseArray = []
         }
+        if (openSeaInvalidCounterArray.length > CALL_BATCH_SIZE) {
+          await reconcileInvalidCounterOrdersOpenSea(
+            openSeaInvalidCounterArray,
+            chainId,
+          )
+          openSeaInvalidCounterArray = []
+        }
       }
     }
     if (openSeaPromiseArray.length) {
@@ -500,6 +636,13 @@ const fetchDataUsingMulticallAndReconcile = async (
       await Promise.all(x2y2PromiseArray)
       x2y2PromiseArray = []
     }
+    if (openSeaInvalidCounterArray.length) {
+      await reconcileInvalidCounterOrdersOpenSea(
+        openSeaInvalidCounterArray,
+        chainId,
+      )
+      openSeaInvalidCounterArray = []
+    }
   } catch (error) {
     logger.error(
       `Failed to fetch data using multicall: ${error}`,
@@ -510,110 +653,116 @@ const fetchDataUsingMulticallAndReconcile = async (
 
 export const orderReconciliationHandler = async (job: Job): Promise<void> =>  {
   logger.log('initiated order reconciliation process')
-  const chainId: string = job.data.chainId || process.env.CHAIN_ID
-  const expirationFilters = {
-    activityType: defs.ActivityType.Listing,
-    status: defs.ActivityStatus.Valid,
-    expiration: MoreThan(new Date()),
-    chainId,
-    // updatedAt: MoreThanOrEqual(updatedAt),
-  }
-  const countFilter = {
-    activity: {
-      ...expirationFilters,
-    },
-    orderType: defs.ActivityType.Listing,
-    chainId,
-  } as any
-  const unexpiredListingsCount: number = await repositories.txOrder.count(countFilter)
-  logger.log(`current valid listing count: ${unexpiredListingsCount}`)
-
-  for (let i=0; i < unexpiredListingsCount; i+= CALL_SAMPLE_BATCH_SIZE) {
-    const unexpiredListingBatch: Partial<entity.TxOrder>[] = await repositories.txOrder.find({
-      relations: ['activity'],
-      where: {
-        activity: {
-          ...expirationFilters,
+  try {
+    const chainId: string = job.data.chainId || process.env.CHAIN_ID
+    const expirationFilters = {
+      activityType: defs.ActivityType.Listing,
+      status: defs.ActivityStatus.Valid,
+      expiration: MoreThanOrEqual(new Date()),
+      chainId,
+      // updatedAt: MoreThanOrEqual(updatedAt),
+    }
+    const countFilter = {
+      activity: {
+        ...expirationFilters,
+      },
+      orderType: defs.ActivityType.Listing,
+      chainId,
+    } as any
+    const unexpiredListingsCount: number = await repositories.txOrder.count(countFilter)
+    logger.log(`current valid listing count: ${unexpiredListingsCount}`)
+  
+    for (let i=0; i < unexpiredListingsCount; i+= CALL_SAMPLE_BATCH_SIZE) {
+      const unexpiredListingBatch: Partial<entity.TxOrder>[] = await repositories.txOrder.find({
+        relations: ['activity'],
+        where: {
+          activity: {
+            ...expirationFilters,
+          },
         },
-      },
-      skip: i,
-      take: CALL_SAMPLE_BATCH_SIZE,
-      select: {
-        id: true,
-        orderHash: true,
-        exchange: true,
-        protocolData: true,
-        makerAddress: true,
-      },
-    })
-
-    if (unexpiredListingBatch?.length) {
-      let seaportCalls = [], looksrareCalls = [], x2y2Calls = []
-      const seaportAbi = contracts.openseaSeaportABI()
-      const looksrareAbi = contracts.looksrareExchangeABI()
-      const x2y2Abi = contracts.x2y2ABI()
+        skip: i,
+        take: CALL_SAMPLE_BATCH_SIZE,
+        select: {
+          id: true,
+          orderHash: true,
+          exchange: true,
+          protocolData: true,
+          makerAddress: true,
+        },
+      })
   
-      for (const listing of unexpiredListingBatch) {
-        switch (listing.exchange) {
-        case defs.ExchangeType.OpenSea:
-          seaportCalls.push({
-            contract: contracts.openseaSeaportAddress(chainId),
-            name: 'getOrderStatus',
-            params: [listing.orderHash],
-          })
-          break
-        case defs.ExchangeType.LooksRare:
-          if (listing?.protocolData?.nonce !== null && listing?.protocolData?.nonce !== undefined) {
-            looksrareCalls.push({
-              contract: contracts.looksrareExchangeAddress(chainId),
-              name: 'isUserOrderNonceExecutedOrCancelled',
-              params: [listing.makerAddress, listing.protocolData?.nonce],
+      if (unexpiredListingBatch?.length) {
+        let seaportCalls = [], looksrareCalls = [], x2y2Calls = []
+        const seaportAbi = contracts.openseaSeaportABI()
+        const looksrareAbi = contracts.looksrareExchangeABI()
+        const x2y2Abi = contracts.x2y2ABI()
+    
+        for (const listing of unexpiredListingBatch) {
+          switch (listing.exchange) {
+          case defs.ExchangeType.OpenSea:
+            seaportCalls.push({
+              contract: contracts.openseaSeaportAddress(chainId),
+              name: 'getOrderStatus',
+              params: [listing.orderHash],
             })
+            break
+          case defs.ExchangeType.LooksRare:
+            if (listing?.protocolData?.nonce !== null
+                && listing?.protocolData?.nonce !== undefined) {
+              looksrareCalls.push({
+                contract: contracts.looksrareExchangeAddress(chainId),
+                name: 'isUserOrderNonceExecutedOrCancelled',
+                params: [listing.makerAddress, listing.protocolData?.nonce],
+              })
+            }
+            break
+          case defs.ExchangeType.X2Y2:
+            // 0 -> not fulfilled, 1 -> auction, 2 -> fulfilled, 3 -> cancelled, 4 -> refunded
+            x2y2Calls.push({
+              contract: contracts.x2y2Address(chainId),
+              name: 'inventoryStatus',
+              params: [listing.orderHash],
+            })
+            break
+          default:
+            break
           }
-          break
-        case defs.ExchangeType.X2Y2:
-          // 0 -> not fulfilled, 1 -> auction, 2 -> fulfilled, 3 -> cancelled, 4 -> refunded
-          x2y2Calls.push({
-            contract: contracts.x2y2Address(chainId),
-            name: 'inventoryStatus',
-            params: [listing.orderHash],
-          })
-          break
-        default:
-          break
+    
+          if (seaportCalls.length >= CALL_BATCH_SIZE) {
+            await fetchDataUsingMulticallAndReconcile(seaportCalls, seaportAbi, chainId)
+            seaportCalls = []
+          }
+    
+          if (looksrareCalls.length >= CALL_BATCH_SIZE) {
+            await fetchDataUsingMulticallAndReconcile(looksrareCalls, looksrareAbi, chainId)
+            looksrareCalls = []
+          }
+    
+          if (x2y2Calls.length >= CALL_BATCH_SIZE) {
+            await fetchDataUsingMulticallAndReconcile(x2y2Calls, x2y2Abi, chainId)
+            x2y2Calls = []
+          }
         }
-  
-        if (seaportCalls.length >= CALL_BATCH_SIZE) {
+    
+        if (seaportCalls.length) {
           await fetchDataUsingMulticallAndReconcile(seaportCalls, seaportAbi, chainId)
           seaportCalls = []
         }
-  
-        if (looksrareCalls.length >= CALL_BATCH_SIZE) {
+    
+        if (looksrareCalls.length) {
           await fetchDataUsingMulticallAndReconcile(looksrareCalls, looksrareAbi, chainId)
           looksrareCalls = []
         }
-  
-        if (x2y2Calls.length >= CALL_BATCH_SIZE) {
+    
+        if (x2y2Calls.length) {
           await fetchDataUsingMulticallAndReconcile(x2y2Calls, x2y2Abi, chainId)
           x2y2Calls = []
         }
       }
-  
-      if (seaportCalls.length) {
-        await fetchDataUsingMulticallAndReconcile(seaportCalls, seaportAbi, chainId)
-        seaportCalls = []
-      }
-  
-      if (looksrareCalls.length) {
-        await fetchDataUsingMulticallAndReconcile(looksrareCalls, looksrareAbi, chainId)
-        looksrareCalls = []
-      }
-  
-      if (x2y2Calls.length) {
-        await fetchDataUsingMulticallAndReconcile(x2y2Calls, x2y2Abi, chainId)
-        x2y2Calls = []
-      }
     }
+  } catch (err) {
+    logger.error(err, 'Error in order reconciliation process')
   }
+  
   logger.log('completed order reconciliation process')
 }
