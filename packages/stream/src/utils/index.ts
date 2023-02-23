@@ -8,6 +8,10 @@ export const lookupEnvKeyOrThrow = (key: string): string => {
   throw new Error(`Environment variable ${key} is required`)
 }
 
+export const getTimeStamp = (start: number): string => {
+  return `Total time taken : ${new Date().getTime() - start} milliseconds`
+}
+
 export const chainFromId = (chainId: string): string | undefined => {
   switch(chainId) {
   case '1':
