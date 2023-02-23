@@ -660,7 +660,6 @@ export const orderReconciliationHandler = async (job: Job): Promise<void> =>  {
       status: defs.ActivityStatus.Valid,
       expiration: MoreThanOrEqual(new Date()),
       chainId,
-      // updatedAt: MoreThanOrEqual(updatedAt),
     }
     const countFilter = {
       activity: {
