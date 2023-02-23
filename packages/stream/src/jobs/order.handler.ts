@@ -4,7 +4,6 @@ import { ethers } from 'ethers'
 import { In, MoreThanOrEqual } from 'typeorm'
 
 import { Result } from '@ethersproject/abi'
-import { Contract } from '@ethersproject/contracts'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import { core, looksrareService, openseaService, x2y2Service } from '@nftcom/gql/service'
@@ -306,36 +305,6 @@ interface OSCallResponse {
   totalSize: number
 }
 
-const fetchDataUsingMulticall = async (
-  calls: Array<core.Call>,
-  abi: any[],
-  chainId: string,
-): Promise<Array<MulticallResponse | undefined>> => {
-  try {
-    const multicall2ABI = contracts.Multicall2ABI()
-    // 1. create contract using multicall contract address and abi...
-    const multicallAddress = process.env.MULTICALL_CONTRACT
-    const multicallContract = new Contract(
-      multicallAddress.toLowerCase(),
-      multicall2ABI,
-      provider(Number(chainId), true),
-    )
-    const abiInterface = new ethers.utils.Interface(abi)
-    const callData = calls.map((call) =>
-    {
-      return [
-        call.contract.toLowerCase(),
-        abiInterface.encodeFunctionData(call.name, call.params),
-      ]})
-    // 2. get bytes array from multicall contract by process aggregate method...
-    const results: MulticallResponse[] =
-      await multicallContract.tryAggregate(false, callData)
-    return results
-  } catch (err) {
-    return []
-  }
-}
-
 const reconcileInvalidCounterOrdersOpenSea = async (
   openSeaInvalidCounterArray: string[],
   chainId: string,
@@ -388,10 +357,12 @@ const reconcileInvalidCounterOrdersOpenSea = async (
 
     let listingsToBeUpdated = []
     if (nonceCalls.length) {
-      const results = await fetchDataUsingMulticall(
+      const results = await core.fetchDataUsingMulticall(
         nonceCalls,
         seaportAbi,
         chainId,
+        true,
+        provider(Number(chainId), true),
       )
 
       for (let i=0; i < results.length; i++) {
@@ -554,10 +525,12 @@ const fetchDataUsingMulticallAndReconcile = async (
   try {
     const abiInterface = new ethers.utils.Interface(abi)
     const results: MulticallResponse[] =
-      await fetchDataUsingMulticall(
+      await core.fetchDataUsingMulticall(
         calls,
         abi,
         chainId,
+        true,
+        provider(Number(chainId), true),
       )
 
     let openSeaPromiseArray = [],
