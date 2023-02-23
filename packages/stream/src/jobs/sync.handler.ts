@@ -111,7 +111,6 @@ export const nftExternalOrders = async (job: Job): Promise<void> => {
 
     logger.debug('updated external orders for nfts')
   } catch (err) {
-    console.log('err', err)
     logger.error(`Error in nftExternalOrders Job: ${err}`)
   }
 }
