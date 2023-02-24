@@ -58,6 +58,7 @@ const updateWalletNFTs = async (
     logger.info(`[updateWalletNFTs-1] jobId: ${jobId}, nftService.updateWalletNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
     start = new Date().getTime()
     await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
+    logger.info(`[updateWalletNFTs-1a] jobId: ${jobId}, nftService.updateEdgesWeightForProfile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
     // TODO this fn is being called again in updateNFTsForAssociatedAddresses, so remove for optimization
     // logger.info(`jobId: ${jobId}, updated edges for profile ${profile.id}`)
     // await nftService.syncEdgesWithNFTs(profile.id)
