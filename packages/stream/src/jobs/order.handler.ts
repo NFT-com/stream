@@ -437,6 +437,7 @@ const fulfillOrCancelOpenSea = async (
     , {
       status,
     })
+    logger.log(`OS order with orderhash: ${orderHash} has been ${status}`)
   } else {
     // collect all
     openSeaInvalidCounterArray.push(orderHash)
@@ -479,6 +480,7 @@ const fulfillOrCancelLooksrare = async (
       await repositories.txActivity.update(updateFilter, {
         status: defs.ActivityStatus.Executed,
       })
+      logger.log(`Looksrare orders with order ids: ${orderIdMap.join(',')} have been executed.`)
     }
   }
 }
@@ -503,6 +505,7 @@ const fulfillOrCancelX2Y2 = async (
     , {
       status,
     })
+    logger.log(`X2Y2 order with orderhash: ${orderHash} has been ${status}`)
   }
 }
 
