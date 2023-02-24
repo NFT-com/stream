@@ -390,7 +390,7 @@ const reconcileInvalidCounterOrdersOpenSea = async (
                 listingsToBeUpdated.push(listing)
               }
             }
-            logger.log(`maker: ${maker} has ${listingsToBeUpdated}`)
+            logger.log(`maker: ${maker} has ${JSON.stringify(listingsToBeUpdated)}`)
           }
           if (listingsToBeUpdated.length) {
             await repositories.txOrder.saveMany(listingsToBeUpdated, { chunk: 20 })
