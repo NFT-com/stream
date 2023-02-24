@@ -635,6 +635,7 @@ const stopServer = async (): Promise<void> => {
 const bootstrap = (): Promise<void> => {
   verifyConfiguration()
   return db.connect(dbConfig)
+    .then(db.connectPg)
     .then(startAndListen)
     .then(startServer)
     .then(client.connect)
@@ -658,6 +659,7 @@ const gracefulShutdown = (): Promise<void> => {
   return stopServer()
     .then(killPort)
     .then(db.disconnect)
+    .then(db.endPg)
     .then(stopAndDisconnect)
     .then(client.disconnect)
     .then(stopProvider)
