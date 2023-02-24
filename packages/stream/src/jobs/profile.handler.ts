@@ -54,8 +54,9 @@ const updateWalletNFTs = async (
   jobId?: string,
 ): Promise<void> => {
   try {
+    logger.info(`updateWalletNFTs sync jobId: ${jobId}`)
     let start: number = new Date().getTime()
-    nftService.initiateWeb3(chainId)``
+    nftService.initiateWeb3(chainId)
     await nftService.updateWalletNFTs(userId, wallet, chainId)
     logger.info(`[updateWalletNFTs-1] jobId: ${jobId}, nftService.updateWalletNFTs ${profileId}, ${getTimeStamp(start)}`)
     start = new Date().getTime()
