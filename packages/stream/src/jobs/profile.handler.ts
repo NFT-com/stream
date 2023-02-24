@@ -122,12 +122,12 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
     for (const profileId of cachedProfiles) {
       const profile = await repositories.profile.findById(profileId)
       if (!profile) {
-        logger.info(`2. jobId: ${job.id}, No profile found for ID ${profileId}`)
+        logger.info(`2. jobId: ${job.id}, No profile found for ID ${profile.url} (${profileId}}`)
       } else {
         // check if updating NFTs for profile is in progress
         const inProgress = await cache.zscore(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, profileId)
         if (inProgress) {
-          logger.info(`3. jobId: ${job.id}, Updating NFTs for profile ${profileId} is in progress`)
+          logger.info(`3. jobId: ${job.id}, Updating NFTs for profile ${profile.url} (${profileId}) is in progress`)
         } else {
           // const updateBegin = Date.now()
           const wallet = await repositories.wallet.findOne({
@@ -137,7 +137,7 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
             },
           })
           if (!wallet) {
-            logger.info(`4. jobId: ${job.id}, No wallet found for ID ${profile.ownerWalletId}`)
+            logger.info(`4. jobId: ${job.id}, No wallet found for ID ${profile.ownerWalletId} (url = ${profile.url})`)
           } else {
             try {
               // keep profile to cache, so we won't repeat profiles in progress
