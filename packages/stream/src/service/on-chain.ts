@@ -1,6 +1,9 @@
 import { BigNumber, ethers, providers, utils } from 'ethers'
 import { In, LessThan } from 'typeorm'
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import { core } from '@nftcom/gql/service'
 import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
 import { delay } from '../utils'
@@ -420,6 +423,13 @@ const keepAlive = ({
               chainId.toString(),
             )
 
+            if (order.createdInternally) {
+              await core.sendSlackMessage(
+                'sub-nftdotcom-analytics',
+                `New Looksrare Trade on NFT.com: https://www.etherscan.io/tx/${e.transactionHash}`,
+              )
+            }
+
             logger.debug(`
                 updated ${orderHash} for collection ${collection} -- strategy:
                 ${strategy}, currency:${currency} orderNonce:${orderNonce}
@@ -480,6 +490,13 @@ const keepAlive = ({
               taker,
               chainId.toString(),
             )
+
+            if (order.createdInternally) {
+              await core.sendSlackMessage(
+                'sub-nftdotcom-analytics',
+                `New Looksrare Trade on NFT.com: https://www.etherscan.io/tx/${e.transactionHash}`,
+              )
+            }
 
             logger.debug(`
             updated ${orderHash} for collection ${collection} -- strategy:
@@ -661,6 +678,13 @@ const keepAlive = ({
               recipient,
               chainId.toString(),
             )
+
+            if (order.createdInternally) {
+              await core.sendSlackMessage(
+                'sub-nftdotcom-analytics',
+                `New Seaport Trade on NFT.com: https://www.etherscan.io/tx/${e.transactionHash}`,
+              )
+            }
             logger.debug(`
             Evt Saved: ${OSSeaportEventName.OrderFulfilled} for orderHash ${orderHash},
             offerer ${offerer},
@@ -796,6 +820,13 @@ const keepAlive = ({
               chainId.toString(),
             )
 
+            if (order.createdInternally) {
+              await core.sendSlackMessage(
+                'sub-nftdotcom-analytics',
+                `New X2Y2 Trade on NFT.com: https://www.etherscan.io/tx/${e.transactionHash}`,
+              )
+            }
+
             logger.debug(`
                   Evt Saved: ${X2Y2EventName.EvProfit} for orderHash ${orderHash}
                   and ownership updated
@@ -906,6 +937,14 @@ const keepAlive = ({
               taker,
               chainId.toString(),
             )
+
+            if (order.createdInternally) {
+              await core.sendSlackMessage(
+                'sub-nftdotcom-analytics',
+                `New X2Y2 Trade on NFT.com: https://www.etherscan.io/tx/${e.transactionHash}`,
+              )
+            }
+
             logger.debug(`
               Evt Saved: ${X2Y2EventName.EvInventory} for orderHash ${orderHash}
               and ownership updated

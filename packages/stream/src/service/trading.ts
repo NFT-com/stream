@@ -1,6 +1,9 @@
 import { BigNumber, ethers, utils } from 'ethers'
 import { defaultAbiCoder } from 'ethers/lib/utils'
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import { core } from '@nftcom/gql/service'
 import { _logger, db, defs, entity, helper } from '@nftcom/shared'
 
 import { provider } from '../jobs/mint.handler'
@@ -346,6 +349,10 @@ export const matchEventHandler = async (
   chainId: string,
 ): Promise<void> => {
   try {
+    await core.sendSlackMessage(
+      'sub-nftdotcom-analytics',
+      `New NFT.com Marketplace Trade: https://www.etherscan.io/tx/${transactionHash}`,
+    )
     let txListingOrder, txBidOrder
     txListingOrder = await repositories.txOrder.findOne({
       where: {
