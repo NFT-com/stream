@@ -1,9 +1,6 @@
 import { Job } from 'bull'
 import { ethers, utils } from 'ethers'
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-import { core } from '@nftcom/gql/service'
 import { _logger, contracts, defs, helper } from '@nftcom/shared'
 
 import { cache } from '../service/cache'
@@ -229,8 +226,6 @@ const listenMatchEvents = async (
             defs.AuctionType.Decreasing
         const makerSig = event.args.makerSig
         const takerSig = event.args.takerSig
-
-        await core.sendSlackMessage('sub-nftdotcom-analytics', `New NFT.com Marketplace Trade: https://www.etherscan.io/tx/${log.transactionHash}`)
 
         await matchEventHandler(
           sellHash,
