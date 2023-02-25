@@ -53,6 +53,7 @@ const updateWalletNFTs = async (
 ): Promise<void> => {
   try {
     let start: number = new Date().getTime()
+    const constantStart = start
     nftService.initiateWeb3(chainId)
     await nftService.updateWalletNFTs(profile.ownerUserId, wallet, chainId)
     logger.info(`[updateWalletNFTs-1] jobId: ${jobId}, nftService.updateWalletNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
@@ -105,7 +106,7 @@ const updateWalletNFTs = async (
       cache.zrem(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, [profile.id]),
     ])
 
-    logger.info(`[updateWalletNFTs-6] jobId: ${jobId}, completed updating NFTs for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+    logger.info(`[updateWalletNFTs-6] jobId: ${jobId}, completed updating NFTs for profile ${profile.url} (${profile.id}), TOTAL: ${getTimeStamp(constantStart)}`)
   } catch (err) {
     await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id]),
     logger.error(`jobId: ${jobId}, Error in updateWalletNFTs: ${err}`)
