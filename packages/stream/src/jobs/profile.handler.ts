@@ -56,13 +56,12 @@ const updateWalletNFTs = async (
     nftService.initiateWeb3(chainId)
     await nftService.updateWalletNFTs(profile.ownerUserId, wallet, chainId)
     logger.info(`[updateWalletNFTs-1] jobId: ${jobId}, nftService.updateWalletNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+
     start = new Date().getTime()
     await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
     logger.info(`[updateWalletNFTs-1a] jobId: ${jobId}, nftService.updateEdgesWeightForProfile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
-    // TODO this fn is being called again in updateNFTsForAssociatedAddresses, so remove for optimization
-    // logger.info(`jobId: ${jobId}, updated edges for profile ${profile.id}`)
-    // await nftService.syncEdgesWithNFTs(profile.id)
-    // logger.info(`jobId: ${jobId}, synced edges with NFTs for profile ${profile.id}`)
+    start = new Date().getTime()
+
     await nftService.saveVisibleNFTsForProfile(profile.id, repositories)
     logger.info(`[updateWalletNFTs-2a] jobId: ${jobId}, saved amount of visible NFTs and score for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
     start = new Date().getTime()
@@ -79,6 +78,7 @@ const updateWalletNFTs = async (
     )
     logger.info(`[updateWalletNFTs-3] jobId: ${jobId}, after updateNFTsForAssociatedAddresses ${msg}, ${getTimeStamp(start)}`)
     start = new Date().getTime()
+
     msg = await nftService.updateCollectionForAssociatedContract(
       repositories,
       profile,
@@ -94,6 +94,7 @@ const updateWalletNFTs = async (
       logger.info(`[updateWalletNFTs-5] jobId: ${jobId}, gkIconVisible updated for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
       start = new Date().getTime()
     }
+    
     // Once we update NFTs for profile, we cache it to UPDATED_NFTS_PROFILE with expire date
     const now: Date = new Date()
     now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
