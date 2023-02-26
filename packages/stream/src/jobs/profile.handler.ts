@@ -66,7 +66,7 @@ const updateWalletNFTs = async (
     logger.info(`[updateWalletNFTs-2a] saved amount of visible NFTs and score for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
     start = new Date().getTime()
 
-    nftService.saveProfileScore(repositories, profile)
+    await nftService.saveProfileScore(repositories, profile)
     logger.info(`[updateWalletNFTs-2b] saveProfileScore ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
     start = new Date().getTime()
 
