@@ -279,14 +279,20 @@ export const profileGKOwnersHandler = async (job: Job): Promise<any> => {
 
       if (profileUpdatePromise.length > 50) {
         await repositories.profile.saveMany(profileUpdatePromise, { chunk: 50 })
-        await cache.zadd(`${CacheKeys.PROFILE_GK_OWNERS}_${chainId}`, ...cacheProfiles)
+        if (cacheProfiles.length) {
+          logger.info(`[profileGKOwnersHandler-1] Sync profile gk owners cacheProfiles: ${JSON.stringify(cacheProfiles)}`)
+          await cache.zadd(`${CacheKeys.PROFILE_GK_OWNERS}_${chainId}`, ...cacheProfiles)
+        }
         profileUpdatePromise = []
       }
     }
 
     if (profileUpdatePromise.length) {
       await repositories.profile.saveMany(profileUpdatePromise, { chunk: 50 })
-      await cache.zadd(`${CacheKeys.PROFILE_GK_OWNERS}_${chainId}`, ...cacheProfiles)
+      if (cacheProfiles.length) {
+        logger.info(`[profileGKOwnersHandler-2] Sync profile gk owners cacheProfiles: ${JSON.stringify(cacheProfiles)}`)
+        await cache.zadd(`${CacheKeys.PROFILE_GK_OWNERS}_${chainId}`, ...cacheProfiles)
+      }
     }
 
     logger.info('Sync profile gk owners end')
