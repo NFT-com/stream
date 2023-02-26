@@ -49,26 +49,25 @@ const updateWalletNFTs = async (
   profile: entity.Profile,
   wallet: entity.Wallet,
   chainId: string,
-  jobId?: string,
 ): Promise<void> => {
   try {
     let start: number = new Date().getTime()
     const constantStart = start
     nftService.initiateWeb3(chainId)
     await nftService.updateWalletNFTs(profile.ownerUserId, wallet, chainId)
-    logger.info(`[updateWalletNFTs-1] jobId: ${jobId}, nftService.updateWalletNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+    logger.info(`[updateWalletNFTs-1] nftService.updateWalletNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
 
     start = new Date().getTime()
     await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
-    logger.info(`[updateWalletNFTs-1a] jobId: ${jobId}, nftService.updateEdgesWeightForProfile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+    logger.info(`[updateWalletNFTs-1a] nftService.updateEdgesWeightForProfile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
     start = new Date().getTime()
 
     await nftService.saveVisibleNFTsForProfile(profile.id, repositories)
-    logger.info(`[updateWalletNFTs-2a] jobId: ${jobId}, saved amount of visible NFTs and score for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+    logger.info(`[updateWalletNFTs-2a] saved amount of visible NFTs and score for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
     start = new Date().getTime()
 
     nftService.saveProfileScore(repositories, profile)
-    logger.info(`[updateWalletNFTs-2b] jobId: ${jobId}, saveProfileScore ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+    logger.info(`[updateWalletNFTs-2b] saveProfileScore ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
     start = new Date().getTime()
 
     // refresh NFTs for associated addresses and contract
@@ -77,7 +76,7 @@ const updateWalletNFTs = async (
       profile,
       chainId,
     )
-    logger.info(`[updateWalletNFTs-3] jobId: ${jobId}, after updateNFTsForAssociatedAddresses ${msg}, ${getTimeStamp(start)}`)
+    logger.info(`[updateWalletNFTs-3] after updateNFTsForAssociatedAddresses ${msg}, ${getTimeStamp(start)}`)
     start = new Date().getTime()
 
     msg = await nftService.updateCollectionForAssociatedContract(
@@ -86,13 +85,13 @@ const updateWalletNFTs = async (
       chainId,
       wallet.address,
     )
-    logger.info(`[updateWalletNFTs-4] jobId: ${jobId}, updateCollectionForAssociatedContract ${msg}, ${getTimeStamp(start)}`)
+    logger.info(`[updateWalletNFTs-4] updateCollectionForAssociatedContract ${msg}, ${getTimeStamp(start)}`)
     start = new Date().getTime()
 
     // if gkIconVisible is true, we check if this profile owner still owns genesis key,
     if (profile.gkIconVisible) {
       await nftService.updateGKIconVisibleStatus(repositories, chainId, profile)
-      logger.info(`[updateWalletNFTs-5] jobId: ${jobId}, gkIconVisible updated for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+      logger.info(`[updateWalletNFTs-5] gkIconVisible updated for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
       start = new Date().getTime()
     }
     
@@ -106,16 +105,16 @@ const updateWalletNFTs = async (
       cache.zrem(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, [profile.id]),
     ])
 
-    logger.info(`[updateWalletNFTs-6] jobId: ${jobId}, completed updating NFTs for profile ${profile.url} (${profile.id}), TOTAL: ${getTimeStamp(constantStart)}`)
+    logger.info(`[updateWalletNFTs-6] completed updating NFTs for profile ${profile.url} (${profile.id}), TOTAL: ${getTimeStamp(constantStart)}`)
   } catch (err) {
     await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id]),
-    logger.error(`jobId: ${jobId}, Error in updateWalletNFTs: ${err}`)
+    logger.error(`[updateWalletNFTs-error]: ${err}`)
   }
 }
 
 export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
   const chainId: string =  job.data?.chainId || process.env.CHAIN_ID
-  logger.info(`1: [jobId: ${job.id}] [updateNFTsForProfilesHandler]`)
+  logger.info('1: [updateNFTsForProfilesHandler]')
   try {
     // 1. remove expired profiles from the UPDATED_NFTS_PROFILE cache
     await removeExpiredTimestampedZsetMembers(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`)
@@ -126,12 +125,12 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
     for (const profileId of cachedProfiles) {
       const profile = await repositories.profile.findById(profileId)
       if (!profile) {
-        logger.info(`2. jobId: ${job.id}, No profile found for ID ${profile.url} (${profileId}}`)
+        logger.info(`2. [updateNFTsForProfilesHandler] No profile found for ID ${profile.url} (${profileId}}`)
       } else {
         // check if updating NFTs for profile is in progress
         const inProgress = await cache.zscore(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, profileId)
         if (inProgress) {
-          logger.info(`3. jobId: ${job.id}, Updating NFTs for profile ${profile.url} (${profileId}) is in progress`)
+          logger.info(`3. [updateNFTsForProfilesHandler] Updating NFTs for profile ${profile.url} (${profileId}) is in progress`)
         } else {
           // const updateBegin = Date.now()
           const wallet = await repositories.wallet.findOne({
@@ -141,7 +140,7 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
             },
           })
           if (!wallet) {
-            logger.info(`4. jobId: ${job.id}, No wallet found for ID ${profile.ownerWalletId} (url = ${profile.url})`)
+            logger.info(`4. [updateNFTsForProfilesHandler] No wallet found for ID ${profile.ownerWalletId} (url = ${profile.url})`)
           } else {
             try {
               // keep profile to cache, so we won't repeat profiles in progress
@@ -153,22 +152,21 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
                 wallet.address,
                 chainId,
               )
-              logger.info(`5. jobId: ${job.id}, checked NFT contract addresses for profile ${profile.url} (${profile.id})`)
+              logger.info(`5. [updateNFTsForProfilesHandler] checked NFT contract addresses for profile ${profile.url} (${profile.id})`)
               await updateWalletNFTs(
                 profile,
                 wallet,
                 chainId,
-                `${job.id}`,
               )
             } catch (err) {
-              logger.error(`jobId: ${job.id}, Error in updateNFTsForProfilesHandler: ${err}`)
+              logger.error(`[updateNFTsForProfilesHandler] Error in updateNFTsForProfilesHandler: ${err}`)
             }
           }
         }
       }
     }
   } catch (err) {
-    logger.error(`jobId: ${job.id}, Error in updateNFTsForProfilesHandler: ${err}`)
+    logger.error(`[updateNFTsForProfilesHandler] Error in updateNFTsForProfilesHandler: ${err}`)
   }
 }
 
