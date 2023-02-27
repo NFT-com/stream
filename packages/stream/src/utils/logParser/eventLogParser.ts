@@ -42,6 +42,7 @@ export const provider = (
     logger.info('Using zmok provider [eventLogParser]')
     return new ethers.providers.JsonRpcProvider(process.env.ZMOK_RPC_URL)
   } else if (infura) { // dedicated key
+    logger.info('Using dedicated infura provider [eventLogParser]')
     return new ethers.providers.InfuraProvider(chainId, process.env.INFURA_API_KEY)
   } else if (process.env.USE_INFURA == 'true') {
     logger.info('Using infura provider [eventLogParser]')
