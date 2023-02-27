@@ -116,7 +116,7 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
   const chainId: string =  job.data?.chainId || process.env.CHAIN_ID
   logger.info('1: [updateNFTsForProfilesHandler]')
   try {
-    // 1. remove expired profiles from the UPDATED_NFTS_PROFILE cache.
+    // 1. remove expired profiles from the UPDATED_NFTS_PROFILE cache
     await removeExpiredTimestampedZsetMembers(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`)
 
     // 2. update NFTs for profiles cached in UPDATE_NFTS_PROFILE cache
