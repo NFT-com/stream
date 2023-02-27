@@ -140,6 +140,10 @@ runs:
         DB_USE_SSL: ${{ fromJSON(inputs.secrets).DB_USE_SSL }}
         MULTICALL_CONTRACT: ${{ fromJSON(inputs.secrets).MULTICALL_CONTRACT }}
         ORDER_RECONCILIATION_PERIOD: ${{ fromJSON(inputs.secrets).ORDER_RECONCILIATION_PERIOD }}
+        USE_INFURA: ${{ fromJSON(inputs.secrets).USE_INFURA }}
+        USE_ZMOK: ${{ fromJSON(inputs.secrets).USE_ZMOK }}
+        ZMOK_API_KEY: ${{ fromJSON(inputs.secrets).ZMOK_API_KEY }}
+        INFURA_KEY_SET: ${{ fromJSON(inputs.secrets).INFURA_KEY_SET }}
         NODE_ENV: ${{ fromJSON(inputs.secrets).NODE_ENV }}
         DATADOG_API_KEY: ${{ fromJSON(inputs.secrets).DATADOG_API_KEY }}
         MAX_BATCHES_NFTPORT: ${{ fromJSON(inputs.secrets).MAX_BATCHES_NFTPORT }}
