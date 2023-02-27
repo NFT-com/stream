@@ -35,7 +35,7 @@ const openseaSeaportInterface = new utils.Interface(contracts.openseaSeaportABI(
 const x2y2Interface = new utils.Interface(contracts.x2y2ABI())
 
 export const provider = (
-  chainId: providers.Networkish = 1, //mainnet default
+  chainId: providers.Networkish = 1, // mainnet default
   infura?: boolean,
 ): ethers.providers.BaseProvider => {
   if (process.env.USE_ZMOK == 'true' && Number(chainId) == 1) { // zmok only supports mainnet and rinkeby (feb 2023)
