@@ -510,6 +510,10 @@ const createEcsTaskDefinition = (
                   Value: process.env.USE_ZMOK,
                 },
                 {
+                  Name: 'ZMOK_API_KEY',
+                  Value: process.env.ZMOK_API_KEY,
+                },
+                {
                   Name: 'INFURA_KEY_SET',
                   Value: process.env.INFURA_KEY_SET,
                 },
