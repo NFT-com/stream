@@ -17,6 +17,7 @@ const MAX_BLOCKS = 100000 // we use this constant to split blocks to avoid any i
 export const provider = (
   chainId: providers.Networkish = 1, //mainnet default
 ): ethers.providers.BaseProvider => {
+  logger.info(`process.env.USE_ZMOK: ${process.env.USE_ZMOK}, process.env.USE_INFURA: ${process.env.USE_INFURA} [mint-handler]`)
   if (process.env.USE_ZMOK == 'true' && Number(chainId) == 1) { // zmok only has support for mainnet and rinkeby (feb 2023)
     logger.info('Using zmok provider [mint-handler]')
     return new ethers.providers.JsonRpcProvider(`https://api.zmok.io/mainnet/${process.env.ZMOK_API_KEY}`)

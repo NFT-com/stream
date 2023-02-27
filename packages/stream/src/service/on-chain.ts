@@ -1212,6 +1212,7 @@ export const startProvider = (
     const randomInfuraKey = items[Math.floor(Math.random() * items.length)]
 
     try {
+      logger.info(`process.env.USE_ZMOK: ${process.env.USE_ZMOK}, process.env.USE_INFURA: ${process.env.USE_INFURA} [on-chain]`)
       provider = process.env.USE_ZMOK == 'true' && Number(chainId) == 1 ?
         new ethers.providers.WebSocketProvider(`wss://api.zmok.io/mainnet/${process.env.ZMOK_API_KEY}`) :
         process.env.USE_INFURA == 'true' ?
@@ -1221,7 +1222,7 @@ export const startProvider = (
             process.env.ALCHEMY_API_KEY,
           )
 
-      logger.info(`Using ${process.env.USE_ZMOK == 'true' && Number(chainId) == 1 ? 'Zmok' : process.env.USE_INFURA == 'true' ? 'Infura' : 'Alchemy'} provider`)
+      logger.info(`Using ${process.env.USE_ZMOK == 'true' && Number(chainId) == 1 ? 'Zmok' : process.env.USE_INFURA == 'true' ? 'Infura' : 'Alchemy'} provider [on-chain]`)
 
       keepAlive({
         provider,
