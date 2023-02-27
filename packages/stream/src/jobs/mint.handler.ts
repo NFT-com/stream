@@ -17,7 +17,18 @@ const MAX_BLOCKS = 100000 // we use this constant to split blocks to avoid any i
 export const provider = (
   chainId: providers.Networkish = 1, //mainnet default
 ): ethers.providers.BaseProvider => {
-  return new ethers.providers.AlchemyProvider(chainId, process.env.ALCHEMY_API_KEY)
+  if (process.env.USE_ZMOK == 'true' && Number(chainId) == 1) { // zmok only has support for mainnet and rinkeby (feb 2023)
+    logger.info('Using zmok provider [mint-handler]')
+    return new ethers.providers.JsonRpcProvider(`https://api.zmok.io/mainnet/${process.env.ZMOK_API_KEY}`)
+  } else if (process.env.USE_INFURA == 'true') {
+    logger.info('Using infura provider [mint-handler]')
+    const items = process.env.INFURA_KEY_SET.split(',')
+    const randomKey = items[Math.floor(Math.random() * items.length)]
+    return new ethers.providers.InfuraProvider(chainId, randomKey)
+  } else {
+    logger.info('Using alchemy provider [mint-handler]')
+    return new ethers.providers.AlchemyProvider(chainId, process.env.ALCHEMY_API_KEY)
+  }
 }
 
 /**

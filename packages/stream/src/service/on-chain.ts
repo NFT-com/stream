@@ -1207,11 +1207,22 @@ export const startProvider = (
 ): Promise<void> => {
   if (!process.env.DISABLE_WEBSOCKET) {
     logger.debug(`---------> 🎬 starting websocket on chainId: ${Number(chainId)}`)
+
+    const items = process.env.INFURA_KEY_SET.split(',')
+    const randomInfuraKey = items[Math.floor(Math.random() * items.length)]
+
     try {
-      provider = ethers.providers.AlchemyProvider.getWebSocketProvider(
-        Number(chainId),
-        process.env.ALCHEMY_API_KEY,
-      )
+      provider = process.env.USE_ZMOK == 'true' && Number(chainId) == 1 ?
+        new ethers.providers.WebSocketProvider(`wss://api.zmok.io/mainnet/${process.env.ZMOK_API_KEY}`) :
+        process.env.USE_INFURA == 'true' ?
+          new ethers.providers.WebSocketProvider(`wss://mainnet.infura.io/ws/v3/${randomInfuraKey}`) :
+          ethers.providers.AlchemyProvider.getWebSocketProvider(
+            Number(chainId),
+            process.env.ALCHEMY_API_KEY,
+          )
+
+      logger.info(`Using ${process.env.USE_ZMOK == 'true' && Number(chainId) == 1 ? 'Zmok' : process.env.USE_INFURA == 'true' ? 'Infura' : 'Alchemy'} provider`)
+
       keepAlive({
         provider,
         chainId,

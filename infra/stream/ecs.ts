@@ -502,6 +502,18 @@ const createEcsTaskDefinition = (
                   Value: process.env.ORDER_RECONCILIATION_PERIOD,
                 },
                 {
+                  Name: 'USE_INFURA',
+                  Value: process.env.USE_INFURA,
+                },
+                {
+                  Name: 'USE_ZMOK',
+                  Value: process.env.USE_ZMOK,
+                },
+                {
+                  Name: 'INFURA_KEY_SET',
+                  Value: process.env.INFURA_KEY_SET,
+                },
+                {
                   Name: 'MAX_BATCHES_NFTPORT',
                   Value: process.env.MAX_BATCHES_NFTPORT,
                 },

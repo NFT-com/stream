@@ -37,11 +37,20 @@ const x2y2Interface = new utils.Interface(contracts.x2y2ABI())
 export const provider = (
   chainId: providers.Networkish = 1, //mainnet default
   infura?: boolean,
+  zmok?: boolean,
 ): ethers.providers.BaseProvider => {
-  if (infura) {
-    return new ethers.providers.InfuraProvider(chainId, process.env.INFURA_API_KEY)
+  if (zmok && Number(chainId) == 1) { // zmok only supports mainnet and rinkeby (feb 2023)
+    logger.info('Using zmok provider [eventLogParser]')
+    return new ethers.providers.JsonRpcProvider(process.env.ZMOK_RPC_URL)
+  } else if (infura) {
+    logger.info('Using infura provider [eventLogParser]')
+    const items = process.env.INFURA_KEY_SET.split(',')
+    const randomKey = items[Math.floor(Math.random() * items.length)]
+    return new ethers.providers.InfuraProvider(chainId, randomKey)
+  } else {
+    logger.info('Using alchemy provider [eventLogParser]')
+    return new ethers.providers.AlchemyProvider(chainId, process.env.ALCHEMY_API_KEY)
   }
-  return new ethers.providers.AlchemyProvider(chainId, process.env.ALCHEMY_API_KEY)
 }
 
 export const txEventLogs = async (
