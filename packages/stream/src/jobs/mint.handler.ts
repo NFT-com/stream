@@ -310,7 +310,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
     const nftResolverAddress = checksumAddress(contracts.nftResolverAddress(chainId))
     const profileAddress = checksumAddress(contracts.nftProfileAddress(chainId))
 
-    logger.info(`👾 getting Ethereum Events chainId=${chainId}`)
+    logger.info(`👾 getEthereumEvents chainId=${chainId}`)
 
     const log = await getMintedProfileEvents(topics, Number(chainId), chainProvider, address)
     logger.info(`minted profile events ${log.latestBlockNumber}`)
