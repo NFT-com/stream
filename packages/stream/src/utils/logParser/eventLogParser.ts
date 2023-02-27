@@ -37,12 +37,13 @@ const x2y2Interface = new utils.Interface(contracts.x2y2ABI())
 export const provider = (
   chainId: providers.Networkish = 1, //mainnet default
   infura?: boolean,
-  zmok?: boolean,
 ): ethers.providers.BaseProvider => {
-  if (zmok && Number(chainId) == 1) { // zmok only supports mainnet and rinkeby (feb 2023)
+  if (process.env.USE_ZMOK == 'true' && Number(chainId) == 1) { // zmok only supports mainnet and rinkeby (feb 2023)
     logger.info('Using zmok provider [eventLogParser]')
     return new ethers.providers.JsonRpcProvider(process.env.ZMOK_RPC_URL)
-  } else if (infura) {
+  } else if (infura) { // dedicated key
+    return new ethers.providers.InfuraProvider(chainId, process.env.INFURA_API_KEY)
+  } else if (process.env.USE_INFURA == 'true') {
     logger.info('Using infura provider [eventLogParser]')
     const items = process.env.INFURA_KEY_SET.split(',')
     const randomKey = items[Math.floor(Math.random() * items.length)]
