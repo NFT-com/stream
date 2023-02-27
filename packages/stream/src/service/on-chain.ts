@@ -1206,13 +1206,13 @@ export const startProvider = (
   chainId: providers.Networkish = 1, //mainnet default
 ): Promise<void> => {
   if (!process.env.DISABLE_WEBSOCKET) {
-    logger.debug(`---------> 🎬 starting websocket on chainId: ${Number(chainId)}`)
+    logger.debug(`----------> 🎬 starting websocket on chainId: ${Number(chainId)}`)
 
     const items = process.env.INFURA_KEY_SET.split(',')
     const randomInfuraKey = items[Math.floor(Math.random() * items.length)]
 
     try {
-      logger.info(`process.env.USE_ZMOK: ${process.env.USE_ZMOK}, process.env.USE_INFURA: ${process.env.USE_INFURA} [on-chain]`)
+      logger.info(`process.env.USE_ZMOK: ${process.env.USE_ZMOK}, process.env.USE_INFURA: ${process.env.USE_INFURA}, ${process.env.ZMOK_API_KEY} [on-chain]`)
       provider = process.env.USE_ZMOK == 'true' && Number(chainId) == 1 ?
         new ethers.providers.WebSocketProvider(`wss://api.zmok.io/mainnet/${process.env.ZMOK_API_KEY}`) :
         process.env.USE_INFURA == 'true' ?
