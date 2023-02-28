@@ -110,7 +110,6 @@ const updateWalletNFTs = async (
     logger.info(`[updateWalletNFTs-6] completed updating NFTs for profile ${profile.url} (${profile.id}), TOTAL: ${getTimeStamp(constantStart)}`)
   } catch (err) {
     await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
-    await cache.zadd(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, 'INCR', 1, profile.id)
     logger.error(`[updateWalletNFTs-error]: ${err}`)
   }
 }
@@ -137,6 +136,7 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
           if (inProgressScore > PROFILE_PROGRESS_THRESHOLD) {
             await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
             await cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id)
+            await cache.zadd(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, 'INCR', 1, profile.id)
           } else {
             const failScore: string =  await cache.zscore(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, profileId)
             await cache.zadd(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, 'INCR', Number(failScore), profile.id)
@@ -173,7 +173,6 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
             } catch (err) {
               logger.error(`[updateNFTsForProfilesHandler] Error in updateNFTsForProfilesHandler: ${err}`)
               await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
-              await cache.zadd(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, 'INCR', 1, profile.id)
             }
           }
         }
