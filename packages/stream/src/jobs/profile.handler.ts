@@ -70,16 +70,53 @@ const updateWalletNFTs = async (
     logger.info(`[updateWalletNFTs-2b] saveProfileScore ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
     start = new Date().getTime()
 
-    // refresh NFTs for associated addresses and contract
-    let msg = await nftService.updateNFTsForAssociatedAddresses(
-      repositories,
-      profile,
-      chainId,
-    )
-    logger.info(`[updateWalletNFTs-3] after updateNFTsForAssociatedAddresses ${msg}, ${getTimeStamp(start)}`)
+    const addresses = await nftService.fetchAssociatedAddressesForProfile(profile, chainId)
+    logger.info(`[updateWalletNFTs-3a] fetchAssociatedAddressesForProfile ${profile.url} (${profile.id}), (${addresses.length} addresses), ${getTimeStamp(start)}`)
+
+    const prevAssociatedAddresses = profile.associatedAddresses
+    // update associated addresses with the latest updates
+    await repositories.profile.updateOneById(profile.id, { associatedAddresses: addresses })
     start = new Date().getTime()
 
-    msg = await nftService.updateCollectionForAssociatedContract(
+    // remove NFT edges for non-associated addresses
+    await nftService.removeEdgesForNonassociatedAddresses(
+      profile.id,
+      prevAssociatedAddresses,
+      addresses,
+      chainId,
+    )
+    logger.info(`[updateWalletNFTs-3b] removeEdgesForNonAssociatedAddresses ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+    start = new Date().getTime()
+
+    // save User, Wallet for associated addresses of profile...
+    const wallets: entity.Wallet[] = []
+    await Promise.allSettled(
+      addresses.map(async (address) => {
+        wallets.push(await core.saveUsersForAssociatedAddress(chainId, address, repositories))
+      }),
+    )
+    logger.info(`[updateWalletNFTs-3c] saveUsersForAssociatedAddress ${profile.url} (${profile.id}), (${wallets.length} wallets), ${getTimeStamp(start)}`)
+    start = new Date().getTime()
+
+    // refresh NFTs for associated addresses...
+    await Promise.allSettled(
+      wallets.map(async (wallet) => {
+        try {
+          await nftService.updateNFTsForAssociatedWallet(profile.id, wallet)
+        } catch (err) {
+          logger.error(`Error in updateNFTsForAssociatedAddresses: ${err}`)
+        }
+      }),
+    )
+    logger.info(`[updateWalletNFTs-3d] updateNFTsForAssociatedWallet ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+    start = new Date().getTime()
+
+    // sync Edges with NFTs
+    await nftService.syncEdgesWithNFTs(profile.id)
+    logger.info(`[updateWalletNFTs-3e] syncEdgesWithNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+    start = new Date().getTime()
+
+    const msg = await nftService.updateCollectionForAssociatedContract(
       repositories,
       profile,
       chainId,
@@ -92,9 +129,8 @@ const updateWalletNFTs = async (
     if (profile.gkIconVisible) {
       await nftService.updateGKIconVisibleStatus(repositories, chainId, profile)
       logger.info(`[updateWalletNFTs-5] gkIconVisible updated for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
-      start = new Date().getTime()
     }
-    
+
     // Once we update NFTs for profile, we cache it to UPDATED_NFTS_PROFILE with expire date
     const now: Date = new Date()
     now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
