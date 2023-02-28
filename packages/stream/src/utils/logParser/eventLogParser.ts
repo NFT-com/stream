@@ -1,10 +1,10 @@
-import { BigNumber, ethers, providers, utils } from 'ethers'
+import { BigNumber, ethers, utils } from 'ethers'
 import { In, LessThan } from 'typeorm'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore:next-line
 import {  nftService } from '@nftcom/gql/service'
-import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
+import { _logger, contracts, db, defs, entity, helper, provider } from '@nftcom/shared'
 
 import { delay } from '../'
 import { cancelEntityBuilder, txEntityBuilder, txX2Y2ProtocolDataParser } from '../builder/orderBuilder'
@@ -33,27 +33,6 @@ enum X2Y2EventName {
 const looksrareExchangeInterface = new utils.Interface(contracts.looksrareExchangeABI())
 const openseaSeaportInterface = new utils.Interface(contracts.openseaSeaportABI())
 const x2y2Interface = new utils.Interface(contracts.x2y2ABI())
-
-export const provider = (
-  chainId: providers.Networkish = 1, // mainnet default
-  infura?: boolean,
-): ethers.providers.BaseProvider => {
-  if (process.env.USE_ZMOK == 'true' && Number(chainId) == 1) { // zmok only supports mainnet and rinkeby (feb 2023)
-    logger.info('Using zmok provider [eventLogParser]')
-    return new ethers.providers.JsonRpcProvider(process.env.ZMOK_RPC_URL)
-  } else if (infura) { // dedicated key
-    logger.info('Using dedicated infura provider [eventLogParser]')
-    return new ethers.providers.InfuraProvider(chainId, process.env.INFURA_API_KEY)
-  } else if (process.env.USE_INFURA == 'true') {
-    logger.info('Using infura provider [eventLogParser]')
-    const items = process.env.INFURA_KEY_SET.split(',')
-    const randomKey = items[Math.floor(Math.random() * items.length)]
-    return new ethers.providers.InfuraProvider(chainId, randomKey)
-  } else {
-    logger.info('Using alchemy provider [eventLogParser]')
-    return new ethers.providers.AlchemyProvider(chainId, process.env.ALCHEMY_API_KEY)
-  }
-}
 
 export const txEventLogs = async (
   provider: ethers.providers.BaseProvider,
@@ -872,7 +851,7 @@ export const reconcileOrders = async (
   blockHash: string,
   chainId: string,
 ): Promise<void> => {
-  const etherProvider = provider(chainId)
+  const etherProvider = provider.provider(chainId)
   let reconcileExchangeOrders
   switch(exchange) {
   case defs.ExchangeType.OpenSea:

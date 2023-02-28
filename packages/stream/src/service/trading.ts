@@ -4,9 +4,8 @@ import { defaultAbiCoder } from 'ethers/lib/utils'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import { core } from '@nftcom/gql/service'
-import { _logger, db, defs, entity, helper } from '@nftcom/shared'
+import { _logger, db, defs, entity, helper, provider } from '@nftcom/shared'
 
-import { provider } from '../jobs/mint.handler'
 import { blockNumberToTimestamp } from '../jobs/trading.handler'
 import { activityBuilder } from '../utils/builder/orderBuilder'
 import { checksumAddress, updateOwnership } from './ownership'
@@ -904,7 +903,7 @@ export const matchTwoBEventHandler = async (
       if (txListingOrder.makerAddress !== '0x') {
         try {
           // find transfer event
-          const chainProvider = provider(Number(chainId))
+          const chainProvider = provider.provider(Number(chainId))
           const txResponse = await chainProvider.getTransaction(transactionHash)
           const receipt = await txResponse.wait()
           logger.info(`Logs count: ${receipt.logs.length}`)

@@ -1,7 +1,7 @@
 import { Job } from 'bull'
 import { ethers, utils } from 'ethers'
 
-import { _logger, contracts, defs, helper } from '@nftcom/shared'
+import { _logger, contracts, defs, helper, provider } from '@nftcom/shared'
 
 import { cache } from '../service/cache'
 import {
@@ -14,7 +14,7 @@ import {
   matchTwoAEventHandler,
   matchTwoBEventHandler,
 } from '../service/trading'
-import { getCachedBlock, getPastLogs, provider } from './mint.handler'
+import { getCachedBlock, getPastLogs } from './mint.handler'
 
 const logger = _logger.Factory(_logger.Context.Bull)
 const eventABI = contracts.marketplaceEventABI()
@@ -26,7 +26,7 @@ export const blockNumberToTimestamp = async (
   blockNumber: number,
   chainId: string,
 ): Promise<number> => {
-  const chainProvider = provider(Number(chainId))
+  const chainProvider = provider.provider(Number(chainId))
   const block = await chainProvider.getBlock(blockNumber)
   return block.timestamp * 1000
 }
@@ -504,7 +504,7 @@ export const syncTrading = async (job: Job): Promise<any> => {
     logger.info('marketplace sync job')
 
     const chainId = Number(job.data.chainId)
-    const chainProvider = provider(chainId)
+    const chainProvider = provider.provider(chainId)
     const latestBlock = await chainProvider.getBlock('latest')
     const cachedBlock = await getCachedBlock(chainId, `marketplace_cached_block_${chainId}`)
     logger.info(`Marketplace_Cached_Block: ${cachedBlock} - LatestBlock: ${latestBlock.number}`)

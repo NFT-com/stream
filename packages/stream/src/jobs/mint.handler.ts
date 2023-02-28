@@ -1,10 +1,10 @@
 import { Job } from 'bull'
-import { BigNumber, ethers, providers, utils } from 'ethers'
+import { BigNumber, ethers, utils } from 'ethers'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import {  core, HederaConsensusService, nftService } from '@nftcom/gql/service'
-import { _logger, contracts, db, defs, helper } from '@nftcom/shared'
+import { _logger, contracts, db, defs, helper, provider } from '@nftcom/shared'
 
 import { cache } from '../service/cache'
 import { checksumAddress } from '../service/ownership'
@@ -13,24 +13,6 @@ const logger = _logger.Factory(_logger.Context.Bull)
 const repositories = db.newRepositories()
 
 const MAX_BLOCKS = 100000 // we use this constant to split blocks to avoid any issues to get logs for event...
-
-export const provider = (
-  chainId: providers.Networkish = 1, //mainnet default
-): ethers.providers.BaseProvider => {
-  logger.info(`process.env.USE_ZMOK: ${process.env.USE_ZMOK}, process.env.USE_INFURA: ${process.env.USE_INFURA} [mint-handler]`)
-  if (process.env.USE_ZMOK == 'true' && Number(chainId) == 1) { // zmok only has support for mainnet and rinkeby (feb 2023)
-    logger.info('Using zmok provider [mint-handler]')
-    return new ethers.providers.JsonRpcProvider(`https://api.zmok.io/mainnet/${process.env.ZMOK_API_KEY}`)
-  } else if (process.env.USE_INFURA == 'true') {
-    logger.info('Using infura provider [mint-handler]')
-    const items = process.env.INFURA_KEY_SET.split(',')
-    const randomKey = items[Math.floor(Math.random() * items.length)]
-    return new ethers.providers.InfuraProvider(chainId, randomKey)
-  } else {
-    logger.info('Using alchemy provider [mint-handler]')
-    return new ethers.providers.AlchemyProvider(chainId, process.env.ALCHEMY_API_KEY)
-  }
-}
 
 /**
  * recursive method to split blocks for getting event logs
@@ -305,7 +287,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
       ],
     ]
 
-    const chainProvider = provider(Number(chainId))
+    const chainProvider = provider.provider(Number(chainId))
     const address = checksumAddress(contracts.profileAuctionAddress(chainId))
     const nftResolverAddress = checksumAddress(contracts.nftResolverAddress(chainId))
     const profileAddress = checksumAddress(contracts.nftProfileAddress(chainId))
