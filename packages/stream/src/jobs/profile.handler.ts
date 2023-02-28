@@ -146,7 +146,9 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
             await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
             logger.log(`Threshold crossed ${failScore + 1} times for profile id: ${profile.id} - current progress score: ${inProgressScore}`)
           } else {
-            await cache.zadd(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, 'INCR', Number(failScore), profile.id)
+            const score: number =  Number(failScore) || 1
+            await cache.zadd(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, 'INCR', score, profile.id)
+            logger.log(`Progress score incremented for profile id: ${profile.id} - increment: ${score}`)
           }
 
           logger.info(`3. [updateNFTsForProfilesHandler] Updating NFTs for profile ${profile.url} (${profileId}) is in progress`)
