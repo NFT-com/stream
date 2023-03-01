@@ -673,5 +673,10 @@ const gracefulShutdown = (): Promise<void> => {
 
 process.on('SIGINT', gracefulShutdown)
 process.on('SIGTERM', gracefulShutdown)
+// catches uncaught exceptions
+process.on('uncaughtException', err => {
+  logger.error(err, 'Uncaught Exception thrown')
+  return gracefulShutdown()
+})
 
 bootstrap().catch(handleError)
