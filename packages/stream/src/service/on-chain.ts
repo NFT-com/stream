@@ -692,7 +692,7 @@ const keepAlive = ({
         `)
           }
         } catch (err) {
-          logger.error(`Evt: ${OSSeaportEventName.OrderFulfilled} -- Err: ${err}`)
+          logger.error(err, `Evt: ${OSSeaportEventName.OrderFulfilled}`)
         }
       } else {
         // not relevant in our search space
