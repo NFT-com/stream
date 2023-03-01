@@ -323,6 +323,6 @@ export const profileGKOwnersHandler = async (job: Job): Promise<any> => {
 
     logger.info('Sync profile gk owners end')
   } catch (err) {
-    logger.error(`Error in profile gk owners Job: ${err}`)
+    logger.error(`Error in profile gk owners Job: ${err}.`)
   }
 }
