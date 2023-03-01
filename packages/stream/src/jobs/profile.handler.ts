@@ -54,11 +54,15 @@ const updateWalletNFTs = async (
   try {
     let start: number = new Date().getTime()
     const constantStart = start
+    
     nftService.initiateWeb3(chainId)
+    logger.info(`[updateWalletNFTs-0] starting nftService.updateWalletNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+    start = new Date().getTime()
+
     await nftService.updateWalletNFTs(profile.ownerUserId, wallet, chainId)
     logger.info(`[updateWalletNFTs-1] nftService.updateWalletNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
-
     start = new Date().getTime()
+
     await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
     logger.info(`[updateWalletNFTs-1a] nftService.updateEdgesWeightForProfile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
     start = new Date().getTime()
