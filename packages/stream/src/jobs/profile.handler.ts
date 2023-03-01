@@ -49,12 +49,13 @@ const updateWalletNFTs = async (
   profile: entity.Profile,
   wallet: entity.Wallet,
   chainId: string,
+  latestNFTs: any[],
 ): Promise<void> => {
   try {
     let start: number = new Date().getTime()
     const constantStart = start
     nftService.initiateWeb3(chainId)
-    await nftService.updateWalletNFTs(profile.ownerUserId, wallet, chainId)
+    await nftService.updateWalletNFTs(profile.ownerUserId, wallet, chainId, latestNFTs)
     logger.info(`[updateWalletNFTs-1] nftService.updateWalletNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
 
     start = new Date().getTime()
@@ -182,17 +183,24 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
               // keep profile to cache, so we won't repeat profiles in progress
               await cache.zadd(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, 'INCR', 1, profile.id)
               nftService.initiateWeb3(chainId)
-              await nftService.checkNFTContractAddresses(
-                profile.ownerUserId,
-                wallet.id,
+              const latestNFTs = await nftService.fetchNFTsFromAlchemyForAddress(
                 wallet.address,
                 chainId,
               )
-              logger.info(`5. [updateNFTsForProfilesHandler] checked NFT contract addresses for profile ${profile.url} (${profile.id})`)
+              logger.info(`5. [updateNFTsForProfilesHandler] Wallet ${wallet.address} fetched ${latestNFTs.length} NFTs`)
+              await nftService.verifyNFTsFromDB(
+                wallet.userId,
+                wallet.id,
+                wallet.address,
+                wallet.chainId,
+                latestNFTs,
+              )
+              logger.info(`6. [updateNFTsForProfilesHandler] verified NFTs from DB for profile ${profile.url} (${profile.id})`)
               await updateWalletNFTs(
                 profile,
                 wallet,
                 chainId,
+                latestNFTs,
               )
             } catch (err) {
               logger.error(`[updateNFTsForProfilesHandler] Error in updateNFTsForProfilesHandler: ${err}`)
