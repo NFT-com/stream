@@ -258,7 +258,7 @@ const jobHasNotRunRecently = (job: Bull.Job<any>): boolean  => {
 const checkJobQueues = (jobs: Bull.Job[][]): Promise<boolean> => {
   const values = [...queues.values()]
   if (jobs.flat().length < queues.size) {
-    logger.info('🐮 fewer bull jobs than queues -- wiping queues for restart')
+    logger.info('🐮 fewer bull jobs than queues --- wiping queues for restart')
     return Promise.all(values.map((queue) => {
       return queue.obliterate({ force: true })
     })).then(() => true)
