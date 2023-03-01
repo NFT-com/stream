@@ -658,11 +658,12 @@ const logExit = (): void => {
 const gracefulShutdown = (): Promise<void> => {
   return stopServer()
     .then(killPort)
-    .then(db.disconnect)
-    .then(db.endPg)
     .then(stopAndDisconnect)
     .then(client.disconnect)
     .then(stopProvider)
+    .then(fp.pause(500))
+    .then(db.disconnect)
+    .then(db.endPg)
     .then(fp.pause(500))
     .finally(() => {
       logExit()
