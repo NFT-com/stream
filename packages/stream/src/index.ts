@@ -675,7 +675,7 @@ process.on('SIGINT', gracefulShutdown)
 process.on('SIGTERM', gracefulShutdown)
 // catches uncaught exceptions
 process.on('uncaughtException', err => {
-  logger.error(err, 'Uncaught Exception thrown')
+  logger.error(err, 'Uncaught Exception thrown!')
   return gracefulShutdown()
 })
 
