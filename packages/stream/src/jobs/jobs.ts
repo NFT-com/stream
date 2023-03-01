@@ -514,7 +514,7 @@ export const startAndListen = (): Promise<void> => {
     .then(() => {
       setTimeout(() => {
         didPublish ? logger.info('🍊 queue was restarted -- listening for jobs...')
-          : logger.info('🍊 queue is healthy -- listening for jobs...')
+          : logger.info('🍊 queue is healthy --- listening for jobs...')
       })
     })
 }
