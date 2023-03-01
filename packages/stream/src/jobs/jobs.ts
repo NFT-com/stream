@@ -428,7 +428,7 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             jobId: 'reconcile_orders',
           })
       default:
-        return queues.get(chainId).add({ chainId: process.env.CHAIN_ID }, {
+        return queues.get(chainId).add({ chainId }, {
           removeOnComplete: true,
           removeOnFail: true,
           // repeat every 3 minutes
