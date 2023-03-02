@@ -15,6 +15,7 @@ const logger = _logger.Factory(_logger.Context.Bull)
 const repositories = db.newRepositories()
 
 const PROFILE_NFTS_EXPIRE_DURATION = Number(process.env.PROFILE_NFTS_EXPIRE_DURATION)
+const PROFILE_PROGRESS_THRESHOLD = Number(process.env.PROFILE_PROGRESS_THRESHOLD || 10)
 
 export const nftUpdateBatchProcessor = async (job: Job): Promise<boolean> => {
   logger.info(`initiated nft update batch processor for profile ${job.data.profileId} - index : ${job.data.index}`)
@@ -49,16 +50,19 @@ const updateWalletNFTs = async (
   profile: entity.Profile,
   wallet: entity.Wallet,
   chainId: string,
-  latestNFTs: any[],
 ): Promise<void> => {
   try {
     let start: number = new Date().getTime()
     const constantStart = start
-    nftService.initiateWeb3(chainId)
-    await nftService.updateWalletNFTs(profile.ownerUserId, wallet, chainId, latestNFTs)
-    logger.info(`[updateWalletNFTs-1] nftService.updateWalletNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
 
+    nftService.initiateWeb3(chainId)
+    logger.info(`[updateWalletNFTs-0] starting nftService.updateWalletNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
     start = new Date().getTime()
+
+    await nftService.updateWalletNFTs(profile.ownerUserId, wallet, chainId)
+    logger.info(`[updateWalletNFTs-1] nftService.updateWalletNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+    start = new Date().getTime()
+
     await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
     logger.info(`[updateWalletNFTs-1a] nftService.updateEdgesWeightForProfile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
     start = new Date().getTime()
@@ -71,50 +75,8 @@ const updateWalletNFTs = async (
     logger.info(`[updateWalletNFTs-2b] saveProfileScore ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
     start = new Date().getTime()
 
-    const addresses = await nftService.fetchAssociatedAddressesForProfile(profile, chainId)
-    logger.info(`[updateWalletNFTs-3a] fetchAssociatedAddressesForProfile ${profile.url} (${profile.id}), (${addresses.length} addresses), ${getTimeStamp(start)}`)
-
-    const prevAssociatedAddresses = profile.associatedAddresses
-    // update associated addresses with the latest updates
-    await repositories.profile.updateOneById(profile.id, { associatedAddresses: addresses })
-    start = new Date().getTime()
-
-    // remove NFT edges for non-associated addresses
-    await nftService.removeEdgesForNonassociatedAddresses(
-      profile.id,
-      prevAssociatedAddresses,
-      addresses,
-      chainId,
-    )
-    logger.info(`[updateWalletNFTs-3b] removeEdgesForNonAssociatedAddresses ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
-    start = new Date().getTime()
-
-    // save User, Wallet for associated addresses of profile...
-    const wallets: entity.Wallet[] = []
-    await Promise.allSettled(
-      addresses.map(async (address) => {
-        wallets.push(await core.saveUsersForAssociatedAddress(chainId, address, repositories))
-      }),
-    )
-    logger.info(`[updateWalletNFTs-3c] saveUsersForAssociatedAddress ${profile.url} (${profile.id}), (${wallets.length} wallets), ${getTimeStamp(start)}`)
-    start = new Date().getTime()
-
-    // refresh NFTs for associated addresses...
-    await Promise.allSettled(
-      wallets.map(async (wallet) => {
-        try {
-          await nftService.updateNFTsForAssociatedWallet(profile.id, wallet)
-        } catch (err) {
-          logger.error(`Error in updateNFTsForAssociatedAddresses: ${err}`)
-        }
-      }),
-    )
-    logger.info(`[updateWalletNFTs-3d] updateNFTsForAssociatedWallet ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
-    start = new Date().getTime()
-
-    // sync Edges with NFTs
-    await nftService.syncEdgesWithNFTs(profile.id)
-    logger.info(`[updateWalletNFTs-3e] syncEdgesWithNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+    await nftService.updateAssociatedAddressesForProfile(repositories, profile, chainId)
+    logger.info(`[updateWalletNFTs-3] updateAssociatedAddressesForProfile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
     start = new Date().getTime()
 
     const msg = await nftService.updateCollectionForAssociatedContract(
@@ -140,11 +102,12 @@ const updateWalletNFTs = async (
       cache.zadd(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, ttl, profile.id),
       cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id]),
       cache.zrem(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, [profile.id]),
+      cache.zrem(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, [profile.id]),
     ])
 
     logger.info(`[updateWalletNFTs-6] completed updating NFTs for profile ${profile.url} (${profile.id}), TOTAL: ${getTimeStamp(constantStart)}`)
   } catch (err) {
-    await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id]),
+    await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
     logger.error(`[updateWalletNFTs-error]: ${err}`)
   }
 }
@@ -167,6 +130,25 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
         // check if updating NFTs for profile is in progress
         const inProgress = await cache.zscore(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, profileId)
         if (inProgress) {
+          const inProgressScore = Number(inProgress)
+          const fails: string =  await cache.zscore(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, profileId)
+          const failScore = Number(fails)
+          if (inProgressScore > PROFILE_PROGRESS_THRESHOLD) {
+            if (failScore > inProgressScore) {
+              logger.log(`Profile failed to process a lot and needs investigation: profileId: ${profile.id}, times: ${failScore}`)
+              await cache.zrem(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, [profile.id])
+            } else {
+              await cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id)
+              await cache.zadd(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, 'INCR', 1, profile.id)
+            }
+            await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
+            logger.log(`Threshold crossed ${failScore + 1} times for profile id: ${profile.id} - current progress score: ${inProgressScore}`)
+          } else {
+            const score: number =  Number(failScore) || 1
+            await cache.zadd(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, 'INCR', score, profile.id)
+            logger.log(`Progress score incremented for profile id: ${profile.id} - increment: ${score}`)
+          }
+
           logger.info(`3. [updateNFTsForProfilesHandler] Updating NFTs for profile ${profile.url} (${profileId}) is in progress`)
         } else {
           // const updateBegin = Date.now()
@@ -183,27 +165,15 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
               // keep profile to cache, so we won't repeat profiles in progress
               await cache.zadd(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, 'INCR', 1, profile.id)
               nftService.initiateWeb3(chainId)
-              const latestNFTs = await nftService.fetchNFTsFromAlchemyForAddress(
-                wallet.address,
-                chainId,
-              )
-              logger.info(`5. [updateNFTsForProfilesHandler] Wallet ${wallet.address} fetched ${latestNFTs.length} NFTs`)
-              await nftService.verifyNFTsFromDB(
-                wallet.userId,
-                wallet.id,
-                wallet.address,
-                wallet.chainId,
-                latestNFTs,
-              )
               logger.info(`6. [updateNFTsForProfilesHandler] verified NFTs from DB for profile ${profile.url} (${profile.id})`)
               await updateWalletNFTs(
                 profile,
                 wallet,
                 chainId,
-                latestNFTs,
               )
             } catch (err) {
               logger.error(`[updateNFTsForProfilesHandler] Error in updateNFTsForProfilesHandler: ${err}`)
+              await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
             }
           }
         }
@@ -341,6 +311,6 @@ export const profileGKOwnersHandler = async (job: Job): Promise<any> => {
 
     logger.info('Sync profile gk owners end')
   } catch (err) {
-    logger.error(`Error in profile gk owners Job: ${err}`)
+    logger.error(`Error in profile gk owners Job: ${err}.`)
   }
 }

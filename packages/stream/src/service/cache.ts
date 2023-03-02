@@ -12,6 +12,7 @@ export enum CacheKeys {
   REFRESHED_COLLECTION_RARITY= 'refreshed_collection_rarity',
   UPDATED_NFTS_PROFILE = 'updated_nfts_profile',
   UPDATE_NFTS_PROFILE = 'update_nfts_profile',
+  PROFILE_FAIL_SCORE = 'profile_fail_score',
   PROFILES_IN_PROGRESS = 'profiles_in_progress',
   SLUG = 'collection-slug',
   REGISTERED = 'registered-slug',

@@ -658,11 +658,12 @@ const logExit = (): void => {
 const gracefulShutdown = (): Promise<void> => {
   return stopServer()
     .then(killPort)
-    .then(db.disconnect)
-    .then(db.endPg)
     .then(stopAndDisconnect)
     .then(client.disconnect)
     .then(stopProvider)
+    .then(fp.pause(500))
+    .then(db.disconnect)
+    .then(db.endPg)
     .then(fp.pause(500))
     .finally(() => {
       logExit()
@@ -672,5 +673,10 @@ const gracefulShutdown = (): Promise<void> => {
 
 process.on('SIGINT', gracefulShutdown)
 process.on('SIGTERM', gracefulShutdown)
+// catches uncaught exceptions
+process.on('uncaughtException', err => {
+  logger.error(err, 'Uncaught Exception thrown!')
+  return gracefulShutdown()
+})
 
 bootstrap().catch(handleError)
