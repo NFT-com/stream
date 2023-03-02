@@ -3,7 +3,7 @@ import Bull from 'bull'
 import { _logger } from '@nftcom/shared'
 
 import { redisConfig } from '../config'
-import { collectionIssuanceDateSync, collectionNameSync, collectionSyncHandler, nftRaritySyncHandler, raritySync, spamCollectionSyncHandler } from './collection.handler'
+import { collectionBannerImageSync, collectionIssuanceDateSync, collectionNameSync, collectionSyncHandler, nftRaritySyncHandler, raritySync, spamCollectionSyncHandler } from './collection.handler'
 import { getEthereumEvents } from './mint.handler'
 import { syncTxsFromNFTPortHandler } from './nftport.handler'
 import { nftExternalOrdersOnDemand, orderReconciliationHandler } from './order.handler'
@@ -468,9 +468,9 @@ const listenToJobs = async (): Promise<void> => {
     case QUEUE_TYPES.SYNC_CONTRACTS:
       queue.process(nftExternalOrders)
       break
-      // case QUEUE_TYPES.SYNC_COLLECTION_IMAGES:
-      //   queue.process(collectionBannerImageSync)
-      //   break
+    case QUEUE_TYPES.SYNC_COLLECTION_IMAGES:
+      queue.process(collectionBannerImageSync)
+      break
     case QUEUE_TYPES.SYNC_TRADING:
       queue.process(syncTrading)
       break
