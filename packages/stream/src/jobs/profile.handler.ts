@@ -118,7 +118,9 @@ const updateWalletNFTs = async (
   }
 }
 
+// TODO: make this function non-blocking in general (or get rid of Bull whatever comes first)
 export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
+  await job.moveToCompleted(undefined, true, true) // don't block processing future jobs.
   const chainId: string =  job.data?.chainId || process.env.CHAIN_ID
   logger.info('1: [updateNFTsForProfilesHandler]')
   try {
