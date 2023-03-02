@@ -141,13 +141,13 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
           const failScore = Number(fails)
           if (inProgressScore > PROFILE_PROGRESS_THRESHOLD) {
             if (failScore > inProgressScore) {
-              logger.log(`Profile failed to process a lot and needs investigation: profileId: ${profile.id}, times: ${failScore}`)
-              await cache.zrem(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, [profile.id])
+              logger.log(`Profile stuck in progress for sometime and needs investigation: profileId: ${profile.id}, fail_score: ${failScore}`)
+              // await cache.zrem(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, [profile.id])
             } else {
               await cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id)
               await cache.zadd(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, 'INCR', 1, profile.id)
             }
-            await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
+            // await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
             logger.log(`Threshold crossed ${failScore + 1} times for profile id: ${profile.id} - current progress score: ${inProgressScore}`)
           } else {
             const score: number =  Number(failScore) || 1
