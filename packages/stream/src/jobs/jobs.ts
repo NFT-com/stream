@@ -78,12 +78,19 @@ networkList.map(network => {
 
 let didPublish: boolean
 
+// settings for bull jobs (https://github.com/OptimalBits/bull/blob/develop/REFERENCE.md)
+const settings = {
+  stalledInterval: 60 * 60 * 1000, // change default from 30 sec to 1 hour, set 0 for disabling the stalled interval
+  maxStalledCount: 5,
+}
+
 const createQueues = (): Promise<void> => {
   return new Promise((resolve) => {
     networks.forEach((chainId: string, network: string) => {
       queues.set(network, new Bull(chainId, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
     })
 
@@ -92,6 +99,7 @@ const createQueues = (): Promise<void> => {
       QUEUE_TYPES.SYNC_TRADING, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
 
     // add composite image generation job to queue...
@@ -99,6 +107,7 @@ const createQueues = (): Promise<void> => {
       QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
 
     // sync collection images...
@@ -106,6 +115,7 @@ const createQueues = (): Promise<void> => {
       QUEUE_TYPES.SYNC_COLLECTION_IMAGES, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
 
     // sync collection images...
@@ -113,24 +123,28 @@ const createQueues = (): Promise<void> => {
       QUEUE_TYPES.SYNC_COLLECTION_NAME, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
 
     queues.set(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, new Bull(
       QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
 
     queues.set(QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS, new Bull(
       QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
 
     queues.set(QUEUE_TYPES.REGISTER_OS_STREAMS, new Bull(
       QUEUE_TYPES.REGISTER_OS_STREAMS, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
 
     // sync external orders
@@ -138,6 +152,7 @@ const createQueues = (): Promise<void> => {
       QUEUE_TYPES.SYNC_CONTRACTS, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
 
     // sync txs from nftport
@@ -145,6 +160,7 @@ const createQueues = (): Promise<void> => {
       QUEUE_TYPES.SYNC_TXS_NFTPORT, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
 
     // sync external collections
@@ -152,6 +168,7 @@ const createQueues = (): Promise<void> => {
       QUEUE_TYPES.SYNC_COLLECTIONS, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
 
     // sync collection rarity
@@ -159,6 +176,7 @@ const createQueues = (): Promise<void> => {
       QUEUE_TYPES.SYNC_COLLECTION_RARITY, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
 
     // sync nft/null nft rarity
@@ -166,6 +184,7 @@ const createQueues = (): Promise<void> => {
       QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
 
     // sync collection issuance date
@@ -173,6 +192,7 @@ const createQueues = (): Promise<void> => {
       QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
 
     // sync spam collections
@@ -180,17 +200,20 @@ const createQueues = (): Promise<void> => {
       QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
 
     //order subqueue
     nftOrderSubqueue = new Bull(orderSubqueueName, {
       redis: redis,
+      settings,
       prefix: orderSubqueuePrefix,
     })
 
     //collection subqueue
     collectionSyncSubqueue = new Bull(collectionSubqueueName, {
       redis: redis,
+      settings,
       prefix: collectionSubqueuePrefix,
     })
 
@@ -209,12 +232,14 @@ const createQueues = (): Promise<void> => {
       QUEUE_TYPES.DEREGISTER_OS_STREAMS, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
 
     queues.set(QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS, new Bull(
       QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
 
     // external orders on demand
@@ -222,12 +247,14 @@ const createQueues = (): Promise<void> => {
       QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
 
     queues.set(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, new Bull(
       QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
 
     // reconcile exchange orders
@@ -235,6 +262,7 @@ const createQueues = (): Promise<void> => {
       QUEUE_TYPES.RECONCILE_ORDERS, {
         prefix: queuePrefix,
         redis,
+        settings,
       }))
 
     resolve()
