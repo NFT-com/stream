@@ -144,7 +144,7 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
               logger.log(`Profile stuck in progress for sometime and needs investigation: profileId: ${profile.id}, fail_score: ${failScore}`)
               // await cache.zrem(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, [profile.id])
             } else {
-              await cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id)
+              //await cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id)
               await cache.zadd(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, 'INCR', 1, profile.id)
             }
             // await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
