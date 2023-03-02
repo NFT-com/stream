@@ -7,7 +7,6 @@ import { collectionBannerImageSync, collectionIssuanceDateSync, collectionNameSy
 import { getEthereumEvents } from './mint.handler'
 import { syncTxsFromNFTPortHandler } from './nftport.handler'
 import { nftExternalOrdersOnDemand, orderReconciliationHandler } from './order.handler'
-import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
 import { profileGKOwnersHandler, saveProfileExpireAt, updateNFTsForNonProfilesHandler,updateNFTsForProfilesHandler } from './profile.handler'
 import { searchListingIndexHandler } from './search.handler'
 import { nftExternalOrders } from './sync.handler'
@@ -495,12 +494,12 @@ const listenToJobs = async (): Promise<void> => {
     case QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND:
       queue.process(nftExternalOrdersOnDemand)
       break
-    case QUEUE_TYPES.REGISTER_OS_STREAMS:
-      queue.process(registerStreamHandler)
-      break
-    case QUEUE_TYPES.DEREGISTER_OS_STREAMS:
-      queue.process(deregisterStreamHandler)
-      break
+    // case QUEUE_TYPES.REGISTER_OS_STREAMS:
+    //   queue.process(registerStreamHandler)
+    //   break
+    // case QUEUE_TYPES.DEREGISTER_OS_STREAMS:
+    //   queue.process(deregisterStreamHandler)
+    //   break
     case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
       queue.process(updateNFTsForProfilesHandler)
       break

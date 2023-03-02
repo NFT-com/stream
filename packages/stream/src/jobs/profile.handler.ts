@@ -334,9 +334,15 @@ export const updateNFTsForNonProfilesHandler = async (job: Job): Promise<any> =>
     const cachedWallets = await cache.zrevrangebyscore(`${CacheKeys.UPDATE_NFTS_NON_PROFILE}_${chainId}`, '+inf', '(0')
     for (const walletId of cachedWallets) {
       const wallet: entity.Wallet = await repositories.wallet.findById(walletId)
-      if (wallet && wallet.userId) {
+      const profile: entity.Profile = await repositories.profile.findOne({
+        where: {
+          ownerWalletId: wallet.id,
+          chainId: wallet.chainId,
+        },
+      })
+      if (wallet && wallet.userId && !profile) {
         try {
-          logger.log(`Wallet id being processed: ${walletId}`)
+          logger.log(`Wallet id being processed: ${walletId}, profile: ${profile}`)
           await nftService.updateWalletNFTs(wallet.userId, wallet, chainId)
           // Once NFTs for non-profile wallet are updated, cache it to UPDATED_NFTS_NON_PROFILE with expire date
           const now: Date = new Date()
@@ -354,6 +360,10 @@ export const updateNFTsForNonProfilesHandler = async (job: Job): Promise<any> =>
       } else {
         if (!wallet.userId) {
           logger.log(`Wallet Id: ${walletId} does not have an associated user!`)
+        }
+
+        if (profile) {
+          logger.log(`Wallet Id: ${walletId} has at least one profile ${profile.id} - url: ${profile.url}`)
         }
         logger.log(`Wallet Id: ${walletId} does not exist!`)
       }
