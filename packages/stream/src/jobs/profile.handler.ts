@@ -322,3 +322,45 @@ export const profileGKOwnersHandler = async (job: Job): Promise<any> => {
     logger.error(`Error in profile gk owners Job: ${err}`)
   }
 }
+
+export const updateNFTsForNonProfilesHandler = async (job: Job): Promise<any> => {
+  logger.info('non-profile sync initiated')
+  try {
+    const chainId: string =  job.data?.chainId || process.env.CHAIN_ID
+    // 1. remove expired profiles from the UPDATED_NFTS_PROFILE cache
+    await removeExpiredTimestampedZsetMembers(`${CacheKeys.UPDATED_NFTS_NON_PROFILE}_${chainId}`)
+
+    // 2. update NFTs for profiles cached in UPDATE_NFTS_PROFILE cache
+    const cachedWallets = await cache.zrevrangebyscore(`${CacheKeys.UPDATE_NFTS_NON_PROFILE}_${chainId}`, '+inf', '(0')
+    for (const walletId of cachedWallets) {
+      const wallet: entity.Wallet = await repositories.wallet.findById(walletId)
+      if (wallet && wallet.userId) {
+        try {
+          logger.log(`Wallet id being processed: ${walletId}`)
+          await nftService.updateWalletNFTs(wallet.userId, wallet, chainId)
+          // Once NFTs for non-profile wallet are updated, cache it to UPDATED_NFTS_NON_PROFILE with expire date
+          const now: Date = new Date()
+          now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
+          const ttl = now.getTime()
+          await Promise.all([
+            cache.zadd(`${CacheKeys.UPDATED_NFTS_NON_PROFILE}_${chainId}`, ttl, walletId),
+            cache.zrem(`${CacheKeys.NON_PROFILES_IN_PROGRESS}_${chainId}`, [walletId]),
+            cache.zrem(`${CacheKeys.UPDATE_NFTS_NON_PROFILE}_${chainId}`, [walletId]),
+          ])
+          logger.log(`Finished processing wallet id: ${walletId}`)
+        } catch (err) {
+          logger.error(err, `Error in updateWalletNFTs while processing wallet: ${walletId}`)
+        }
+      } else {
+        if (!wallet.userId) {
+          logger.log(`Wallet Id: ${walletId} does not have an associated user!`)
+        }
+        logger.log(`Wallet Id: ${walletId} does not exist!`)
+      }
+    }
+    
+    logger.info('non-profile sync completed')
+  } catch (err) {
+    logger.error(err, 'Error in non-profile sync job')
+  }
+}

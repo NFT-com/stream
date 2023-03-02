@@ -3,12 +3,12 @@ import Bull from 'bull'
 import { _logger } from '@nftcom/shared'
 
 import { redisConfig } from '../config'
-import { collectionBannerImageSync, collectionIssuanceDateSync, collectionNameSync, collectionSyncHandler, nftRaritySyncHandler, raritySync, spamCollectionSyncHandler } from './collection.handler'
+import { collectionIssuanceDateSync, collectionNameSync, collectionSyncHandler, nftRaritySyncHandler, raritySync, spamCollectionSyncHandler } from './collection.handler'
 import { getEthereumEvents } from './mint.handler'
 import { syncTxsFromNFTPortHandler } from './nftport.handler'
 import { nftExternalOrdersOnDemand, orderReconciliationHandler } from './order.handler'
 import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
-import { profileGKOwnersHandler, saveProfileExpireAt, updateNFTsForProfilesHandler } from './profile.handler'
+import { profileGKOwnersHandler, saveProfileExpireAt, updateNFTsForNonProfilesHandler,updateNFTsForProfilesHandler } from './profile.handler'
 import { searchListingIndexHandler } from './search.handler'
 import { nftExternalOrders } from './sync.handler'
 import { syncTrading } from './trading.handler'
@@ -34,6 +34,7 @@ export enum QUEUE_TYPES {
   REGISTER_OS_STREAMS = 'REGISTER_OS_STREAMS',
   DEREGISTER_OS_STREAMS = 'DEREGISTER_OS_STREAMS',
   UPDATE_PROFILES_NFTS_STREAMS = 'UPDATE_PROFILES_NFTS_STREAMS',
+  UPDATE_NON_PROFILES_NFTS_STREAMS = 'UPDATE_NON_PROFILES_NFTS_STREAMS',
   FETCH_EXTERNAL_ORDERS = 'FETCH_EXTERNAL_ORDERS',
   FETCH_EXTERNAL_ORDERS_ON_DEMAND = 'FETCH_EXTERNAL_ORDERS_ON_DEMAND',
   GENERATE_COMPOSITE_IMAGE = 'GENERATE_COMPOSITE_IMAGE',
@@ -217,6 +218,12 @@ const createQueues = (): Promise<void> => {
         redis,
       }))
 
+    queues.set(QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS, new Bull(
+      QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS, {
+        prefix: queuePrefix,
+        redis,
+      }))
+
     // external orders on demand
     queues.set(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, new Bull(
       QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, {
@@ -299,6 +306,19 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             // repeat every minute
             repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_nfts_streams',
+          })
+      case QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS:
+        return queues.get(QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS)
+          .add({
+            UPDATE_NON_PROFILES_NFTS_STREAMS: QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS,
+            chainId: process.env.CHAIN_ID,
+          },
+          {
+            removeOnComplete: true,
+            removeOnFail: true,
+            // repeat every minute
+            repeat: { every: 1 * 60000 },
+            jobId: 'update_non_profiles_nfts_streams',
           })
       case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
         return queues.get(QUEUE_TYPES.SYNC_COLLECTION_RARITY)
@@ -448,9 +468,9 @@ const listenToJobs = async (): Promise<void> => {
     case QUEUE_TYPES.SYNC_CONTRACTS:
       queue.process(nftExternalOrders)
       break
-    case QUEUE_TYPES.SYNC_COLLECTION_IMAGES:
-      queue.process(collectionBannerImageSync)
-      break
+      // case QUEUE_TYPES.SYNC_COLLECTION_IMAGES:
+      //   queue.process(collectionBannerImageSync)
+      //   break
     case QUEUE_TYPES.SYNC_TRADING:
       queue.process(syncTrading)
       break
@@ -483,6 +503,9 @@ const listenToJobs = async (): Promise<void> => {
       break
     case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
       queue.process(updateNFTsForProfilesHandler)
+      break
+    case QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS:
+      queue.process(updateNFTsForNonProfilesHandler)
       break
     case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
       queue.process(collectionIssuanceDateSync)
