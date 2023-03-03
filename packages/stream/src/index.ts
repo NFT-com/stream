@@ -678,13 +678,13 @@ process.on('SIGTERM', gracefulShutdown)
 process.on('uncaughtException', async (err) => {
   logger.error(err, 'Uncaught Exception thrown')
   const activeSpan = trace.getActiveSpan()
-  activeSpan.setAttribute('sampling.priority', 1)
+  activeSpan && activeSpan.setAttribute('sampling.priority', 1)
   await gracefulShutdown()
 })
 process.on('unhandledRejection', async (reason, p) => {
   logger.error({ p, reason }, `Unhandled Rejection at: ${p}, reason: ${reason}`)
   const activeSpan = trace.getActiveSpan()
-  activeSpan.setAttribute('sampling.priority', 1)
+  activeSpan && activeSpan.setAttribute('sampling.priority', 1)
   await gracefulShutdown()
 })
 
