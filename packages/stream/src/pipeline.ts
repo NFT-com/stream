@@ -16,13 +16,13 @@ export const allowedEvents: EventType[] = [
 const repositories = db.newRepositories()
 // fetch all nfts -
 export const fetchAllNFTs = (): Promise<DistinctContract[]> => {
-  logger.debug('----initiating fetch----')
+  logger.log('----initiating fetch----')
   return repositories.nft.findDistinctContracts()
 }
 
 // map contracts to slugs - heavy lifting
 export const mapContractsToSlugs = async (contracts: DistinctContract[]): Promise<string[]> => {
-  logger.debug('----mapping contracts to slugs----')
+  logger.log('----mapping contracts to slugs----')
   const noSlugContracts: string[] = []
   const slugQueryParams: string[] = []
   const cachedMembers: string[] = await cache.smembers(`${CacheKeys.SLUG}`)
@@ -66,7 +66,7 @@ export const mapContractsToSlugs = async (contracts: DistinctContract[]): Promis
 
 // initiate all sockets
 const initializeStreamsForAllSlugs = (): void => {
-  logger.debug('----initiating streams----')
+  logger.log('----initiating streams----')
   
   client.onEvents('*',
     [
@@ -124,7 +124,7 @@ const initializeStreamsForAllSlugs = (): void => {
                         )
 
                         await repositories.txOrder.save(newOrder)
-                        logger.debug(`order with orderHash: ${orderHash} for ${nftId} is saved successfully on ${network} network`)
+                        logger.log(`order with orderHash: ${orderHash} for ${nftId} is saved successfully on ${network} network`)
                       } catch (err) {
                         // error handling
                       }
@@ -146,6 +146,6 @@ const initializeStreamsForAllSlugs = (): void => {
 }
 
 export const initiateStreaming = async (): Promise<void> => {
-  logger.debug('initiate streaming')
+  logger.log('initiate streaming')
   return initializeStreamsForAllSlugs()
 }
