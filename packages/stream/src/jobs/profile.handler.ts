@@ -115,7 +115,7 @@ const updateWalletNFTs = async (
     logger.info(`[updateWalletNFTs-6] completed updating NFTs for profile ${profile.url} (${profile.id}), TOTAL: ${getTimeStamp(constantStart)}`)
   } catch (err) {
     await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
-    logger.error(`[updateWalletNFTs-error]: ${err}`)
+    logger.error(`[updateWalletNFTs-error]: ${err} `)
   }
 }
 
