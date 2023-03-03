@@ -45,7 +45,7 @@ const checkSumOwner = (owner: string): string | undefined => {
   try {
     return helper.checkSum(owner)
   } catch (err) {
-    logger.error(err, `Unable to checkSum owner: ${owner}`)
+    logger.error(err, `Unable to checkSum owner ${owner}`)
   }
   return
 }
