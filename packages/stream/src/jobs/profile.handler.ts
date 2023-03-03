@@ -124,7 +124,7 @@ const processProfileUpdate = async (profileId: string, chainId: string): Promise
   if (!profile) {
     logger.info(`2. [updateNFTsForProfilesHandler] No profile found for ID ${profile.url} (${profileId}}`)
   } else {
-    // check if updating NFTs for profile is in progress
+    // check if updating NFTs for profile is in progress.
     const inProgress = await cache.zscore(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, profileId)
     if (inProgress) {
       const inProgressScore = Number(inProgress)
