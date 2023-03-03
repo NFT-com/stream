@@ -219,7 +219,7 @@ export const generateCompositeImages = async (job: Job): Promise<any> => {
         await repositories.profile.updateOneById(profile.id, {
           photoURL: imageURL,
         })
-        logger.debug(`Composite Image for Profile ${ profile.url } was generated`)
+        logger.debug(`composite image for profile ${ profile.url } was generated`)
       }),
     )
     logger.debug('generated composite images for profiles', { counts: MAX_PROFILE_COUNTS })
