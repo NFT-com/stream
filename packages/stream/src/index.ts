@@ -601,7 +601,7 @@ app.post('/stopSyncCollectionNftRarity', authMiddleWare, async (_req, res) => {
       return res.status(200).send({ message: 'Stopped Collection Sync!' })
     }
 
-    return res.status(200).send({ message: 'No Collection Null Rarity Sync In Progress!' })
+    return res.status(200).send({ message: 'No Collection Null Rarity Sync In Progress!!' })
   } catch (error) {
     logger.error(`err: ${error}`)
     return res.status(400).send(error)
@@ -674,9 +674,13 @@ const gracefulShutdown = (): Promise<void> => {
 process.on('SIGINT', gracefulShutdown)
 process.on('SIGTERM', gracefulShutdown)
 // catches uncaught exceptions
-process.on('uncaughtException', err => {
+process.on('uncaughtException', async (err) => {
   logger.error(err, 'Uncaught Exception thrown')
-  return gracefulShutdown()
+  await gracefulShutdown()
+})
+process.on('unhandledRejection', async (reason, p) => {
+  logger.error('Unhandled Rejection at:', p, 'reason:', reason)
+  await gracefulShutdown()
 })
 
 bootstrap().catch(handleError)
