@@ -601,7 +601,7 @@ app.post('/stopSyncCollectionNftRarity', authMiddleWare, async (_req, res) => {
       return res.status(200).send({ message: 'Stopped Collection Sync!' })
     }
 
-    return res.status(200).send({ message: 'No Collection Null Rarity Sync In Progress!' })
+    return res.status(200).send({ message: 'No Collection Null Rarity Sync In Progress!!' })
   } catch (error) {
     logger.error(`err: ${error}`)
     return res.status(400).send(error)
