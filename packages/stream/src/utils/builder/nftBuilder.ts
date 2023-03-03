@@ -21,6 +21,7 @@ export const collectionEntityBuilder = async (
     chainId,
     defs.NFTType.ERC721,
   )
+  
   if (collectionName === 'Unknown Name') {
     collectionName = await nftService.getCollectionNameFromContract(
       contract,
