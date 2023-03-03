@@ -282,7 +282,7 @@ export const profileParseLog = (log: any): any => {
 
 export const getEthereumEvents = async (job: Job): Promise<any> => {
   try {
-    const { chainId } = job.data
+    const { chainId = process.env.CHAIN_ID } = job.data
 
     const topics = [
       helper.id('MintedProfile(address,string,uint256,uint256,uint256,address)'),
