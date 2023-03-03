@@ -138,7 +138,7 @@ const processProfileUpdate = async (profileId: string, chainId: string): Promise
           await cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id)
           await cache.zadd(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, 'INCR', 1, profile.id)
         }
-        // await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
+        await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
         logger.log(`Threshold crossed ${failScore + 1} times for profile ${profile.url} (${profile.id}) - current progress score: ${inProgressScore}`)
       } else {
         const score: number = Number(failScore) || 1
