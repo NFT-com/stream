@@ -204,7 +204,7 @@ export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
 
 export const generateCompositeImages = async (job: Job): Promise<any> => {
   try {
-    logger.debug('generate Composite Images', job.data)
+    logger.debug('generate composite images', job.data)
 
     const MAX_PROFILE_COUNTS = 200
     const profiles = await repositories.profile.find({
