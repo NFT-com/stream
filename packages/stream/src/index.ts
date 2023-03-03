@@ -679,7 +679,7 @@ process.on('uncaughtException', async (err) => {
   await gracefulShutdown()
 })
 process.on('unhandledRejection', async (reason, p) => {
-  logger.error('Unhandled Rejection at:', p, 'reason:', reason)
+  logger.error({ p, reason }, `Unhandled Rejection at: ${p}, reason: ${reason}`)
   await gracefulShutdown()
 })
 
