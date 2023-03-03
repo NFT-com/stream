@@ -23,7 +23,6 @@
         "@opentelemetry/instrumentation-http": "0.34.0",
         "@opentelemetry/instrumentation-ioredis": "0.33.0",
         "@opentelemetry/instrumentation-pg": "0.33.0",
-        "@opentelemetry/sdk-node": "0.34.0",
         "@opentelemetry/sdk-trace-base": "1.8.0",
         "@opentelemetry/sdk-trace-node": "1.8.0",
         "aws-sdk": "^2.1269.0",
