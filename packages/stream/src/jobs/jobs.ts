@@ -84,6 +84,8 @@ const settings = {
   maxStalledCount: 5,
 }
 
+const defaultJobOptions = { removeOnComplete: true, removeOnFail: true }
+
 const createQueues = (): Promise<void> => {
   return new Promise((resolve) => {
     networks.forEach((chainId: string, network: string) => {
@@ -91,6 +93,7 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
     })
 
@@ -100,6 +103,7 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
 
     // add composite image generation job to queue...
@@ -108,6 +112,7 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
 
     // sync collection images...
@@ -116,6 +121,7 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
 
     // sync collection images...
@@ -124,6 +130,7 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
 
     queues.set(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, new Bull(
@@ -131,6 +138,7 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
 
     queues.set(QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS, new Bull(
@@ -138,6 +146,7 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
 
     queues.set(QUEUE_TYPES.REGISTER_OS_STREAMS, new Bull(
@@ -145,6 +154,7 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
 
     // sync external orders
@@ -153,6 +163,7 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
 
     // sync txs from nftport
@@ -161,6 +172,7 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
 
     // sync external collections
@@ -169,6 +181,7 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
 
     // sync collection rarity
@@ -177,6 +190,7 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
 
     // sync nft/null nft rarity
@@ -185,6 +199,7 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
 
     // sync collection issuance date
@@ -193,6 +208,7 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
 
     // sync spam collections
@@ -201,12 +217,14 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
 
     //order subqueue
     nftOrderSubqueue = new Bull(orderSubqueueName, {
       redis: redis,
       settings,
+      defaultJobOptions,
       prefix: orderSubqueuePrefix,
     })
 
@@ -214,6 +232,7 @@ const createQueues = (): Promise<void> => {
     collectionSyncSubqueue = new Bull(collectionSubqueueName, {
       redis: redis,
       settings,
+      defaultJobOptions,
       prefix: collectionSubqueuePrefix,
     })
 
@@ -233,6 +252,7 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
 
     queues.set(QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS, new Bull(
@@ -240,6 +260,7 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
 
     // external orders on demand
@@ -248,6 +269,7 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
 
     queues.set(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, new Bull(
@@ -255,6 +277,7 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
 
     // reconcile exchange orders
@@ -263,6 +286,7 @@ const createQueues = (): Promise<void> => {
         prefix: queuePrefix,
         redis,
         settings,
+        defaultJobOptions,
       }))
 
     resolve()
