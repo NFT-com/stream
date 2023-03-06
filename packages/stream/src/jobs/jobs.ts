@@ -84,136 +84,119 @@ const settings = {
   maxStalledCount: 5,
 }
 
+// https://github.com/OptimalBits/bull/blob/develop/REFERENCE.md
+const defaultJobOptions = {
+  removeOnComplete: true,
+  removeOnFail: true,
+}
+
+const defaultBullSettings = {
+  prefix: queuePrefix,
+  redis,
+  settings,
+  defaultJobOptions,
+}
+
 const createQueues = (): Promise<void> => {
   return new Promise((resolve) => {
     networks.forEach((chainId: string, network: string) => {
-      queues.set(network, new Bull(chainId, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+      queues.set(network, new Bull(chainId, defaultBullSettings))
     })
 
     // add trading handler job to queue...
-    queues.set(QUEUE_TYPES.SYNC_TRADING, new Bull(
-      QUEUE_TYPES.SYNC_TRADING, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_TRADING,
+      new Bull(QUEUE_TYPES.SYNC_TRADING, defaultBullSettings),
+    )
 
     // add composite image generation job to queue...
-    queues.set(QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, new Bull(
-      QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+    queues.set(
+      QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE,
+      new Bull(QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, defaultBullSettings),
+    )
 
     // sync collection images...
-    queues.set(QUEUE_TYPES.SYNC_COLLECTION_IMAGES, new Bull(
-      QUEUE_TYPES.SYNC_COLLECTION_IMAGES, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_COLLECTION_IMAGES,
+      new Bull(QUEUE_TYPES.SYNC_COLLECTION_IMAGES, defaultBullSettings),
+    )
 
     // sync collection images...
-    queues.set(QUEUE_TYPES.SYNC_COLLECTION_NAME, new Bull(
-      QUEUE_TYPES.SYNC_COLLECTION_NAME, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_COLLECTION_NAME,
+      new Bull(QUEUE_TYPES.SYNC_COLLECTION_NAME, defaultBullSettings),
+    )
 
-    queues.set(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, new Bull(
-      QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+    queues.set(
+      QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT,
+      new Bull(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, defaultBullSettings),
+    )
 
-    queues.set(QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS, new Bull(
-      QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS,
+      new Bull(QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS, defaultBullSettings),
+    )
 
-    queues.set(QUEUE_TYPES.REGISTER_OS_STREAMS, new Bull(
-      QUEUE_TYPES.REGISTER_OS_STREAMS, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+    queues.set(
+      QUEUE_TYPES.REGISTER_OS_STREAMS,
+      new Bull(QUEUE_TYPES.REGISTER_OS_STREAMS, defaultBullSettings),
+    )
 
     // sync external orders
-    queues.set(QUEUE_TYPES.SYNC_CONTRACTS, new Bull(
-      QUEUE_TYPES.SYNC_CONTRACTS, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_CONTRACTS,
+      new Bull(QUEUE_TYPES.SYNC_CONTRACTS, defaultBullSettings),
+    )
 
     // sync txs from nftport
-    queues.set(QUEUE_TYPES.SYNC_TXS_NFTPORT, new Bull(
-      QUEUE_TYPES.SYNC_TXS_NFTPORT, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_TXS_NFTPORT,
+      new Bull(QUEUE_TYPES.SYNC_TXS_NFTPORT, defaultBullSettings),
+    )
 
     // sync external collections
-    queues.set(QUEUE_TYPES.SYNC_COLLECTIONS, new Bull(
-      QUEUE_TYPES.SYNC_COLLECTIONS, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_COLLECTIONS,
+      new Bull(QUEUE_TYPES.SYNC_COLLECTIONS, defaultBullSettings),
+    )
 
     // sync collection rarity
-    queues.set(QUEUE_TYPES.SYNC_COLLECTION_RARITY, new Bull(
-      QUEUE_TYPES.SYNC_COLLECTION_RARITY, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_COLLECTION_RARITY,
+      new Bull(QUEUE_TYPES.SYNC_COLLECTION_RARITY, defaultBullSettings),
+    )
 
     // sync nft/null nft rarity
-    queues.set(QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY, new Bull(
-      QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY,
+      new Bull(QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY, defaultBullSettings),
+    )
 
     // sync collection issuance date
-    queues.set(QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, new Bull(
-      QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+    queues.set(
+      QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE,
+      new Bull(QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, defaultBullSettings),
+    )
 
     // sync spam collections
-    queues.set(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, new Bull(
-      QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_SPAM_COLLECTIONS,
+      new Bull(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, defaultBullSettings),
+    )
 
     //order subqueue
     nftOrderSubqueue = new Bull(orderSubqueueName, {
-      redis: redis,
+      redis,
       settings,
+      defaultJobOptions,
       prefix: orderSubqueuePrefix,
     })
 
     //collection subqueue
     collectionSyncSubqueue = new Bull(collectionSubqueueName, {
-      redis: redis,
+      redis,
       settings,
+      defaultJobOptions,
       prefix: collectionSubqueuePrefix,
     })
 
@@ -228,42 +211,32 @@ const createQueues = (): Promise<void> => {
     //   prefix: subqueuePrefix,
     // })
 
-    queues.set(QUEUE_TYPES.DEREGISTER_OS_STREAMS, new Bull(
-      QUEUE_TYPES.DEREGISTER_OS_STREAMS, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+    queues.set(
+      QUEUE_TYPES.DEREGISTER_OS_STREAMS,
+      new Bull(QUEUE_TYPES.DEREGISTER_OS_STREAMS, defaultBullSettings),
+    )
 
-    queues.set(QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS, new Bull(
-      QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+    queues.set(
+      QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS,
+      new Bull(QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS, defaultBullSettings),
+    )
 
     // external orders on demand
-    queues.set(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, new Bull(
-      QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+    queues.set(
+      QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND,
+      new Bull(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, defaultBullSettings),
+    )
 
-    queues.set(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, new Bull(
-      QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+    queues.set(
+      QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE,
+      new Bull(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, defaultBullSettings),
+    )
 
     // reconcile exchange orders
-    queues.set(QUEUE_TYPES.RECONCILE_ORDERS, new Bull(
-      QUEUE_TYPES.RECONCILE_ORDERS, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-      }))
+    queues.set(
+      QUEUE_TYPES.RECONCILE_ORDERS,
+      new Bull(QUEUE_TYPES.RECONCILE_ORDERS, defaultBullSettings),
+    )
 
     resolve()
   })
@@ -322,9 +295,6 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             chainId: process.env.CHAIN_ID,
           },
           {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every minute
             repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_nfts_streams',
           })
@@ -335,9 +305,6 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             chainId: process.env.CHAIN_ID,
           },
           {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every five minutes - this repeat job runs to pick up collection addresses from cache
             repeat: { every: 5 * 60000 },
             jobId: 'sync_collection_rarity',
           })
@@ -348,9 +315,6 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             chainId: process.env.CHAIN_ID,
           },
           {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every once every day
             repeat: { every: 24 * 60 * 60000 },
             jobId: 'sync_spam_collections',
           })
@@ -361,36 +325,24 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             chainId: process.env.CHAIN_ID,
           },
           {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every once every day
             repeat: { every: 24 * 60 * 60000 },
             jobId: 'save_profile_expire_at',
           })
       case QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS:
         return queues.get(QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS).add(
           { chainId: process.env.CHAIN_ID }, {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every 10 minutes
             repeat: { every: 10 * 60000 },
             jobId: 'sync_profile_gk_owners',
           })
       // case QUEUE_TYPES.REGISTER_OS_STREAMS:
       //   return queues.get(QUEUE_TYPES.REGISTER_OS_STREAMS)
       //     .add({ REGISTER_OS_STREAMS: QUEUE_TYPES.REGISTER_OS_STREAMS }, {
-      //       removeOnComplete: true,
-      //       removeOnFail: true,
-      //       // repeat every  2 minutes
       //       repeat: { every: 10 * 60000 },
       //       jobId: 'register_os_streams',
       //     })
       // case QUEUE_TYPES.DEREGISTER_OS_STREAMS:
       //   return queues.get(QUEUE_TYPES.DEREGISTER_OS_STREAMS)
       //     .add({ DEREGISTER_OS_STREAMS: QUEUE_TYPES.DEREGISTER_OS_STREAMS }, {
-      //       removeOnComplete: true,
-      //       removeOnFail: true,
-      //       // repeat every  2 minutes
       //       repeat: { every: 10 * 60000 },
       //       jobId: 'deregister_os_streams',
       //     })
@@ -401,21 +353,15 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             chainId: process.env.CHAIN_ID,
           }, {
             attempts: 5,
-            removeOnComplete: true,
-            removeOnFail: true,
             backoff: {
               type: 'exponential',
               delay: 2000,
             },
-            // repeat every  2 minutes
             repeat: { every: 2 * 60000 },
             jobId: 'fetch_external_orders_on_demand',
           })
       case QUEUE_TYPES.SYNC_TRADING:
         return queues.get(QUEUE_TYPES.SYNC_TRADING).add({ chainId: process.env.CHAIN_ID }, {
-          removeOnComplete: true,
-          removeOnFail: true,
-          // repeat every 5 minutes
           repeat: { every: 5 * 60000 },
           jobId: 'sync_trading',
         })
@@ -426,21 +372,16 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             chainId: process.env.CHAIN_ID,
           }, {
             attempts: 5,
-            removeOnComplete: true,
-            removeOnFail: true,
             backoff: {
               type: 'exponential',
               delay: 2000,
             },
-            // repeat every  12 hours
             repeat: { every: 12 * 60 * 60000 },
             jobId: 'fetch_collection_issuance_date',
           })
       case QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE:
         return queues.get(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE)
           .add({}, {
-            removeOnComplete: true,
-            removeOnFail: true,
             repeat: { every: 10 * 60000 },
             jobId: 'search_engine_listings_update',
           })
@@ -449,9 +390,6 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
           .add({
             chainId: process.env.CHAIN_ID,
           }, {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // will run every week?
             repeat: { every: ORDER_RECONCILIATION_PERIOD * 60000 },
             jobId: 'reconcile_orders',
           })
@@ -459,7 +397,6 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
         return queues.get(chainId).add({ chainId: chainId || process.env.CHAIN_ID }, {
           removeOnComplete: true,
           removeOnFail: true,
-          // repeat every 3 minutes
           repeat: { every: 3 * 60000 },
           jobId: `chainid_${chainId}_job`,
         })

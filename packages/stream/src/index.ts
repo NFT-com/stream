@@ -26,7 +26,6 @@ import {
 } from './middleware/validate'
 import { initiateStreaming } from './pipeline'
 import { cache, CacheKeys, removeExpiredTimestampedZsetMembers } from './service/cache'
-//import { startAndListen } from './jobs/jobs'
 import { startProvider, stopProvider } from './service/on-chain'
 import { client } from './service/opensea'
 
