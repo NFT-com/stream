@@ -84,7 +84,11 @@ const settings = {
   maxStalledCount: 5,
 }
 
-const defaultJobOptions = { removeOnComplete: true, removeOnFail: true }
+// https://github.com/OptimalBits/bull/blob/develop/REFERENCE.md
+const defaultJobOptions = {
+  removeOnComplete: true,
+  removeOnFail: true,
+}
 
 const createQueues = (): Promise<void> => {
   return new Promise((resolve) => {
@@ -346,9 +350,6 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             chainId: process.env.CHAIN_ID,
           },
           {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every minute
             repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_nfts_streams',
           })
@@ -359,9 +360,6 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             chainId: process.env.CHAIN_ID,
           },
           {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every five minutes - this repeat job runs to pick up collection addresses from cache
             repeat: { every: 5 * 60000 },
             jobId: 'sync_collection_rarity',
           })
@@ -372,9 +370,6 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             chainId: process.env.CHAIN_ID,
           },
           {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every once every day
             repeat: { every: 24 * 60 * 60000 },
             jobId: 'sync_spam_collections',
           })
@@ -385,36 +380,24 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             chainId: process.env.CHAIN_ID,
           },
           {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every once every day
             repeat: { every: 24 * 60 * 60000 },
             jobId: 'save_profile_expire_at',
           })
       case QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS:
         return queues.get(QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS).add(
           { chainId: process.env.CHAIN_ID }, {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every 10 minutes
             repeat: { every: 10 * 60000 },
             jobId: 'sync_profile_gk_owners',
           })
       // case QUEUE_TYPES.REGISTER_OS_STREAMS:
       //   return queues.get(QUEUE_TYPES.REGISTER_OS_STREAMS)
       //     .add({ REGISTER_OS_STREAMS: QUEUE_TYPES.REGISTER_OS_STREAMS }, {
-      //       removeOnComplete: true,
-      //       removeOnFail: true,
-      //       // repeat every  2 minutes
       //       repeat: { every: 10 * 60000 },
       //       jobId: 'register_os_streams',
       //     })
       // case QUEUE_TYPES.DEREGISTER_OS_STREAMS:
       //   return queues.get(QUEUE_TYPES.DEREGISTER_OS_STREAMS)
       //     .add({ DEREGISTER_OS_STREAMS: QUEUE_TYPES.DEREGISTER_OS_STREAMS }, {
-      //       removeOnComplete: true,
-      //       removeOnFail: true,
-      //       // repeat every  2 minutes
       //       repeat: { every: 10 * 60000 },
       //       jobId: 'deregister_os_streams',
       //     })
@@ -425,21 +408,15 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             chainId: process.env.CHAIN_ID,
           }, {
             attempts: 5,
-            removeOnComplete: true,
-            removeOnFail: true,
             backoff: {
               type: 'exponential',
               delay: 2000,
             },
-            // repeat every  2 minutes
             repeat: { every: 2 * 60000 },
             jobId: 'fetch_external_orders_on_demand',
           })
       case QUEUE_TYPES.SYNC_TRADING:
         return queues.get(QUEUE_TYPES.SYNC_TRADING).add({ chainId: process.env.CHAIN_ID }, {
-          removeOnComplete: true,
-          removeOnFail: true,
-          // repeat every 5 minutes
           repeat: { every: 5 * 60000 },
           jobId: 'sync_trading',
         })
@@ -450,21 +427,16 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             chainId: process.env.CHAIN_ID,
           }, {
             attempts: 5,
-            removeOnComplete: true,
-            removeOnFail: true,
             backoff: {
               type: 'exponential',
               delay: 2000,
             },
-            // repeat every  12 hours
             repeat: { every: 12 * 60 * 60000 },
             jobId: 'fetch_collection_issuance_date',
           })
       case QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE:
         return queues.get(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE)
           .add({}, {
-            removeOnComplete: true,
-            removeOnFail: true,
             repeat: { every: 10 * 60000 },
             jobId: 'search_engine_listings_update',
           })
@@ -473,9 +445,6 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
           .add({
             chainId: process.env.CHAIN_ID,
           }, {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // will run every week?
             repeat: { every: ORDER_RECONCILIATION_PERIOD * 60000 },
             jobId: 'reconcile_orders',
           })
@@ -483,7 +452,6 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
         return queues.get(chainId).add({ chainId: chainId || process.env.CHAIN_ID }, {
           removeOnComplete: true,
           removeOnFail: true,
-          // repeat every 3 minutes
           repeat: { every: 3 * 60000 },
           jobId: `chainid_${chainId}_job`,
         })
