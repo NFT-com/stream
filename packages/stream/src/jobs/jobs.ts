@@ -33,7 +33,8 @@ export enum QUEUE_TYPES {
   SYNC_SPAM_COLLECTIONS = 'SYNC_SPAM_COLLECTIONS',
   REGISTER_OS_STREAMS = 'REGISTER_OS_STREAMS',
   DEREGISTER_OS_STREAMS = 'DEREGISTER_OS_STREAMS',
-  UPDATE_PROFILES_NFTS_STREAMS = 'UPDATE_PROFILES_NFTS_STREAMS',
+  UPDATE_PROFILES_NFTS_STREAMS = 'UPDATE_PROFILES_NFTS_STREAMS', // add new nfts to profiles
+  OWNER_SYNC_NFTS_STREAMS = 'OWNER_SYNC_NFTS_STREAMS', // sync existing nfts owners
   FETCH_EXTERNAL_ORDERS = 'FETCH_EXTERNAL_ORDERS',
   FETCH_EXTERNAL_ORDERS_ON_DEMAND = 'FETCH_EXTERNAL_ORDERS_ON_DEMAND',
   GENERATE_COMPOSITE_IMAGE = 'GENERATE_COMPOSITE_IMAGE',
@@ -90,143 +91,103 @@ const defaultJobOptions = {
   removeOnFail: true,
 }
 
+const defaultBullSettings = {
+  prefix: queuePrefix,
+  redis,
+  settings,
+  defaultJobOptions,
+}
+
 const createQueues = (): Promise<void> => {
   return new Promise((resolve) => {
     networks.forEach((chainId: string, network: string) => {
-      queues.set(network, new Bull(chainId, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+      queues.set(network, new Bull(chainId, defaultBullSettings))
     })
 
     // add trading handler job to queue...
-    queues.set(QUEUE_TYPES.SYNC_TRADING, new Bull(
-      QUEUE_TYPES.SYNC_TRADING, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_TRADING,
+      new Bull(QUEUE_TYPES.SYNC_TRADING, defaultBullSettings),
+    )
 
     // add composite image generation job to queue...
-    queues.set(QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, new Bull(
-      QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+    queues.set(
+      QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE,
+      new Bull(QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, defaultBullSettings),
+    )
 
     // sync collection images...
-    queues.set(QUEUE_TYPES.SYNC_COLLECTION_IMAGES, new Bull(
-      QUEUE_TYPES.SYNC_COLLECTION_IMAGES, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_COLLECTION_IMAGES,
+      new Bull(QUEUE_TYPES.SYNC_COLLECTION_IMAGES, defaultBullSettings),
+    )
 
     // sync collection images...
-    queues.set(QUEUE_TYPES.SYNC_COLLECTION_NAME, new Bull(
-      QUEUE_TYPES.SYNC_COLLECTION_NAME, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_COLLECTION_NAME,
+      new Bull(QUEUE_TYPES.SYNC_COLLECTION_NAME, defaultBullSettings),
+    )
 
-    queues.set(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, new Bull(
-      QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+    queues.set(
+      QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT,
+      new Bull(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, defaultBullSettings),
+    )
 
-    queues.set(QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS, new Bull(
-      QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS,
+      new Bull(QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS, defaultBullSettings),
+    )
 
-    queues.set(QUEUE_TYPES.REGISTER_OS_STREAMS, new Bull(
-      QUEUE_TYPES.REGISTER_OS_STREAMS, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+    queues.set(
+      QUEUE_TYPES.REGISTER_OS_STREAMS,
+      new Bull(QUEUE_TYPES.REGISTER_OS_STREAMS, defaultBullSettings),
+    )
 
     // sync external orders
-    queues.set(QUEUE_TYPES.SYNC_CONTRACTS, new Bull(
-      QUEUE_TYPES.SYNC_CONTRACTS, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_CONTRACTS,
+      new Bull(QUEUE_TYPES.SYNC_CONTRACTS, defaultBullSettings),
+    )
 
     // sync txs from nftport
-    queues.set(QUEUE_TYPES.SYNC_TXS_NFTPORT, new Bull(
-      QUEUE_TYPES.SYNC_TXS_NFTPORT, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_TXS_NFTPORT,
+      new Bull(QUEUE_TYPES.SYNC_TXS_NFTPORT, defaultBullSettings),
+    )
 
     // sync external collections
-    queues.set(QUEUE_TYPES.SYNC_COLLECTIONS, new Bull(
-      QUEUE_TYPES.SYNC_COLLECTIONS, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_COLLECTIONS,
+      new Bull(QUEUE_TYPES.SYNC_COLLECTIONS, defaultBullSettings),
+    )
 
     // sync collection rarity
-    queues.set(QUEUE_TYPES.SYNC_COLLECTION_RARITY, new Bull(
-      QUEUE_TYPES.SYNC_COLLECTION_RARITY, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_COLLECTION_RARITY,
+      new Bull(QUEUE_TYPES.SYNC_COLLECTION_RARITY, defaultBullSettings),
+    )
 
     // sync nft/null nft rarity
-    queues.set(QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY, new Bull(
-      QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY,
+      new Bull(QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY, defaultBullSettings),
+    )
 
     // sync collection issuance date
-    queues.set(QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, new Bull(
-      QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+    queues.set(
+      QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE,
+      new Bull(QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, defaultBullSettings),
+    )
 
     // sync spam collections
-    queues.set(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, new Bull(
-      QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+    queues.set(
+      QUEUE_TYPES.SYNC_SPAM_COLLECTIONS,
+      new Bull(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, defaultBullSettings),
+    )
 
     //order subqueue
     nftOrderSubqueue = new Bull(orderSubqueueName, {
-      redis: redis,
+      redis,
       settings,
       defaultJobOptions,
       prefix: orderSubqueuePrefix,
@@ -234,7 +195,7 @@ const createQueues = (): Promise<void> => {
 
     //collection subqueue
     collectionSyncSubqueue = new Bull(collectionSubqueueName, {
-      redis: redis,
+      redis,
       settings,
       defaultJobOptions,
       prefix: collectionSubqueuePrefix,
@@ -251,47 +212,32 @@ const createQueues = (): Promise<void> => {
     //   prefix: subqueuePrefix,
     // })
 
-    queues.set(QUEUE_TYPES.DEREGISTER_OS_STREAMS, new Bull(
-      QUEUE_TYPES.DEREGISTER_OS_STREAMS, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+    queues.set(
+      QUEUE_TYPES.DEREGISTER_OS_STREAMS,
+      new Bull(QUEUE_TYPES.DEREGISTER_OS_STREAMS, defaultBullSettings),
+    )
 
-    queues.set(QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS, new Bull(
-      QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+    queues.set(
+      QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS,
+      new Bull(QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS, defaultBullSettings),
+    )
 
     // external orders on demand
-    queues.set(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, new Bull(
-      QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+    queues.set(
+      QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND,
+      new Bull(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, defaultBullSettings),
+    )
 
-    queues.set(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, new Bull(
-      QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+    queues.set(
+      QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE,
+      new Bull(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, defaultBullSettings),
+    )
 
     // reconcile exchange orders
-    queues.set(QUEUE_TYPES.RECONCILE_ORDERS, new Bull(
-      QUEUE_TYPES.RECONCILE_ORDERS, {
-        prefix: queuePrefix,
-        redis,
-        settings,
-        defaultJobOptions,
-      }))
+    queues.set(
+      QUEUE_TYPES.RECONCILE_ORDERS,
+      new Bull(QUEUE_TYPES.RECONCILE_ORDERS, defaultBullSettings),
+    )
 
     resolve()
   })
