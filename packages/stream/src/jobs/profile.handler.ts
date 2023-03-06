@@ -1,5 +1,5 @@
 /* eslint-disable no-use-before-define */
-import { Job } from 'bull'
+import { Job } from 'bullmq'
 import { BigNumber } from 'ethers'
 import * as Lodash from 'lodash'
 import { IsNull } from 'typeorm'

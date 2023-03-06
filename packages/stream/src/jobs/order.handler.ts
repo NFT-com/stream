@@ -1,5 +1,5 @@
 
-import { Job } from 'bull'
+import { Job } from 'bullmq'
 import { ethers } from 'ethers'
 import { In, MoreThanOrEqual } from 'typeorm'
 

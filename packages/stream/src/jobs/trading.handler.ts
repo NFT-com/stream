@@ -1,4 +1,4 @@
-import { Job } from 'bull'
+import { Job } from 'bullmq'
 import { ethers, utils } from 'ethers'
 
 import { _logger, contracts, defs, helper } from '@nftcom/shared'

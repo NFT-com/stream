@@ -4,7 +4,7 @@ if (['development','staging','production'].includes(process.env.NODE_ENV)) {
   setupTracing(`${process.env.NODE_ENV}-stream`)
 }
 
-import Bull from 'bull'
+import Bull from 'bullmq'
 import { BigNumber } from 'ethers'
 import express from 'express'
 import kill from 'kill-port'
@@ -66,7 +66,7 @@ app.get('/health', async (_req, res) => {
 app.get('/syncOS', authMiddleWare, async (_req, res) => {
   try {
     queues.get(QUEUE_TYPES.SYNC_CONTRACTS)
-      .add({
+      .add('syncOS', {
         SYNC_CONTRACTS: QUEUE_TYPES.SYNC_CONTRACTS,
         chainId: process.env.CHAIN_ID,
       }, {
@@ -85,7 +85,7 @@ app.get('/syncOS', authMiddleWare, async (_req, res) => {
 app.get('/syncLR', authMiddleWare, async (_req, res) => {
   try {
     queues.get(QUEUE_TYPES.SYNC_CONTRACTS)
-      .add({
+      .add('syncLR', {
         SYNC_CONTRACTS: QUEUE_TYPES.SYNC_CONTRACTS,
         chainId: process.env.CHAIN_ID,
       }, {
@@ -155,7 +155,7 @@ app.post('/syncTxsFromNFTPort', authMiddleWare, validate(syncTxsFromNFTPortSchem
           // 7. sync txs for collection + timestamp
           const jobId = `sync_txs_nftport:${Date.now()}`
           queues.get(QUEUE_TYPES.SYNC_TXS_NFTPORT)
-            .add({
+            .add('syncTxsNftport', {
               SYNC_TXS_NFTPORT: QUEUE_TYPES.SYNC_TXS_NFTPORT,
               address,
               tokenId,
@@ -216,7 +216,7 @@ app.post('/collectionSync', authMiddleWare, validate(collectionSyncSchema), asyn
     // sync collection + timestamp
     const jobId = `sync_collections:${Date.now()}`
     queues.get(QUEUE_TYPES.SYNC_COLLECTIONS)
-      .add({
+      .add('syncCollections', {
         SYNC_CONTRACTS: QUEUE_TYPES.SYNC_COLLECTIONS,
         collections: validCollections,
         chainId: process.env.CHAIN_ID,
@@ -284,7 +284,7 @@ app.post('/uploadCollections', authMiddleWare, upload.single('file'), async (_re
     // sync collection + timestamp
     const jobId = `sync_collections_from_csv:${Date.now()}`
     queues.get(QUEUE_TYPES.SYNC_COLLECTIONS)
-      .add({
+      .add('syncCollectionsFromCsv', {
         SYNC_CONTRACTS: QUEUE_TYPES.SYNC_COLLECTIONS,
         collections: validCollections,
         chainId: process.env.CHAIN_ID,
@@ -369,13 +369,13 @@ app.get('/syncCollectionBannerImages', authMiddleWare, async (_req, res) => {
     const jobId = 'sync_collection_images'
     const collectionBannerImageQueue = queues.get(QUEUE_TYPES.SYNC_COLLECTION_IMAGES)
     const job: Bull.Job = await collectionBannerImageQueue.getJob(jobId)
-    if (job && (job.isFailed() || job.isPaused() || job.isStuck() || job.isDelayed())) {
+    if (job && (!['active', 'completed'].includes(await job.getState()))) {
       await job.remove()
     }
 
     if(!job) {
       collectionBannerImageQueue
-        .add({
+        .add('syncCollectionBannerImages', {
           SYNC_CONTRACTS: QUEUE_TYPES.SYNC_COLLECTION_IMAGES,
           chainId: process.env.CHAIN_ID,
         }, {
@@ -401,8 +401,8 @@ app.get('/stopSyncCollectionBannerImages', authMiddleWare, async (_req, res) => 
     const collectionBannerImageQueue = queues.get(QUEUE_TYPES.SYNC_COLLECTION_IMAGES)
     const job: Bull.Job = await collectionBannerImageQueue.getJob(jobId)
     if (job) {
-      await job.moveToFailed(new Error('Abort Triggered!'), true)
-      await job.discard()
+      await job.moveToFailed(new Error('Abort Triggered!'), jobId, true)
+      job.discard()
       await job.remove()
       // await killProcess(job.data.pid)
       return res.status(200).send({ message: 'Stopped Sync!' })
@@ -422,13 +422,13 @@ app.get('/syncCollectionName', authMiddleWare, validate(collectionNameSyncSchema
     const jobId = 'sync_collection_name'
     const collectionNameQueue = queues.get(QUEUE_TYPES.SYNC_COLLECTION_NAME)
     const job: Bull.Job = await collectionNameQueue.getJob(jobId)
-    if (job && (job.isFailed() || job.isPaused() || job.isStuck() || job.isDelayed())) {
+    if (job && (!['active', 'completed'].includes(await job.getState()))) {
       await job.remove()
     }
 
     if(!job) {
       collectionNameQueue
-        .add({
+        .add('syncCollectionName', {
           SYNC_CONTRACTS: QUEUE_TYPES.SYNC_COLLECTION_NAME,
           chainId: process.env.CHAIN_ID,
           contract,
@@ -456,8 +456,8 @@ app.get('/stopSyncCollectionName', authMiddleWare, async (_req, res) => {
     const collectionNameQueue = queues.get(QUEUE_TYPES.SYNC_COLLECTION_NAME)
     const job: Bull.Job = await collectionNameQueue.getJob(jobId)
     if (job) {
-      await job.moveToFailed(new Error('Abort Triggered!'), true)
-      await job.discard()
+      await job.moveToFailed(new Error('Abort Triggered!'), jobId, true)
+      job.discard()
       await job.remove()
       // await killProcess(job.data.pid)
       return res.status(200).send({ message: 'Stopped Collection Name Sync!' })
@@ -560,13 +560,13 @@ app.post('/syncCollectionNftRarity', authMiddleWare, validate(nftRaritySyncSchem
     const jobId = 'sync_collection_nft_rarity'
     const collectionNullRarityQueue = queues.get(QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY)
     const job: Bull.Job = await collectionNullRarityQueue.getJob(jobId)
-    if (job && (job.isFailed() || job.isPaused() || job.isStuck() || job.isDelayed())) {
+    if (job && (!['active', 'completed'].includes(await job.getState()))) {
       await job.remove()
     }
 
     if(!job) {
       collectionNullRarityQueue
-        .add({
+        .add('syncCollectionNftRarity', {
           SYNC_CONTRACTS: QUEUE_TYPES.SYNC_COLLECTION_NAME,
           chainId: process.env.CHAIN_ID,
           contract,
@@ -594,8 +594,8 @@ app.post('/stopSyncCollectionNftRarity', authMiddleWare, async (_req, res) => {
     const collectionNameQueue = queues.get(QUEUE_TYPES.SYNC_COLLECTION_NAME)
     const job: Bull.Job = await collectionNameQueue.getJob(jobId)
     if (job) {
-      await job.moveToFailed(new Error('Abort Triggered!'), true)
-      await job.discard()
+      await job.moveToFailed(new Error('Abort Triggered!'), jobId, true)
+      job.discard()
       await job.remove()
       // await killProcess(job.data.pid)
       return res.status(200).send({ message: 'Stopped Collection Sync!' })
