@@ -3,14 +3,14 @@ import { Job, Queue, Worker } from 'bullmq'
 import { _logger } from '@nftcom/shared'
 
 import { redisConfig } from '../config'
-import { collectionBannerImageSync, collectionIssuanceDateSync, collectionNameSync, collectionSyncHandler, nftRaritySyncHandler, raritySync, spamCollectionSyncHandler } from './collection.handler'
+import { collectionBannerImageSync, collectionIssuanceDateSync, collectionNameSync, collectionSyncHandler, nftRaritySyncHandler, nftSyncHandler, raritySync, spamCollectionSyncHandler } from './collection.handler'
 import { getEthereumEvents } from './mint.handler'
 import { syncTxsFromNFTPortHandler } from './nftport.handler'
 import { nftExternalOrdersOnDemand, orderReconciliationHandler } from './order.handler'
 import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
 import { profileGKOwnersHandler, saveProfileExpireAt, updateNFTsForProfilesHandler } from './profile.handler'
 import { searchListingIndexHandler } from './search.handler'
-import { nftExternalOrders } from './sync.handler'
+import { nftExternalOrderBatchProcessor, nftExternalOrders } from './sync.handler'
 import { syncTrading } from './trading.handler'
 
 const BULL_MAX_REPEAT_COUNT = parseInt(process.env.BULL_MAX_REPEAT_COUNT) || 250
@@ -78,6 +78,7 @@ networkList.map(network => {
 
 let didPublish: boolean
 
+const subqueueWorkers = []
 const createQueues = (): Promise<void> => {
   return new Promise((resolve) => {
     networks.forEach((chainId: string, network: string) => {
@@ -187,12 +188,16 @@ const createQueues = (): Promise<void> => {
       connection,
       prefix: orderSubqueuePrefix,
     })
+    subqueueWorkers.push(new Worker(
+      nftOrderSubqueue.name, nftExternalOrderBatchProcessor, { autorun: false, connection }))
 
     //collection subqueue
     collectionSyncSubqueue = new Queue(collectionSubqueueName, {
       connection,
       prefix: collectionSubqueuePrefix,
     })
+    subqueueWorkers.push(new Worker(
+      collectionSyncSubqueue.name, nftSyncHandler, { autorun: false, connection }))
 
     //nft subqueue
     //  nftSyncSubqueue = new Bull(nftSyncSubqueueName, {
@@ -244,7 +249,7 @@ const createQueues = (): Promise<void> => {
 const getExistingJobs = (): Promise<Job[][]> => {
   const values = [...queues.values()]
   return Promise.all(values.map((queue) => {
-    return queue.getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting'])
+    return queue.getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting', 'waiting-children', 'repeat', 'wait'])
   }))
 }
 
@@ -266,8 +271,8 @@ const checkJobQueues = (jobs: Job[][]): Promise<boolean> => {
 
   for (const key of queues.keys()) {
     const queue = queues.get(key)
-    const job = jobs.flat().find(job => job.queueName === queue.name)
-    if ((job.opts.repeat
+    const job = jobs.flat().find(job => job && job.queueName === queue.name)
+    if ((job?.opts?.repeat
           && (job.opts.repeat.count >= BULL_MAX_REPEAT_COUNT || jobHasNotRunRecently(job)))
         || !job.opts.repeat) {
       logger.info('🐮 bull job needs to restart -- wiping queues for restart')
@@ -414,7 +419,7 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
 }
 
 const workers = []
-const defaultWorkerOpts = { autorun: false }
+const defaultWorkerOpts = { autorun: false, connection }
 const listenToJobs = async (): Promise<void> => {
   for (const queue of queues.values()) {
     switch (queue.name) {

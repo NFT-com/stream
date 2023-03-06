@@ -31,7 +31,7 @@ const exceptionBannerUrls: string[] = [
   'https://cdn.nft.com/collectionBanner_default.png',
 ]
 
-const subQueueBaseOptions: Bull.JobOptions = {
+const subQueueBaseOptions: Bull.JobsOptions = {
   attempts: 2,
   removeOnComplete: true,
   removeOnFail: true,
@@ -349,7 +349,7 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
         const job: Bull.Job = await collectionSyncSubqueue.getJob(jobId)
 
         if (!job || !job?.isActive() || !job?.isWaiting()) {
-          collectionSyncSubqueue.add(
+          collectionSyncSubqueue.add(jobId,
             { contract, chainId, startTokenParam },
             {
               ...subQueueBaseOptions,
@@ -360,7 +360,7 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
               
         if (job) {
           // clean up
-          if (job.isStuck() || job.isPaused() || job.isDelayed() || job.isCompleted()) {
+          if (job.isWaiting() || job.isWaitingChildren() || job.isDelayed() || job.isCompleted()) {
             logger.log(`Stack trace: ${job.stacktrace}`)
             await job.remove()
           }
@@ -372,9 +372,6 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
           }
         }
       }
-      // const process = collectionSyncSubqueue.getJobCounts()
-      // process subqueues in series; hence concurrency is explicitly set to one for rate limits
-      collectionSyncSubqueue.process(1, nftSyncHandler)
     }
     logger.log('completed collection sync')
   } catch (err) {
