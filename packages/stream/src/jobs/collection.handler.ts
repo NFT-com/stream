@@ -1,6 +1,6 @@
 
 import { AxiosInstance, AxiosResponse } from 'axios'
-import Bull, { Job } from 'bull'
+import Bull, { Job } from 'bullmq'
 import { BigNumber } from 'ethers'
 import { FindOptionsWhere,ILike, In, IsNull, Not } from 'typeorm'
 

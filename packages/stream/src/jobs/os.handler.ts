@@ -1,4 +1,4 @@
-import  { Job } from 'bull'
+import  { Job } from 'bullmq'
 
 import { _logger } from '@nftcom/shared'
 

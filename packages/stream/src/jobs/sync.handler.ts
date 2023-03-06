@@ -1,4 +1,4 @@
-import Bull, { Job } from 'bull'
+import Bull, { Job } from 'bullmq'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore

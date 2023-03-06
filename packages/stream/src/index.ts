@@ -4,7 +4,7 @@ if (['development','staging','production'].includes(process.env.NODE_ENV)) {
   setupTracing(`${process.env.NODE_ENV}-stream`)
 }
 
-import Bull from 'bull'
+import Bull from 'bullmq'
 import { BigNumber } from 'ethers'
 import express from 'express'
 import kill from 'kill-port'
