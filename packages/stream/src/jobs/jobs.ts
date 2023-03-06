@@ -3,12 +3,12 @@ import Bull from 'bull'
 import { _logger } from '@nftcom/shared'
 
 import { redisConfig } from '../config'
+import { cache, CacheKeys } from '../service/cache'
 import { collectionBannerImageSync, collectionIssuanceDateSync, collectionNameSync, collectionSyncHandler, nftRaritySyncHandler, raritySync, spamCollectionSyncHandler } from './collection.handler'
 import { getEthereumEvents } from './mint.handler'
 import { syncTxsFromNFTPortHandler } from './nftport.handler'
 import { nftExternalOrdersOnDemand, orderReconciliationHandler } from './order.handler'
-import { deregisterStreamHandler, registerStreamHandler } from './os.handler'
-import { profileGKOwnersHandler, saveProfileExpireAt, updateNFTsForProfilesHandler } from './profile.handler'
+import { profileGKOwnersHandler, saveProfileExpireAt, updateNFTsForProfilesHandler, updateNFTsOwnershipForProfilesHandler } from './profile.handler'
 import { searchListingIndexHandler } from './search.handler'
 import { nftExternalOrders } from './sync.handler'
 import { syncTrading } from './trading.handler'
@@ -31,9 +31,8 @@ export enum QUEUE_TYPES {
   SYNC_COLLECTION_RARITY = 'SYNC_COLLECTION_RARITY',
   SYNC_COLLECTION_NFT_RARITY = 'SYNC_COLLECTION_NFT_RARITY',
   SYNC_SPAM_COLLECTIONS = 'SYNC_SPAM_COLLECTIONS',
-  REGISTER_OS_STREAMS = 'REGISTER_OS_STREAMS',
-  DEREGISTER_OS_STREAMS = 'DEREGISTER_OS_STREAMS',
   UPDATE_PROFILES_NFTS_STREAMS = 'UPDATE_PROFILES_NFTS_STREAMS',
+  UPDATE_PROFILES_WALLET_NFTS_STREAMS = 'UPDATE_PROFILES_WALLET_NFTS_STREAMS',
   FETCH_EXTERNAL_ORDERS = 'FETCH_EXTERNAL_ORDERS',
   FETCH_EXTERNAL_ORDERS_ON_DEMAND = 'FETCH_EXTERNAL_ORDERS_ON_DEMAND',
   GENERATE_COMPOSITE_IMAGE = 'GENERATE_COMPOSITE_IMAGE',
@@ -137,11 +136,6 @@ const createQueues = (): Promise<void> => {
       new Bull(QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS, defaultBullSettings),
     )
 
-    queues.set(
-      QUEUE_TYPES.REGISTER_OS_STREAMS,
-      new Bull(QUEUE_TYPES.REGISTER_OS_STREAMS, defaultBullSettings),
-    )
-
     // sync external orders
     queues.set(
       QUEUE_TYPES.SYNC_CONTRACTS,
@@ -212,13 +206,13 @@ const createQueues = (): Promise<void> => {
     // })
 
     queues.set(
-      QUEUE_TYPES.DEREGISTER_OS_STREAMS,
-      new Bull(QUEUE_TYPES.DEREGISTER_OS_STREAMS, defaultBullSettings),
+      QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS,
+      new Bull(QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS, defaultBullSettings),
     )
 
     queues.set(
-      QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS,
-      new Bull(QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS, defaultBullSettings),
+      QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS,
+      new Bull(QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS, defaultBullSettings),
     )
 
     // external orders on demand
@@ -298,6 +292,16 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_nfts_streams',
           })
+      case QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS:
+        return queues.get(QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS)
+          .add({
+            UPDATE_PROFILES_WALLET_NFTS_STREAMS: QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS,
+            chainId: process.env.CHAIN_ID,
+          },
+          {
+            repeat: { every: 1 * 60000 },
+            jobId: 'update_profiles_wallet_nfts_streams',
+          })
       case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
         return queues.get(QUEUE_TYPES.SYNC_COLLECTION_RARITY)
           .add({
@@ -334,18 +338,6 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             repeat: { every: 10 * 60000 },
             jobId: 'sync_profile_gk_owners',
           })
-      // case QUEUE_TYPES.REGISTER_OS_STREAMS:
-      //   return queues.get(QUEUE_TYPES.REGISTER_OS_STREAMS)
-      //     .add({ REGISTER_OS_STREAMS: QUEUE_TYPES.REGISTER_OS_STREAMS }, {
-      //       repeat: { every: 10 * 60000 },
-      //       jobId: 'register_os_streams',
-      //     })
-      // case QUEUE_TYPES.DEREGISTER_OS_STREAMS:
-      //   return queues.get(QUEUE_TYPES.DEREGISTER_OS_STREAMS)
-      //     .add({ DEREGISTER_OS_STREAMS: QUEUE_TYPES.DEREGISTER_OS_STREAMS }, {
-      //       repeat: { every: 10 * 60000 },
-      //       jobId: 'deregister_os_streams',
-      //     })
       case QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND:
         return queues.get(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND)
           .add({
@@ -440,13 +432,10 @@ const listenToJobs = async (): Promise<void> => {
     case QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND:
       queue.process(nftExternalOrdersOnDemand)
       break
-    case QUEUE_TYPES.REGISTER_OS_STREAMS:
-      queue.process(registerStreamHandler)
-      break
-    case QUEUE_TYPES.DEREGISTER_OS_STREAMS:
-      queue.process(deregisterStreamHandler)
-      break
     case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
+      queue.process(updateNFTsOwnershipForProfilesHandler)
+      break
+    case QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS:
       queue.process(updateNFTsForProfilesHandler)
       break
     case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
@@ -470,11 +459,22 @@ const listenToJobs = async (): Promise<void> => {
   }
 }
 
+export const cleanupProgressCache = (): Promise<any> => {
+  const chainId: string = process.env.CHAIN_ID
+  return cache.del([
+    `${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`,
+    `${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`,
+    `${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`,
+    `${CacheKeys.PROFILE_WALLET_FAIL_SCORE}_${chainId}`,
+  ])
+}
+
 export const startAndListen = (): Promise<void> => {
   return createQueues()
     .then(() => getExistingJobs())
     .then((jobs) => checkJobQueues(jobs))
     .then((shouldPublish) => publishJobs(shouldPublish))
+    .then(() => cleanupProgressCache())
     .then(() => listenToJobs())
     .then(() => {
       setTimeout(() => {
