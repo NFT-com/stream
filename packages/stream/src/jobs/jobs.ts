@@ -412,7 +412,7 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
 }
 
 const workers = []
-const defaultWorkerOpts = { autorun: false, connection }
+const defaultWorkerOpts = { connection }
 const listenToJobs = async (): Promise<void> => {
   for (const queue of queues.values()) {
     switch (queue.name) {
