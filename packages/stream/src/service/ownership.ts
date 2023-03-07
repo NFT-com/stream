@@ -19,7 +19,7 @@ export const checksumAddress = (address: string): string | undefined => {
   }
   return
 }
-export const updateOwnership = async (
+export const atomicOwnershipUpdate = async (
   contract: string,
   tokenId: string,
   prevOwner: string,
