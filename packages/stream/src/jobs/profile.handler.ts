@@ -212,7 +212,7 @@ const updateWalletNFTs = async (
 }
 
 const processProfileUpdate = async (profileId: string, chainId: string): Promise<void> => {
-  const start = new Date().getTime()
+  let start = new Date().getTime()
   const profile = await repositories.profile.findById(profileId)
   if (!profile) {
     await removeProfileIdFromRelevantKeys(
@@ -261,6 +261,9 @@ const processProfileUpdate = async (profileId: string, chainId: string): Promise
         logger.info(`4. [processProfileUpdate] No wallet found for ID ${profile.ownerWalletId} (url = ${profile.url})`)
       } else {
         try {
+          logger.info(`5. [processProfileUpdate] Updating NFTs for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+          start = new Date().getTime()
+          
           // keep profile to cache, so we won't repeat profiles in progress
           await cache.zadd(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, 'INCR', 1, profile.id)
           nftService.initiateWeb3(chainId)
@@ -270,7 +273,7 @@ const processProfileUpdate = async (profileId: string, chainId: string): Promise
             wallet.address,
             chainId,
           )
-          logger.info(`5. [processProfileUpdate] checked NFT contract addresses for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+          logger.info(`6. [processProfileUpdate] checked NFT contract addresses for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
           const now: Date = new Date()
           now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
           const ttl = now.getTime()
