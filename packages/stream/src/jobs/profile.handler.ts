@@ -263,7 +263,7 @@ const processProfileUpdate = async (profileId: string, chainId: string): Promise
         try {
           logger.info(`5. [processProfileUpdate] Updating NFTs for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
           start = new Date().getTime()
-          
+
           // keep profile to cache, so we won't repeat profiles in progress
           await cache.zadd(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, 'INCR', 1, profile.id)
           nftService.initiateWeb3(chainId)
@@ -317,7 +317,7 @@ export const updateNFTsOwnershipForProfilesHandler = async (job: Job): Promise<a
 
 export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
   const chainId: string =  job.data?.chainId || process.env.CHAIN_ID
-  logger.info('1: [updateNFTsForProfilesHandler]')
+  logger.info('1: [updateNFTsForProfilesHandler] starting updateWalletNFTs (import new nfts) sync!')
   try {
     // 1. remove expired profiles from the UPDATED_NFTS_PROFILE cache
     await removeExpiredTimestampedZsetMembers(`${CacheKeys.UPDATED_WALLET_NFTS_PROFILE}_${chainId}`)
