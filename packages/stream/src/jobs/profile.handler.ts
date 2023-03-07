@@ -101,24 +101,24 @@ const updateWalletNFTs = async (
       logger.info(`[updateWalletNFTs_0] No profile found for ID ${profile.url} (${profileId}}`)
     } else {
       // check if updating NFTs for profile is in progress.
-      const inProgress = await cache.zscore(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, profileId)
+      const inProgress = await cache.zscore(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, profileId)
       if (inProgress) {
         const inProgressScore = Number(inProgress)
-        const fails: string = await cache.zscore(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, profileId)
+        const fails: string = await cache.zscore(`${CacheKeys.PROFILE_WALLET_FAIL_SCORE}_${chainId}`, profileId)
         const failScore = Number(fails)
         if (inProgressScore > PROFILE_PROGRESS_THRESHOLD) {
           if (failScore > inProgressScore) {
             logger.log({ profile }, `Profile stuck in progress longer than expected: profile ${profile.url} (${profile.id}), fail_score: ${failScore}`)
-            await cache.zrem(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, [profile.id])
+            await cache.zrem(`${CacheKeys.PROFILE_WALLET_FAIL_SCORE}_${chainId}`, [profile.id])
           } else {
-            await cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id)
-            await cache.zadd(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, 'INCR', 1, profile.id)
+            await cache.zadd(`${CacheKeys.UPDATE_WALLET_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id)
+            await cache.zadd(`${CacheKeys.PROFILE_WALLET_FAIL_SCORE}_${chainId}`, 'INCR', 1, profile.id)
           }
-          await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
+          await cache.zrem(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, [profile.id])
           logger.log(`Threshold crossed ${failScore + 1} times for profile ${profile.url} (${profile.id}) - current progress score: ${inProgressScore}`)
         } else {
           const score: number = Number(failScore) || 1
-          await cache.zadd(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, 'INCR', score, profile.id)
+          await cache.zadd(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, 'INCR', score, profile.id)
           logger.log(`Progress score incremented for profile ${profile.url} (${profile.id}) - increment: ${score}`)
         }
 
