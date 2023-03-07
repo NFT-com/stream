@@ -224,10 +224,10 @@ const createQueues = (): Promise<void> => {
       }),
     )
 
-    queues.set(QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS, new Bull(
+    queues.set(QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS, new Queue(
       QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS, {
         prefix: queuePrefix,
-        redis,
+        connection,
       }))
 
     // external orders on demand
@@ -310,16 +310,14 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
           })
       case QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS:
         return queues.get(QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS)
-          .add({
+          .add(QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS, {
             UPDATE_NON_PROFILES_NFTS_STREAMS: QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS,
             chainId: process.env.CHAIN_ID,
           },
           {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every minute
             repeat: { every: 1 * 60000 },
             jobId: 'update_non_profiles_nfts_streams',
+          })
       case QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS:
         return queues.get(QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS)
           .add(QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS, {
@@ -478,7 +476,7 @@ const listenToJobs = async (): Promise<void> => {
       workers.push(new Worker(queue.name, updateNFTsForProfilesHandler, defaultWorkerOpts))
       break
     case QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS:
-      queue.process(updateNFTsForNonProfilesHandler)
+      workers.push(new Worker(queue.name, updateNFTsForNonProfilesHandler, defaultWorkerOpts))
       break
     case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
       workers.push(new Worker(queue.name, collectionIssuanceDateSync, defaultWorkerOpts))
