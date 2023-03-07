@@ -124,7 +124,7 @@ const initializeStreamsForAllSlugs = (): void => {
                         )
 
                         await repositories.txOrder.save(newOrder)
-                        logger.log(`order with orderHash: ${orderHash} for ${nftId} is saved successfully on ${network} network`)
+                        logger.debug(`order with orderHash: ${orderHash} for ${nftId} is saved successfully on ${network} network`)
                       } catch (err) {
                         // error handling
                       }
