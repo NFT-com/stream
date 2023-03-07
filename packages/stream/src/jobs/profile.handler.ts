@@ -461,3 +461,67 @@ export const profileGKOwnersHandler = async (job: Job): Promise<any> => {
     logger.error(`Error in profile gk owners Job: ${err}.`)
   }
 }
+
+export const updateNFTsForNonProfilesHandler = async (job: Job): Promise<any> => {
+  let start: number = new Date().getTime()
+  logger.info('[updateNFTsForNonProfilesHandler]: non-profile sync initiated')
+  start = new Date().getTime()
+  try {
+    const chainId: string =  job.data?.chainId || process.env.CHAIN_ID
+    // 1. remove expired profiles from the UPDATED_NFTS_PROFILE cache
+    await removeExpiredTimestampedZsetMembers(`${CacheKeys.UPDATED_NFTS_NON_PROFILE}_${chainId}`)
+
+    // 2. update NFTs for profiles cached in UPDATE_NFTS_PROFILE cache
+    const cachedWallets = await cache.zrevrangebyscore(`${CacheKeys.UPDATE_NFTS_NON_PROFILE}_${chainId}`, '+inf', '(0')
+    for (const walletId of cachedWallets) {
+      if (walletId) {
+        const wallet: entity.Wallet = await repositories.wallet.findById(walletId)
+        const profile: entity.Profile = await repositories.profile.findOne({
+          where: {
+            ownerWalletId: wallet.id,
+            chainId: wallet.chainId,
+          },
+        })
+        if (wallet && wallet.userId && !profile) {
+          try {
+            logger.log(`[updateNFTsForNonProfilesHandler]: Wallet id being processed: ${walletId}, profile: ${profile}, ${getTimeStamp(start)}}`)
+            start = new Date().getTime()
+
+            await nftService.updateWalletNFTs(wallet.userId, wallet, chainId)
+            // Once NFTs for non-profile wallet are updated, cache it to UPDATED_NFTS_NON_PROFILE with expire date
+            const now: Date = new Date()
+            now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
+            const ttl = now.getTime()
+            await Promise.all([
+              cache.zadd(`${CacheKeys.UPDATED_NFTS_NON_PROFILE}_${chainId}`, ttl, walletId),
+              cache.zrem(`${CacheKeys.NON_PROFILES_IN_PROGRESS}_${chainId}`, [walletId]),
+              cache.zrem(`${CacheKeys.UPDATE_NFTS_NON_PROFILE}_${chainId}`, [walletId]),
+            ])
+            logger.log(`[updateNFTsForNonProfilesHandler]: Finished processing wallet id: ${walletId}, ${getTimeStamp(start)}}`)
+            start = new Date().getTime()
+          } catch (err) {
+            logger.error(err, `[updateNFTsForNonProfilesHandler]: Error in updateWalletNFTs while processing wallet: ${walletId}`)
+          }
+        } else {
+          if (!wallet.userId) {
+            logger.log(`[ updateNFTsForNonProfilesHandler]: Wallet Id: ${walletId} does not have an associated user!`)
+          }
+  
+          if (profile) {
+            logger.log(`[updateNFTsForNonProfilesHandler]: Wallet Id: ${walletId} has at least one profile ${profile.id} - url: ${profile.url}`)
+          }
+          logger.log(`[updateNFTsForNonProfilesHandler]: Wallet Id: ${walletId} does not exist!, ${getTimeStamp(start)}}`)
+          start = new Date().getTime()
+        }
+      } else {
+        logger.log(`[updateNFTsForNonProfilesHandler]: WalletId is incorrect: ${walletId}, ${getTimeStamp(start)}}`)
+        start = new Date().getTime()
+      }
+    }
+    
+    logger.info(`[updateNFTsForNonProfilesHandler]: non-profile sync completed, ${getTimeStamp(start)}`)
+    start = new Date().getTime()
+  } catch (err) {
+    logger.error(err, `[updateNFTsForNonProfilesHandler]: Error in non-profile sync job, ${getTimeStamp(start)}`)
+  }
+}

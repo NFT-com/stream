@@ -8,7 +8,7 @@ import { collectionBannerImageSync, collectionIssuanceDateSync, collectionNameSy
 import { getEthereumEvents } from './mint.handler'
 import { syncTxsFromNFTPortHandler } from './nftport.handler'
 import { nftExternalOrdersOnDemand, orderReconciliationHandler } from './order.handler'
-import { profileGKOwnersHandler, saveProfileExpireAt, updateNFTsForProfilesHandler, updateNFTsOwnershipForProfilesHandler } from './profile.handler'
+import { profileGKOwnersHandler, saveProfileExpireAt, updateNFTsForNonProfilesHandler, updateNFTsForProfilesHandler, updateNFTsOwnershipForProfilesHandler } from './profile.handler'
 import { searchListingIndexHandler } from './search.handler'
 import { nftExternalOrderBatchProcessor, nftExternalOrders } from './sync.handler'
 import { syncTrading } from './trading.handler'
@@ -32,6 +32,7 @@ export enum QUEUE_TYPES {
   SYNC_COLLECTION_NFT_RARITY = 'SYNC_COLLECTION_NFT_RARITY',
   SYNC_SPAM_COLLECTIONS = 'SYNC_SPAM_COLLECTIONS',
   UPDATE_PROFILES_NFTS_STREAMS = 'UPDATE_PROFILES_NFTS_STREAMS',
+  UPDATE_NON_PROFILES_NFTS_STREAMS = 'UPDATE_NON_PROFILES_NFTS_STREAMS',
   UPDATE_PROFILES_WALLET_NFTS_STREAMS = 'UPDATE_PROFILES_WALLET_NFTS_STREAMS',
   FETCH_EXTERNAL_ORDERS = 'FETCH_EXTERNAL_ORDERS',
   FETCH_EXTERNAL_ORDERS_ON_DEMAND = 'FETCH_EXTERNAL_ORDERS_ON_DEMAND',
@@ -223,6 +224,12 @@ const createQueues = (): Promise<void> => {
       }),
     )
 
+    queues.set(QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS, new Queue(
+      QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS, {
+        prefix: queuePrefix,
+        connection,
+      }))
+
     // external orders on demand
     queues.set(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, new Queue(
       QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, {
@@ -300,6 +307,16 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
           {
             repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_nfts_streams',
+          })
+      case QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS:
+        return queues.get(QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS)
+          .add(QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS, {
+            UPDATE_NON_PROFILES_NFTS_STREAMS: QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS,
+            chainId: process.env.CHAIN_ID,
+          },
+          {
+            repeat: { every: 1 * 60000 },
+            jobId: 'update_non_profiles_nfts_streams',
           })
       case QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS:
         return queues.get(QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS)
@@ -457,6 +474,9 @@ const listenToJobs = async (): Promise<void> => {
       break
     case QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS:
       workers.push(new Worker(queue.name, updateNFTsForProfilesHandler, defaultWorkerOpts))
+      break
+    case QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS:
+      workers.push(new Worker(queue.name, updateNFTsForNonProfilesHandler, defaultWorkerOpts))
       break
     case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
       workers.push(new Worker(queue.name, collectionIssuanceDateSync, defaultWorkerOpts))
