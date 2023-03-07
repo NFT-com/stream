@@ -182,7 +182,10 @@ const createQueues = (): Promise<void> => {
       prefix: orderSubqueuePrefix,
     })
     subqueueWorkers.push(new Worker(
-      nftOrderSubqueue.name, nftExternalOrderBatchProcessor, { connection }))
+      nftOrderSubqueue.name,
+      nftExternalOrderBatchProcessor,
+      { connection, prefix: orderSubqueuePrefix },
+    ))
 
     //collection subqueue
     collectionSyncSubqueue = new Queue(collectionSubqueueName, {
@@ -190,7 +193,10 @@ const createQueues = (): Promise<void> => {
       prefix: collectionSubqueuePrefix,
     })
     subqueueWorkers.push(new Worker(
-      collectionSyncSubqueue.name, nftSyncHandler, { connection }))
+      collectionSyncSubqueue.name,
+      nftSyncHandler,
+      { connection, prefix: collectionSubqueuePrefix },
+    ))
 
     //nft subqueue
     //  nftSyncSubqueue = new Bull(nftSyncSubqueueName, {
