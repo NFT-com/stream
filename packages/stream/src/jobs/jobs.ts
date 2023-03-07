@@ -275,7 +275,7 @@ const checkJobQueues = (jobs: Job[][]): Promise<boolean> => {
     const job = jobs.flat().find(job => job && job.queueName === queue.name)
     if ((job?.opts?.repeat
           && (job.opts.repeat.count >= BULL_MAX_REPEAT_COUNT || jobHasNotRunRecently(job)))
-        || !job.opts.repeat) {
+        || !job?.opts.repeat) {
       logger.info('🐮 bull job needs to restart -- wiping queues for restart')
       return Promise.all(values.map((queue) => {
         return queue.obliterate({ force: true })
