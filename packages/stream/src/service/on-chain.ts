@@ -1185,6 +1185,7 @@ const keepAlive = ({
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   provider._websocket.on('close', (err: any) => {
+    logger.error({ err }, 'Websocket closing')
     if (keepAliveInterval) clearInterval(keepAliveInterval)
     if (pingTimeout) clearTimeout(pingTimeout)
     onDisconnect(err)
@@ -1228,12 +1229,12 @@ export const startProvider = (
         provider,
         chainId,
         onDisconnect: (err) => {
+          logger.error({ err }, 'The ws connection was closed')
           startProvider(chainId)
-          logger.error(err, 'The ws connection was closed')
         },
       })
     } catch (err) {
-      logger.error('WS Error', err)
+      logger.error(err, 'WS Error')
     }
   }
   return Promise.resolve()
