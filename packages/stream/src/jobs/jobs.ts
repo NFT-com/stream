@@ -182,7 +182,10 @@ const createQueues = (): Promise<void> => {
       prefix: orderSubqueuePrefix,
     })
     subqueueWorkers.push(new Worker(
-      nftOrderSubqueue.name, nftExternalOrderBatchProcessor, { connection }))
+      nftOrderSubqueue.name,
+      nftExternalOrderBatchProcessor,
+      { connection, prefix: orderSubqueuePrefix },
+    ))
 
     //collection subqueue
     collectionSyncSubqueue = new Queue(collectionSubqueueName, {
@@ -190,7 +193,10 @@ const createQueues = (): Promise<void> => {
       prefix: collectionSubqueuePrefix,
     })
     subqueueWorkers.push(new Worker(
-      collectionSyncSubqueue.name, nftSyncHandler, { connection }))
+      collectionSyncSubqueue.name,
+      nftSyncHandler,
+      { connection, prefix: collectionSubqueuePrefix },
+    ))
 
     //nft subqueue
     //  nftSyncSubqueue = new Bull(nftSyncSubqueueName, {
@@ -269,7 +275,7 @@ const checkJobQueues = (jobs: Job[][]): Promise<boolean> => {
     const job = jobs.flat().find(job => job && job.queueName === queue.name)
     if ((job?.opts?.repeat
           && (job.opts.repeat.count >= BULL_MAX_REPEAT_COUNT || jobHasNotRunRecently(job)))
-        || !job.opts.repeat) {
+        || !job?.opts.repeat) {
       logger.info('🐮 bull job needs to restart -- wiping queues for restart')
       return Promise.all(values.map((queue) => {
         return queue.obliterate({ force: true })
