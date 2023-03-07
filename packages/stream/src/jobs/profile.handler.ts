@@ -509,6 +509,10 @@ export const updateNFTsForNonProfilesHandler = async (job: Job): Promise<any> =>
   
           if (profile) {
             logger.log(`[updateNFTsForNonProfilesHandler]: Wallet Id: ${walletId} has at least one profile ${profile.id} - url: ${profile.url}`)
+            await Promise.all([
+              cache.zrem(`${CacheKeys.UPDATE_NFTS_NON_PROFILE}_${chainId}`, [walletId]),        // remove non profile update
+              cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id), // add in profile update
+            ])
           }
         }
       } else {
