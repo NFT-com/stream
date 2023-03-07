@@ -1,4 +1,4 @@
-import { Job } from 'bull'
+import { Job } from 'bullmq'
 import { BigNumber, ethers, providers, utils } from 'ethers'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -282,7 +282,7 @@ export const profileParseLog = (log: any): any => {
 
 export const getEthereumEvents = async (job: Job): Promise<any> => {
   try {
-    const { chainId } = job.data
+    const { chainId = process.env.CHAIN_ID } = job.data
 
     const topics = [
       helper.id('MintedProfile(address,string,uint256,uint256,uint256,address)'),

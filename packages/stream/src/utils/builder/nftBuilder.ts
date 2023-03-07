@@ -21,6 +21,7 @@ export const collectionEntityBuilder = async (
     chainId,
     defs.NFTType.ERC721,
   )
+
   if (collectionName === 'Unknown Name') {
     collectionName = await nftService.getCollectionNameFromContract(
       contract,
@@ -45,12 +46,12 @@ const checkSumOwner = (owner: string): string | undefined => {
   try {
     return helper.checkSum(owner)
   } catch (err) {
-    logger.error(err, `Unable to checkSum owner: ${owner}`)
+    logger.error(err, `Unable to checkSum owner ${owner}`)
   }
   return
 }
 
-// for NftPort CryptoPunk specifically
+// for NftPort CryptoPunks specifically
 export const nftEntityBuilderCryptoPunks = (
   nft: NFT_NftPort,
   chainId: string,

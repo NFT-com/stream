@@ -1,4 +1,4 @@
-import { Job } from 'bull'
+import { Job } from 'bullmq'
 import { BigNumber } from 'ethers'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment

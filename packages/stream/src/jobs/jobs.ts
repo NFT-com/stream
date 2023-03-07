@@ -1,22 +1,23 @@
-import Bull from 'bull'
+import { Job, Queue, Worker } from 'bullmq'
 
 import { _logger } from '@nftcom/shared'
 
 import { redisConfig } from '../config'
-import { collectionBannerImageSync, collectionIssuanceDateSync, collectionNameSync, collectionSyncHandler, nftRaritySyncHandler, raritySync, spamCollectionSyncHandler } from './collection.handler'
+import { cache, CacheKeys } from '../service/cache'
+import { collectionBannerImageSync, collectionIssuanceDateSync, collectionNameSync, collectionSyncHandler, nftRaritySyncHandler, nftSyncHandler, raritySync, spamCollectionSyncHandler } from './collection.handler'
 import { getEthereumEvents } from './mint.handler'
 import { syncTxsFromNFTPortHandler } from './nftport.handler'
 import { nftExternalOrdersOnDemand, orderReconciliationHandler } from './order.handler'
-import { profileGKOwnersHandler, saveProfileExpireAt, updateNFTsForNonProfilesHandler,updateNFTsForProfilesHandler } from './profile.handler'
+import { profileGKOwnersHandler, saveProfileExpireAt, updateNFTsForNonProfilesHandler, updateNFTsForProfilesHandler, updateNFTsOwnershipForProfilesHandler } from './profile.handler'
 import { searchListingIndexHandler } from './search.handler'
-import { nftExternalOrders } from './sync.handler'
+import { nftExternalOrderBatchProcessor, nftExternalOrders } from './sync.handler'
 import { syncTrading } from './trading.handler'
 
 const BULL_MAX_REPEAT_COUNT = parseInt(process.env.BULL_MAX_REPEAT_COUNT) || 250
 const ORDER_RECONCILIATION_PERIOD = parseInt(process.env.ORDER_RECONCILIATION_PERIOD) || 1440 // default is once every day
 const logger = _logger.Factory(_logger.Context.Bull)
 
-export const redis = {
+export const connection = {
   host: redisConfig.host,
   port: redisConfig.port,
 }
@@ -30,10 +31,9 @@ export enum QUEUE_TYPES {
   SYNC_COLLECTION_RARITY = 'SYNC_COLLECTION_RARITY',
   SYNC_COLLECTION_NFT_RARITY = 'SYNC_COLLECTION_NFT_RARITY',
   SYNC_SPAM_COLLECTIONS = 'SYNC_SPAM_COLLECTIONS',
-  REGISTER_OS_STREAMS = 'REGISTER_OS_STREAMS',
-  DEREGISTER_OS_STREAMS = 'DEREGISTER_OS_STREAMS',
   UPDATE_PROFILES_NFTS_STREAMS = 'UPDATE_PROFILES_NFTS_STREAMS',
   UPDATE_NON_PROFILES_NFTS_STREAMS = 'UPDATE_NON_PROFILES_NFTS_STREAMS',
+  UPDATE_PROFILES_WALLET_NFTS_STREAMS = 'UPDATE_PROFILES_WALLET_NFTS_STREAMS',
   FETCH_EXTERNAL_ORDERS = 'FETCH_EXTERNAL_ORDERS',
   FETCH_EXTERNAL_ORDERS_ON_DEMAND = 'FETCH_EXTERNAL_ORDERS_ON_DEMAND',
   GENERATE_COMPOSITE_IMAGE = 'GENERATE_COMPOSITE_IMAGE',
@@ -46,7 +46,7 @@ export enum QUEUE_TYPES {
   RECONCILE_ORDERS = 'RECONCILE_ORDERS'
 }
 
-export const queues = new Map<string, Bull.Queue>()
+export const queues = new Map<string, Queue>()
 
 // nft order subqueue
 const orderSubqueuePrefix = 'nft-order-sync'
@@ -62,10 +62,10 @@ const collectionSubqueueName = 'collection-batch-processor'
 // const nftSyncSubqueuePrefix: string = 'nft-sync'
 // const nftSyncSubqueueName: string = 'nft-sync-batch-processor'
 
-export let nftOrderSubqueue: Bull.Queue = null
+export let nftOrderSubqueue: Queue = null
 // export let nftUpdateSubqueue: Bull.Queue = null
-export let collectionSyncSubqueue: Bull.Queue = null
-export const nftSyncSubqueue: Bull.Queue = null
+export let collectionSyncSubqueue: Queue = null
+export const nftSyncSubqueue: Queue = null
 
 const networkList = process.env.SUPPORTED_NETWORKS.split('|')
 const networks = new Map()
@@ -78,121 +78,126 @@ networkList.map(network => {
 
 let didPublish: boolean
 
+const subqueueWorkers = []
 const createQueues = (): Promise<void> => {
   return new Promise((resolve) => {
     networks.forEach((chainId: string, network: string) => {
-      queues.set(network, new Bull(chainId, {
+      queues.set(network, new Queue(chainId, {
         prefix: queuePrefix,
-        redis,
+        connection,
       }))
     })
 
     // add trading handler job to queue...
-    queues.set(QUEUE_TYPES.SYNC_TRADING, new Bull(
+    queues.set(QUEUE_TYPES.SYNC_TRADING, new Queue(
       QUEUE_TYPES.SYNC_TRADING, {
         prefix: queuePrefix,
-        redis,
+        connection,
       }))
 
     // add composite image generation job to queue...
-    queues.set(QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, new Bull(
+    queues.set(QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, new Queue(
       QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, {
         prefix: queuePrefix,
-        redis,
+        connection,
       }))
 
     // sync collection images...
-    queues.set(QUEUE_TYPES.SYNC_COLLECTION_IMAGES, new Bull(
+    queues.set(QUEUE_TYPES.SYNC_COLLECTION_IMAGES, new Queue(
       QUEUE_TYPES.SYNC_COLLECTION_IMAGES, {
         prefix: queuePrefix,
-        redis,
+        connection,
       }))
 
     // sync collection images...
-    queues.set(QUEUE_TYPES.SYNC_COLLECTION_NAME, new Bull(
+    queues.set(QUEUE_TYPES.SYNC_COLLECTION_NAME, new Queue(
       QUEUE_TYPES.SYNC_COLLECTION_NAME, {
         prefix: queuePrefix,
-        redis,
+        connection,
       }))
 
-    queues.set(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, new Bull(
+    queues.set(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, new Queue(
       QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, {
         prefix: queuePrefix,
-        redis,
+        connection,
       }))
 
-    queues.set(QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS, new Bull(
+    queues.set(QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS, new Queue(
       QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS, {
         prefix: queuePrefix,
-        redis,
-      }))
-
-    queues.set(QUEUE_TYPES.REGISTER_OS_STREAMS, new Bull(
-      QUEUE_TYPES.REGISTER_OS_STREAMS, {
-        prefix: queuePrefix,
-        redis,
+        connection,
       }))
 
     // sync external orders
-    queues.set(QUEUE_TYPES.SYNC_CONTRACTS, new Bull(
+    queues.set(QUEUE_TYPES.SYNC_CONTRACTS, new Queue(
       QUEUE_TYPES.SYNC_CONTRACTS, {
         prefix: queuePrefix,
-        redis,
+        connection,
       }))
 
     // sync txs from nftport
-    queues.set(QUEUE_TYPES.SYNC_TXS_NFTPORT, new Bull(
+    queues.set(QUEUE_TYPES.SYNC_TXS_NFTPORT, new Queue(
       QUEUE_TYPES.SYNC_TXS_NFTPORT, {
         prefix: queuePrefix,
-        redis,
+        connection,
       }))
 
     // sync external collections
-    queues.set(QUEUE_TYPES.SYNC_COLLECTIONS, new Bull(
+    queues.set(QUEUE_TYPES.SYNC_COLLECTIONS, new Queue(
       QUEUE_TYPES.SYNC_COLLECTIONS, {
         prefix: queuePrefix,
-        redis,
+        connection,
       }))
 
     // sync collection rarity
-    queues.set(QUEUE_TYPES.SYNC_COLLECTION_RARITY, new Bull(
+    queues.set(QUEUE_TYPES.SYNC_COLLECTION_RARITY, new Queue(
       QUEUE_TYPES.SYNC_COLLECTION_RARITY, {
         prefix: queuePrefix,
-        redis,
+        connection,
       }))
 
     // sync nft/null nft rarity
-    queues.set(QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY, new Bull(
+    queues.set(QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY, new Queue(
       QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY, {
         prefix: queuePrefix,
-        redis,
+        connection,
       }))
 
     // sync collection issuance date
-    queues.set(QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, new Bull(
+    queues.set(QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, new Queue(
       QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, {
         prefix: queuePrefix,
-        redis,
+        connection,
       }))
 
     // sync spam collections
-    queues.set(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, new Bull(
+    queues.set(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, new Queue(
       QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, {
         prefix: queuePrefix,
-        redis,
+        connection,
       }))
 
     //order subqueue
-    nftOrderSubqueue = new Bull(orderSubqueueName, {
-      redis: redis,
+    nftOrderSubqueue = new Queue(orderSubqueueName, {
+      connection,
       prefix: orderSubqueuePrefix,
     })
+    subqueueWorkers.push(new Worker(
+      nftOrderSubqueue.name,
+      nftExternalOrderBatchProcessor,
+      { connection, prefix: orderSubqueuePrefix },
+    ))
 
     //collection subqueue
-    collectionSyncSubqueue = new Bull(collectionSubqueueName, {
-      redis: redis,
+    collectionSyncSubqueue = new Queue(collectionSubqueueName, {
+      connection,
       prefix: collectionSubqueuePrefix,
     })
+    subqueueWorkers.push(new Worker(
+      collectionSyncSubqueue.name,
+      nftSyncHandler,
+      { connection, prefix: collectionSubqueuePrefix },
+    ))
 
     //nft subqueue
     //  nftSyncSubqueue = new Bull(nftSyncSubqueueName, {
@@ -205,17 +210,19 @@ const createQueues = (): Promise<void> => {
     //   prefix: subqueuePrefix,
     // })
 
-    queues.set(QUEUE_TYPES.DEREGISTER_OS_STREAMS, new Bull(
-      QUEUE_TYPES.DEREGISTER_OS_STREAMS, {
-        prefix: queuePrefix,
-        redis,
-      }))
-
-    queues.set(QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS, new Bull(
+    queues.set(QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS, new Queue(
       QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS, {
         prefix: queuePrefix,
-        redis,
+        connection,
       }))
+
+    queues.set(
+      QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS,
+      new Queue(QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS, {
+        prefix: queuePrefix,
+        connection,
+      }),
+    )
 
     queues.set(QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS, new Bull(
       QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS, {
@@ -224,47 +231,47 @@ const createQueues = (): Promise<void> => {
       }))
 
     // external orders on demand
-    queues.set(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, new Bull(
+    queues.set(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, new Queue(
       QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, {
         prefix: queuePrefix,
-        redis,
+        connection,
       }))
 
-    queues.set(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, new Bull(
+    queues.set(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, new Queue(
       QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, {
         prefix: queuePrefix,
-        redis,
+        connection,
       }))
 
     // reconcile exchange orders
-    queues.set(QUEUE_TYPES.RECONCILE_ORDERS, new Bull(
+    queues.set(QUEUE_TYPES.RECONCILE_ORDERS, new Queue(
       QUEUE_TYPES.RECONCILE_ORDERS, {
         prefix: queuePrefix,
-        redis,
+        connection,
       }))
 
     resolve()
   })
 }
 
-const getExistingJobs = (): Promise<Bull.Job[][]> => {
+const getExistingJobs = (): Promise<Job[][]> => {
   const values = [...queues.values()]
   return Promise.all(values.map((queue) => {
-    return queue.getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting'])
+    return queue.getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting', 'waiting-children', 'repeat', 'wait'])
   }))
 }
 
-const jobHasNotRunRecently = (job: Bull.Job<any>): boolean  => {
+const jobHasNotRunRecently = (job: Job<any>): boolean  => {
   const currentMillis = Date.now()
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore: @types/bull is outdated
   return currentMillis > (job.opts.repeat.every * 1.2) + job.opts.prevMillis
 }
 
-const checkJobQueues = (jobs: Bull.Job[][]): Promise<boolean> => {
+const checkJobQueues = (jobs: Job[][]): Promise<boolean> => {
   const values = [...queues.values()]
   if (jobs.flat().length < queues.size) {
-    logger.info('🐮 fewer bull jobs than queues -- wiping queues for restart')
+    logger.info('🐮 fewer bull jobs than queues --- wiping queues for restart')
     return Promise.all(values.map((queue) => {
       return queue.obliterate({ force: true })
     })).then(() => true)
@@ -272,12 +279,10 @@ const checkJobQueues = (jobs: Bull.Job[][]): Promise<boolean> => {
 
   for (const key of queues.keys()) {
     const queue = queues.get(key)
-    const job = jobs.flat().find(job => job.queue === queue)
-    if ((job.opts.repeat
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore: @types/bull is outdated
+    const job = jobs.flat().find(job => job && job.queueName === queue.name)
+    if ((job?.opts?.repeat
           && (job.opts.repeat.count >= BULL_MAX_REPEAT_COUNT || jobHasNotRunRecently(job)))
-        || !job.opts.repeat) {
+        || !job?.opts.repeat) {
       logger.info('🐮 bull job needs to restart -- wiping queues for restart')
       return Promise.all(values.map((queue) => {
         return queue.obliterate({ force: true })
@@ -295,14 +300,11 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
       switch (chainId) {
       case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
         return queues.get(QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS)
-          .add({
+          .add(QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS, {
             UPDATE_PROFILES_NFTS_STREAMS: QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS,
             chainId: process.env.CHAIN_ID,
           },
           {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every minute
             repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_nfts_streams',
           })
@@ -318,118 +320,93 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             // repeat every minute
             repeat: { every: 1 * 60000 },
             jobId: 'update_non_profiles_nfts_streams',
+      case QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS:
+        return queues.get(QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS)
+          .add(QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS, {
+            UPDATE_PROFILES_WALLET_NFTS_STREAMS: QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS,
+            chainId: process.env.CHAIN_ID,
+          },
+          {
+            repeat: { every: 1 * 60000 },
+            jobId: 'update_profiles_wallet_nfts_streams',
           })
       case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
         return queues.get(QUEUE_TYPES.SYNC_COLLECTION_RARITY)
-          .add({
+          .add(QUEUE_TYPES.SYNC_COLLECTION_RARITY, {
             SYNC_COLLECTION_RARITY: QUEUE_TYPES.SYNC_COLLECTION_RARITY,
             chainId: process.env.CHAIN_ID,
           },
           {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every five minutes - this repeat job runs to pick up collection addresses from cache
             repeat: { every: 5 * 60000 },
             jobId: 'sync_collection_rarity',
           })
       case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
         return queues.get(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS)
-          .add({
+          .add(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, {
             SYNC_SPAM_COLLECTIONS: QUEUE_TYPES.SYNC_SPAM_COLLECTIONS,
             chainId: process.env.CHAIN_ID,
           },
           {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every once every day
             repeat: { every: 24 * 60 * 60000 },
             jobId: 'sync_spam_collections',
           })
       case QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT:
         return queues.get(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT)
-          .add({
+          .add(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, {
             SAVE_PROFILE_EXPIRE_AT: QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT,
             chainId: process.env.CHAIN_ID,
           },
           {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every once every day
             repeat: { every: 24 * 60 * 60000 },
             jobId: 'save_profile_expire_at',
           })
       case QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS:
         return queues.get(QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS).add(
+          QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS,
           { chainId: process.env.CHAIN_ID }, {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every 10 minutes
             repeat: { every: 10 * 60000 },
             jobId: 'sync_profile_gk_owners',
           })
-      // case QUEUE_TYPES.REGISTER_OS_STREAMS:
-      //   return queues.get(QUEUE_TYPES.REGISTER_OS_STREAMS)
-      //     .add({ REGISTER_OS_STREAMS: QUEUE_TYPES.REGISTER_OS_STREAMS }, {
-      //       removeOnComplete: true,
-      //       removeOnFail: true,
-      //       // repeat every  2 minutes
-      //       repeat: { every: 10 * 60000 },
-      //       jobId: 'register_os_streams',
-      //     })
-      // case QUEUE_TYPES.DEREGISTER_OS_STREAMS:
-      //   return queues.get(QUEUE_TYPES.DEREGISTER_OS_STREAMS)
-      //     .add({ DEREGISTER_OS_STREAMS: QUEUE_TYPES.DEREGISTER_OS_STREAMS }, {
-      //       removeOnComplete: true,
-      //       removeOnFail: true,
-      //       // repeat every  2 minutes
-      //       repeat: { every: 10 * 60000 },
-      //       jobId: 'deregister_os_streams',
-      //     })
       case QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND:
         return queues.get(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND)
-          .add({
+          .add(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, {
             FETCH_EXTERNAL_ORDERS_ON_DEMAND: QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND,
             chainId: process.env.CHAIN_ID,
           }, {
             attempts: 5,
-            removeOnComplete: true,
-            removeOnFail: true,
             backoff: {
               type: 'exponential',
               delay: 2000,
             },
-            // repeat every  2 minutes
             repeat: { every: 2 * 60000 },
             jobId: 'fetch_external_orders_on_demand',
           })
       case QUEUE_TYPES.SYNC_TRADING:
-        return queues.get(QUEUE_TYPES.SYNC_TRADING).add({ chainId: process.env.CHAIN_ID }, {
-          removeOnComplete: true,
-          removeOnFail: true,
-          // repeat every 5 minutes
-          repeat: { every: 5 * 60000 },
-          jobId: 'sync_trading',
-        })
+        return queues.get(QUEUE_TYPES.SYNC_TRADING).add(QUEUE_TYPES.SYNC_TRADING,
+          { chainId: process.env.CHAIN_ID }, {
+            removeOnComplete: true,
+            removeOnFail: true,
+            // repeat every 5 minutes
+            repeat: { every: 5 * 60000 },
+            jobId: 'sync_trading',
+          })
       case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
         return queues.get(QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE)
-          .add({
+          .add(QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, {
             FETCH_COLLECTION_ISSUANCE_DATE: QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE,
             chainId: process.env.CHAIN_ID,
           }, {
             attempts: 5,
-            removeOnComplete: true,
-            removeOnFail: true,
             backoff: {
               type: 'exponential',
               delay: 2000,
             },
-            // repeat every  12 hours
             repeat: { every: 12 * 60 * 60000 },
             jobId: 'fetch_collection_issuance_date',
           })
       case QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE:
         return queues.get(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE)
-          .add({}, {
+          .add(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, {
             removeOnComplete: true,
             removeOnFail: true,
             repeat: { every: 10 * 60000 },
@@ -437,23 +414,21 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
           })
       case QUEUE_TYPES.RECONCILE_ORDERS:
         return queues.get(QUEUE_TYPES.RECONCILE_ORDERS)
-          .add({
+          .add(QUEUE_TYPES.RECONCILE_ORDERS, {
             chainId: process.env.CHAIN_ID,
           }, {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // will run every week?
             repeat: { every: ORDER_RECONCILIATION_PERIOD * 60000 },
             jobId: 'reconcile_orders',
           })
       default:
-        return queues.get(chainId).add({ chainId }, {
-          removeOnComplete: true,
-          removeOnFail: true,
-          // repeat every 3 minutes
-          repeat: { every: 3 * 60000 },
-          jobId: `chainid_${chainId}_job`,
-        })
+        return queues.get(chainId).add('default',
+          { chainId: chainId || process.env.CHAIN_ID }, {
+            removeOnComplete: true,
+            removeOnFail: true,
+            // repeat every 3 minutes
+            repeat: { every: 3 * 60000 },
+            jobId: `chainid_${chainId}_job`,
+          })
       }
     })).then(() => undefined)
   }
@@ -461,70 +436,79 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
   return new Promise(resolve => resolve(undefined))
 }
 
+const workers = []
+const defaultWorkerOpts = { connection, prefix: queuePrefix }
 const listenToJobs = async (): Promise<void> => {
   for (const queue of queues.values()) {
     switch (queue.name) {
     case QUEUE_TYPES.SYNC_CONTRACTS:
-      queue.process(nftExternalOrders)
+      workers.push(new Worker(queue.name, nftExternalOrders, defaultWorkerOpts))
       break
     case QUEUE_TYPES.SYNC_COLLECTION_IMAGES:
-      queue.process(collectionBannerImageSync)
+      workers.push(new Worker(queue.name, collectionBannerImageSync, defaultWorkerOpts))
       break
     case QUEUE_TYPES.SYNC_TRADING:
-      queue.process(syncTrading)
+      workers.push(new Worker(queue.name, syncTrading, defaultWorkerOpts))
       break
     case QUEUE_TYPES.SYNC_COLLECTION_NAME:
-      queue.process(collectionNameSync)
+      workers.push(new Worker(queue.name, collectionNameSync, defaultWorkerOpts))
       break
     case QUEUE_TYPES.SYNC_TXS_NFTPORT:
-      queue.process(syncTxsFromNFTPortHandler)
+      workers.push(new Worker(queue.name, syncTxsFromNFTPortHandler, defaultWorkerOpts))
       break
     case QUEUE_TYPES.SYNC_COLLECTIONS:
-      queue.process(collectionSyncHandler)
+      workers.push(new Worker(queue.name, collectionSyncHandler, defaultWorkerOpts))
       break
     case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
-      queue.process(raritySync)
+      workers.push(new Worker(queue.name, raritySync, defaultWorkerOpts))
       break
     case QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY:
-      queue.process(nftRaritySyncHandler)
+      workers.push(new Worker(queue.name, nftRaritySyncHandler, defaultWorkerOpts))
       break
     case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
-      queue.process(spamCollectionSyncHandler)
+      workers.push(new Worker(queue.name, spamCollectionSyncHandler, defaultWorkerOpts))
       break
     case QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND:
-      queue.process(nftExternalOrdersOnDemand)
+      workers.push(new Worker(queue.name, nftExternalOrdersOnDemand, defaultWorkerOpts))
       break
-    // case QUEUE_TYPES.REGISTER_OS_STREAMS:
-    //   queue.process(registerStreamHandler)
-    //   break
-    // case QUEUE_TYPES.DEREGISTER_OS_STREAMS:
-    //   queue.process(deregisterStreamHandler)
-    //   break
     case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
-      queue.process(updateNFTsForProfilesHandler)
+      workers.push(new Worker(queue.name, updateNFTsOwnershipForProfilesHandler, defaultWorkerOpts))
+      break
+    case QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS:
+      workers.push(new Worker(queue.name, updateNFTsForProfilesHandler, defaultWorkerOpts))
       break
     case QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS:
       queue.process(updateNFTsForNonProfilesHandler)
       break
     case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
-      queue.process(collectionIssuanceDateSync)
+      workers.push(new Worker(queue.name, collectionIssuanceDateSync, defaultWorkerOpts))
       break
     case QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT:
-      queue.process(saveProfileExpireAt)
+      workers.push(new Worker(queue.name, saveProfileExpireAt, defaultWorkerOpts))
       break
     case QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS:
-      queue.process(profileGKOwnersHandler)
+      workers.push(new Worker(queue.name, profileGKOwnersHandler, defaultWorkerOpts))
       break
     case QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE:
-      queue.process(searchListingIndexHandler)
+      workers.push(new Worker(queue.name, searchListingIndexHandler, defaultWorkerOpts))
       break
     case QUEUE_TYPES.RECONCILE_ORDERS:
-      queue.process(orderReconciliationHandler)
+      workers.push(new Worker(queue.name, orderReconciliationHandler, defaultWorkerOpts))
       break
     default:
-      queue.process(getEthereumEvents)
+      workers.push(new Worker(queue.name, getEthereumEvents, defaultWorkerOpts))
     }
   }
+}
+
+export const cleanupProgressCache = (): Promise<any> => {
+  const chainId: string = process.env.CHAIN_ID
+  return cache.del([
+    `${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`,
+    `${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`,
+    `${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`,
+    `${CacheKeys.PROFILE_WALLET_FAIL_SCORE}_${chainId}`,
+  ])
 }
 
 export const startAndListen = (): Promise<void> => {
@@ -532,11 +516,12 @@ export const startAndListen = (): Promise<void> => {
     .then(() => getExistingJobs())
     .then((jobs) => checkJobQueues(jobs))
     .then((shouldPublish) => publishJobs(shouldPublish))
+    .then(() => cleanupProgressCache())
     .then(() => listenToJobs())
     .then(() => {
       setTimeout(() => {
         didPublish ? logger.info('🍊 queue was restarted -- listening for jobs...')
-          : logger.info('🍊 queue is healthy -- listening for jobs...')
+          : logger.info('🍊 queue is healthy --- listening for jobs...')
       })
     })
 }
