@@ -8,7 +8,7 @@ import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
 import { delay } from '../utils'
 import { cancelEntityBuilder, txEntityBuilder, txX2Y2ProtocolDataParser } from '../utils/builder/orderBuilder'
-import { checksumAddress, updateOwnership } from './ownership'
+import { atomicOwnershipUpdate,checksumAddress } from './ownership'
 import {
   approvalEventHandler,
   buyNowInfoEventHandler,
@@ -415,7 +415,7 @@ const keepAlive = ({
             // update NFT ownership
             const tokenId: string = helper.bigNumberToHex(order.protocolData?.tokenId)
 
-            await updateOwnership(
+            await atomicOwnershipUpdate(
               checksumContract,
               tokenId,
               maker,
@@ -483,7 +483,7 @@ const keepAlive = ({
             // update NFT ownership
             const tokenId: string = helper.bigNumberToHex(order.protocolData?.tokenId)
 
-            await updateOwnership(
+            await atomicOwnershipUpdate(
               checksumContract,
               tokenId,
               maker,
@@ -671,7 +671,7 @@ const keepAlive = ({
               order.protocolData?.parameters?.offer?.[0]?.identifierOrCriteria,
             )
 
-            await updateOwnership(
+            await atomicOwnershipUpdate(
               contract,
               tokenId,
               offerer,
@@ -812,7 +812,7 @@ const keepAlive = ({
             const tokenId: string = helper.bigNumberToHex(
               order.protocolData?.tokenId,
             )
-            await updateOwnership(
+            await atomicOwnershipUpdate(
               contract,
               tokenId,
               order.makerAddress,
@@ -930,7 +930,7 @@ const keepAlive = ({
             const tokenId: string = helper.bigNumberToHex(
               order.protocolData?.tokenId,
             )
-            await updateOwnership(
+            await atomicOwnershipUpdate(
               contract,
               tokenId,
               maker,

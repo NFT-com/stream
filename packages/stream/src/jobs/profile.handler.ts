@@ -212,6 +212,7 @@ const updateWalletNFTs = async (
 }
 
 const processProfileUpdate = async (profileId: string, chainId: string): Promise<void> => {
+  const start = new Date().getTime()
   const profile = await repositories.profile.findById(profileId)
   if (!profile) {
     await removeProfileIdFromRelevantKeys(
@@ -219,7 +220,7 @@ const processProfileUpdate = async (profileId: string, chainId: string): Promise
       profileId,
       chainId,
     )
-    logger.info(`2. [updateNFTsOwnershipForProfilesHandler] No profile found for ID ${profile.url} (${profileId}}`)
+    logger.info(`2. [processProfileUpdate] No profile found for ID ${profile.url} (${profileId}}, ${getTimeStamp(start)}`)
   } else {
     // check if updating NFTs for profile is in progress.
     const inProgress = await cache.zscore(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, profileId)
@@ -243,9 +244,8 @@ const processProfileUpdate = async (profileId: string, chainId: string): Promise
         logger.log(`Progress score incremented for profile ${profile.url} (${profile.id}) - increment: ${score}`)
       }
 
-      logger.info(`3. [updateNFTsOwnershipForProfilesHandler] Updating NFTs for profile ${profile.url} (${profileId}) is in progress`)
+      logger.info(`3. [processProfileUpdate] Updating NFTs for profile ${profile.url} (${profileId}) is in progress`)
     } else {
-      // const updateBegin = Date.now()
       const wallet = await repositories.wallet.findOne({
         where: {
           id: profile.ownerWalletId,
@@ -258,7 +258,7 @@ const processProfileUpdate = async (profileId: string, chainId: string): Promise
           profileId,
           chainId,
         )
-        logger.info(`4. [updateNFTsOwnershipForProfilesHandler] No wallet found for ID ${profile.ownerWalletId} (url = ${profile.url})`)
+        logger.info(`4. [processProfileUpdate] No wallet found for ID ${profile.ownerWalletId} (url = ${profile.url})`)
       } else {
         try {
           // keep profile to cache, so we won't repeat profiles in progress
@@ -270,7 +270,7 @@ const processProfileUpdate = async (profileId: string, chainId: string): Promise
             wallet.address,
             chainId,
           )
-          logger.info(`5. [updateNFTsOwnershipForProfilesHandler] checked NFT contract addresses for profile ${profile.url} (${profile.id})`)
+          logger.info(`5. [processProfileUpdate] checked NFT contract addresses for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
           const now: Date = new Date()
           now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
           const ttl = now.getTime()
@@ -283,7 +283,7 @@ const processProfileUpdate = async (profileId: string, chainId: string): Promise
             ),
           ])
         } catch (err) {
-          logger.error(`[updateNFTsOwnershipForProfilesHandler] Error in updateNFTsOwnershipForProfilesHandler: ${err}`)
+          logger.error(`[processProfileUpdate] Error in updateNFTsOwnershipForProfilesHandler: ${err}`)
           await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
         }
       }

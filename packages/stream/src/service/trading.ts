@@ -9,7 +9,7 @@ import { _logger, db, defs, entity, helper } from '@nftcom/shared'
 import { provider } from '../jobs/mint.handler'
 import { blockNumberToTimestamp } from '../jobs/trading.handler'
 import { activityBuilder } from '../utils/builder/orderBuilder'
-import { checksumAddress, updateOwnership } from './ownership'
+import { atomicOwnershipUpdate,checksumAddress } from './ownership'
 
 const logger = _logger.Factory('NFTCOM')
 const repositories = db.newRepositories()
@@ -928,7 +928,7 @@ export const matchTwoBEventHandler = async (
                     })
                     logger.info(`updated recipient of tx_transaction from Match2B ${txTransaction.id}`)
                     // Update NFT ownership
-                    await updateOwnership(
+                    await atomicOwnershipUpdate(
                       seen[key],
                       BigNumber.from(tokenId).toHexString(),
                       checksumAddress(from),
