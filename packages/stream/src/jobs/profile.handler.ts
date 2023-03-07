@@ -510,8 +510,6 @@ export const updateNFTsForNonProfilesHandler = async (job: Job): Promise<any> =>
           if (profile) {
             logger.log(`[updateNFTsForNonProfilesHandler]: Wallet Id: ${walletId} has at least one profile ${profile.id} - url: ${profile.url}`)
           }
-          logger.log(`[updateNFTsForNonProfilesHandler]: Wallet Id: ${walletId} does not exist!, ${getTimeStamp(start)}}`)
-          start = new Date().getTime()
         }
       } else {
         logger.log(`[updateNFTsForNonProfilesHandler]: WalletId is incorrect: ${walletId}, ${getTimeStamp(start)}}`)
