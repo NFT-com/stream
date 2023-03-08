@@ -320,9 +320,7 @@ export const updateNFTsOwnershipForProfilesHandler = async (job: Job): Promise<a
       }
 
       const estimateNftsCount = await repositories.nft.count({
-        where: {
-          profileId,
-        },
+        profileId,
       })
 
       const profile = await repositories.profile.findOne({
