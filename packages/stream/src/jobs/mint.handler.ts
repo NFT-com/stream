@@ -13,6 +13,7 @@ const logger = _logger.Factory(_logger.Context.Bull)
 const repositories = db.newRepositories()
 
 const MAX_BLOCKS = 100000 // we use this constant to split blocks to avoid any issues to get logs for event...
+const MAX_LOGS = 1000
 
 export const provider = (
   chainId: providers.Networkish = 1, //mainnet default
@@ -32,16 +33,16 @@ export const provider = (
   }
 }
 
-/**
- * recursive method to split blocks for getting event logs
- * @param provider
- * @param fromBlock
- * @param toBlock
- * @param address
- * @param topics
- * @param maxBlocks
- * @param currentStackLv
- */
+// /**
+//  * recursive method to split blocks for getting event logs
+//  * @param provider
+//  * @param fromBlock
+//  * @param toBlock
+//  * @param address
+//  * @param topics
+//  * @param maxBlocks
+//  * @param currentStackLv
+//  */
 const splitGetLogs = async (
   provider: ethers.providers.BaseProvider,
   fromBlock: number,
@@ -50,16 +51,48 @@ const splitGetLogs = async (
   topics: any[],
   maxBlocks: number,
   currentStackLv: number,
-): Promise<ethers.providers.Log[]> => {
-  // split block range in half...
-  const midBlock =  (fromBlock.valueOf() + toBlock.valueOf()) >> 1
+  totalLogs: number, // New parameter to track total logs
+): Promise<{
+  logs: ethers.providers.Log[]
+  lastProcessedBlock: number
+}> => {
+  // Check if we've exceeded the maximum number of logs
+  if (totalLogs > MAX_LOGS) {
+    logger.info(`[splitGetLogs] Exceeded maximum number of logs (${MAX_LOGS}), fromBlock: ${fromBlock}, toBlock: ${toBlock}, totalLogs: ${totalLogs}`)
+    return { logs: [], lastProcessedBlock: toBlock }
+  }
+
+  // Split block range in half...
+  const midBlock = (fromBlock + toBlock) >> 1
+  
   // eslint-disable-next-line no-use-before-define
-  const first = await getPastLogs(provider, address, topics,
-    fromBlock, midBlock, maxBlocks, currentStackLv + 1)
+  const first = await getPastLogs(
+    provider,
+    address,
+    topics,
+    fromBlock,
+    midBlock,
+    maxBlocks,
+    currentStackLv + 1,
+    totalLogs, // Pass total logs to the next recursive call
+  )
+
   // eslint-disable-next-line no-use-before-define
-  const last = await getPastLogs(provider, address, topics,
-    midBlock + 1, toBlock, maxBlocks,currentStackLv + 1)
-  return [...first, ...last]
+  const last = await getPastLogs(
+    provider,
+    address,
+    topics,
+    midBlock + 1,
+    toBlock,
+    maxBlocks,
+    currentStackLv + 1,
+    totalLogs + first.logs.length, // Update total logs with the length of the first half
+  )
+
+  return {
+    logs: [...first.logs, ...last.logs],
+    lastProcessedBlock: last.lastProcessedBlock || first.lastProcessedBlock,
+  }
 }
 
 /**
@@ -80,21 +113,29 @@ export const getPastLogs = async (
   toBlock: number,
   maxBlocks?: number,
   currentStackLv = 0,
-): Promise<ethers.providers.Log[]> => {
-  // if there are too many recursive calls, we just return empty array...
-  if (currentStackLv > 400) {
-    return []
-  }
-  if (fromBlock > toBlock) {
-    return []
+  totalLogs = 0, // New parameter to track total logs
+): Promise<{
+  logs: ethers.providers.Log[]
+  lastProcessedBlock: number
+}> => {
+  // Check if we've exceeded the maximum number of logs
+  if (totalLogs > MAX_LOGS) {
+    logger.info(`[getPastLogs] Exceeded maximum number of logs (${MAX_LOGS}), fromBlock: ${fromBlock}, toBlock: ${toBlock}, totalLogs: ${totalLogs}`)
+    return { logs: [], lastProcessedBlock: toBlock }
   }
 
-  const max_Blocks = maxBlocks ? maxBlocks : MAX_BLOCKS
+  if (fromBlock > toBlock) {
+    logger.info(`[getPastLogs] fromBlock (${fromBlock}) is greater than toBlock (${toBlock}), returning empty logs`)
+    return { logs: [], lastProcessedBlock: toBlock }
+  }
+
+  const max_Blocks = maxBlocks ?? MAX_BLOCKS
+
   try {
-    // if there are too many blocks, we will split it up...
-    if ((toBlock - fromBlock) > max_Blocks) {
-      logger.info(`recursive getting logs from ${fromBlock} to ${toBlock}`)
-      // eslint-disable-next-line no-use-before-define
+    // If there are too many blocks, we will split it up...
+    if (toBlock - fromBlock > max_Blocks) {
+      logger.info(`Recursive getting logs from ${fromBlock} to ${toBlock}`)
+
       return await splitGetLogs(
         provider,
         fromBlock,
@@ -103,21 +144,28 @@ export const getPastLogs = async (
         topics,
         max_Blocks,
         currentStackLv,
+        totalLogs,
       )
     } else {
-      // we just get logs using provider...
-      logger.info(`getting logs from ${fromBlock} to ${toBlock}`)
+      // We just get logs using provider...
+      logger.info(`Getting logs from ${fromBlock} to ${toBlock}`)
+
       const filter = {
         address: utils.getAddress(address),
-        fromBlock: fromBlock,
-        toBlock: toBlock,
-        topics: topics,
+        fromBlock,
+        toBlock,
+        topics,
       }
-      return await provider.getLogs(filter)
+
+      const logs = await provider.getLogs(filter)
+
+      // Update total logs with the length of the logs retrieved
+      return { logs, lastProcessedBlock: toBlock }
     }
   } catch (e) {
-    logger.error('error while getting past logs: ', e)
-    return []
+    logger.error('Error while getting past logs: ', e)
+
+    return { logs: [], lastProcessedBlock: toBlock }
   }
 }
 
@@ -182,7 +230,7 @@ export const getResolverEvents = async (
     const maxBlocks = process.env.MINTED_PROFILE_EVENTS_MAX_BLOCKS
     const key = chainIdToCacheKeyResolverAssociate(chainId)
     const cachedBlock = await getCachedBlock(chainId, key)
-    const logs = await getPastLogs(
+    const { logs, lastProcessedBlock } = await getPastLogs(
       provider,
       address,
       topics,
@@ -192,13 +240,13 @@ export const getResolverEvents = async (
     )
     return {
       logs: logs,
-      latestBlockNumber: latestBlock.number,
+      latestBlockNumber: lastProcessedBlock,
     }
   } catch (e) {
     logger.error(`Error in getResolverEvents: ${e}`)
     return {
       logs: [],
-      latestBlockNumber: latestBlock.number,
+      latestBlockNumber: latestBlock,
     }
   }
 }
