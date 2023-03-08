@@ -302,7 +302,7 @@ const topics3 = [
 ]
 
 const syncMintedProfileEvents = async (
-  chainId: string,
+  chainId: number,
   chainProvider: ethers.providers.BaseProvider,
   profileAuctionAddress: `0x${string}`,
 ): Promise<void> => {
@@ -409,7 +409,7 @@ const syncMintedProfileEvents = async (
 }
 
 const syncResolverEvents = async (
-  chainId: string,
+  chainId: number,
   chainProvider: ethers.providers.BaseProvider,
   nftResolverAddress: `0x${string}`,
 ): Promise<void> => {
@@ -596,7 +596,7 @@ const syncResolverEvents = async (
 }
 
 const syncProfileEvents = async (
-  chainId: string,
+  chainId: number,
   chainProvider: ethers.providers.BaseProvider,
   profileAddress: `0x${string}`,
 ): Promise<void> => {
