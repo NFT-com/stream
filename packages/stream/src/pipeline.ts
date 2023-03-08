@@ -66,86 +66,94 @@ export const mapContractsToSlugs = async (contracts: DistinctContract[]): Promis
 
 // initiate all sockets
 const initializeStreamsForAllSlugs = (): void => {
-  logger.log('----initiating streams----')
-  
-  client.onEvents('*',
-    [
-      EventType.ITEM_LISTED,
-      EventType.ITEM_RECEIVED_OFFER,
-      // EventType.ITEM_RECEIVED_BID,
-    ],
-    async (event: BaseStreamMessage<unknown>) => {
-      const eventType: EventType = event.event_type as EventType
-      try {
-        if (allowedEvents.includes(eventType)) {
-          const eventPayload: OSEventPayload = event.payload as OSEventPayload
-          const chain: Chain = eventPayload.item.chain
-          if (chain.name === OSChainTypes.ETHEREUM) {
-            const nftId: string = eventPayload.item.nft_id
-                    
-            let nft: entity.NFT
-            if (nftId) {
-              const chainId: string = process.env.CHAIN_ID || '4'
-              const [network, contract, token] = nftId.split('/')
-              if (contract && token) {
-                try {
-                  nft = await repositories.nft.findOne({
-                    where: {
-                      contract: helper.checkSum(contract),
-                      tokenId: helper.bigNumberToHex(token),
-                      chainId,
-                    },
-                  })
-                } catch (err) {
-                  logger.error(`nft err: ${err}`)
-                }
-                    
-                if (nft) {
-                  const orderHash: string = eventPayload.order_hash
-                  let order: entity.TxOrder
-                  if (orderHash) {
-                    try {
-                      order = await repositories.txOrder.findOne({
-                        relations: ['activity'],
-                        where: {
-                          id: orderHash,
-                        },
-                      })
-                    } catch (err) {
-                      logger.error(`order err: ${err}`)
-                    }
-                                                                
-                    if (!order) {
-                      try {
-                        const newOrder: Partial<entity.TxOrder> = await streamOrderEntityBuilder(
-                          eventType,
-                          eventPayload,
-                          chainId,
-                        )
+  try {
+    logger.log('----initiating streams----')
 
-                        await repositories.txOrder.save(newOrder)
-                        logger.debug(`order with orderHash: ${orderHash} for ${nftId} is saved successfully on ${network} network`)
+    client.onEvents('*',
+      [
+        EventType.ITEM_LISTED,
+        EventType.ITEM_RECEIVED_OFFER,
+        // EventType.ITEM_RECEIVED_BID,
+      ],
+      async (event: BaseStreamMessage<unknown>) => {
+        const eventType: EventType = event.event_type as EventType
+        try {
+          if (allowedEvents.includes(eventType)) {
+            const eventPayload: OSEventPayload = event.payload as OSEventPayload
+            const chain: Chain = eventPayload.item.chain
+            if (chain.name === OSChainTypes.ETHEREUM) {
+              const nftId: string = eventPayload.item.nft_id
+                      
+              let nft: entity.NFT
+              if (nftId) {
+                const chainId: string = process.env.CHAIN_ID || '4'
+                const [network, contract, token] = nftId.split('/')
+                if (contract && token) {
+                  try {
+                    nft = await repositories.nft.findOne({
+                      where: {
+                        contract: helper.checkSum(contract),
+                        tokenId: helper.bigNumberToHex(token),
+                        chainId,
+                      },
+                    })
+                  } catch (err) {
+                    logger.error(`nft err: ${err}`)
+                  }
+                      
+                  if (nft) {
+                    const orderHash: string = eventPayload.order_hash
+                    let order: entity.TxOrder
+                    if (orderHash) {
+                      try {
+                        order = await repositories.txOrder.findOne({
+                          relations: ['activity'],
+                          where: {
+                            id: orderHash,
+                          },
+                        })
                       } catch (err) {
-                        // error handling
+                        logger.error(`order err: ${err}`)
+                      }
+                                                                  
+                      if (!order) {
+                        try {
+                          const newOrder: Partial<entity.TxOrder> = await streamOrderEntityBuilder(
+                            eventType,
+                            eventPayload,
+                            chainId,
+                          )
+
+                          await repositories.txOrder.save(newOrder)
+                          logger.debug(`order with orderHash: ${orderHash} for ${nftId} is saved successfully on ${network} network`)
+                        } catch (err) {
+                          // error handling
+                        }
                       }
                     }
                   }
                 }
+              }  else {
+                logger.error(`nftId undefined: ${nftId}`)
+                logger.log(`event type: ${eventType}`)
+                logger.log(`event payload: ${eventPayload}`)
               }
-            }  else {
-              logger.error(`nftId undefined: ${nftId}`)
-              logger.log(`event type: ${eventType}`)
-              logger.log(`event payload: ${eventPayload}`)
             }
           }
+        } catch (err) {
+          logger.error(`Err: ${JSON.stringify(err)}`)
         }
-      } catch (err) {
-        logger.error(`Err: ${JSON.stringify(err)}`)
-      }
-    })
+      })
+  } catch (err) {
+    logger.error(err, 'error in initializeStreamsForAllSlugs')
+  }
 }
 
 export const initiateStreaming = async (): Promise<void> => {
-  logger.log('initiate streaming')
-  return initializeStreamsForAllSlugs()
+  try {
+    logger.log('initiate streaming')
+    return initializeStreamsForAllSlugs()
+  } catch (err) {
+    logger.error(err, 'error in initiateStreaming')
+  }
 }
