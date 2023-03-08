@@ -230,7 +230,7 @@ export const getResolverEvents = async (
     const maxBlocks = process.env.MINTED_PROFILE_EVENTS_MAX_BLOCKS
     const key = chainIdToCacheKeyResolverAssociate(chainId)
     const cachedBlock = await getCachedBlock(chainId, key)
-    const { logs, lastProcessedBlock } = await getPastLogs(
+    const logs = await getPastLogs(
       provider,
       address,
       topics,
@@ -239,8 +239,8 @@ export const getResolverEvents = async (
       Number(maxBlocks),
     )
     return {
-      logs: logs,
-      latestBlockNumber: lastProcessedBlock.number,
+      logs: logs.logs,
+      latestBlockNumber: logs.lastProcessedBlock,
     }
   } catch (e) {
     logger.error(`Error in getResolverEvents: ${e}`)
@@ -273,7 +273,7 @@ export const getMintedProfileEvents = async (
     )
     return {
       logs: logs.logs,
-      latestBlockNumber: logs.lastProcessedBlock.number,
+      latestBlockNumber: logs.lastProcessedBlock,
     }
   } catch (e) {
     logger.error(`Error in getMintedProfileEvents: ${e}`)
@@ -305,7 +305,7 @@ export const getProfileEvents = async (
     )
     return {
       logs: logs.logs,
-      latestBlockNumber: logs.lastProcessedBlock.number,
+      latestBlockNumber: logs.lastProcessedBlock,
     }
   } catch (e) {
     logger.error(`Error in getProfileEvents: ${e}`)
