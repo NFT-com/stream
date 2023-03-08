@@ -240,13 +240,13 @@ export const getResolverEvents = async (
     )
     return {
       logs: logs,
-      latestBlockNumber: Number(lastProcessedBlock),
+      latestBlockNumber: lastProcessedBlock.number,
     }
   } catch (e) {
     logger.error(`Error in getResolverEvents: ${e}`)
     return {
       logs: [],
-      latestBlockNumber: Number(latestBlock),
+      latestBlockNumber: latestBlock.number,
     }
   }
 }
@@ -273,7 +273,7 @@ export const getMintedProfileEvents = async (
     )
     return {
       logs: logs.logs,
-      latestBlockNumber: latestBlock.number,
+      latestBlockNumber: logs.lastProcessedBlock.number,
     }
   } catch (e) {
     logger.error(`Error in getMintedProfileEvents: ${e}`)
@@ -304,8 +304,8 @@ export const getProfileEvents = async (
       Number(maxBlocks),
     )
     return {
-      logs: logs,
-      latestBlockNumber: latestBlock.number,
+      logs: logs.logs,
+      latestBlockNumber: logs.lastProcessedBlock.number,
     }
   } catch (e) {
     logger.error(`Error in getProfileEvents: ${e}`)
