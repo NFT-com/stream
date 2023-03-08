@@ -281,7 +281,7 @@ const processProfileUpdate = async (profileUrl: string, chainId: string): Promis
             start = new Date().getTime()
   
             // keep profile to cache, so we won't repeat profiles in progress
-            await cache.zadd(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, 'INCR', 1, profile.id)
+            await cache.zadd(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, 'INCR', 1, profile.url)
             nftService.initiateWeb3(chainId)
             await nftService.checkNFTContractAddresses(
               profile.ownerUserId,
@@ -303,7 +303,7 @@ const processProfileUpdate = async (profileUrl: string, chainId: string): Promis
             ])
           } catch (err) {
             logger.error(`[processProfileUpdate] Error in updateNFTsOwnershipForProfilesHandler: ${err}`)
-            await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
+            await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.url])
           }
         }
       } else {
