@@ -55,7 +55,7 @@ enum ProfileCacheEnum {
 
 const removeProfileIdFromRelevantKeys = async (
   cacheType: ProfileCacheEnum,
-  profileId: string,
+  profileUrl: string,
   chainId: string,
 ): Promise<void> => {
   try {
@@ -64,16 +64,16 @@ const removeProfileIdFromRelevantKeys = async (
     switch (cacheType) {
     case ProfileCacheEnum.PROFILE_OWNER:
       cachePromise.push(
-        cache.zrem(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, [profileId]),
-        cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profileId]),
-        cache.zrem(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, [profileId]),
+        cache.zrem(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, [profileUrl]),
+        cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profileUrl]),
+        cache.zrem(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, [profileUrl]),
       )
       break
     case ProfileCacheEnum.WALLET_NFTS:
       cachePromise.push(
-        cache.zrem(`${CacheKeys.PROFILE_WALLET_FAIL_SCORE}_${chainId}`, [profileId]),
-        cache.zrem(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, [profileId]),
-        cache.zrem(`${CacheKeys.UPDATE_WALLET_NFTS_PROFILE}_${chainId}`, [profileId]),
+        cache.zrem(`${CacheKeys.PROFILE_WALLET_FAIL_SCORE}_${chainId}`, [profileUrl]),
+        cache.zrem(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, [profileUrl]),
+        cache.zrem(`${CacheKeys.UPDATE_WALLET_NFTS_PROFILE}_${chainId}`, [profileUrl]),
       )
       break
     default:
@@ -88,24 +88,24 @@ const removeProfileIdFromRelevantKeys = async (
 }
 
 const updateWalletNFTs = async (
-  profileId: string,
+  profileUrl: string,
   chainId: string,
 ): Promise<void> => {
   try {
-    const profile = await repositories.profile.findById(profileId)
+    const profile = await repositories.profile.findOne({ where: { url: profileUrl } })
     if (!profile) {
       await removeProfileIdFromRelevantKeys(
         ProfileCacheEnum.WALLET_NFTS,
-        profileId,
+        profile.url,
         chainId,
       )
-      logger.info(`[updateWalletNFTs_0] No profile found for ID ${profile.url} (${profileId}}`)
+      logger.info(`[updateWalletNFTs_0] No profile found for ID ${profileUrl}`)
     } else {
       // check if updating NFTs for profile is in progress.
-      const inProgress = await cache.zscore(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, profileId)
+      const inProgress = await cache.zscore(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, profile.url)
       if (inProgress) {
         const inProgressScore = Number(inProgress)
-        const fails: string = await cache.zscore(`${CacheKeys.PROFILE_WALLET_FAIL_SCORE}_${chainId}`, profileId)
+        const fails: string = await cache.zscore(`${CacheKeys.PROFILE_WALLET_FAIL_SCORE}_${chainId}`, profile.url)
         const failScore = Number(fails)
         if (inProgressScore > PROFILE_PROGRESS_THRESHOLD) {
           if (failScore > inProgressScore) {
@@ -123,7 +123,7 @@ const updateWalletNFTs = async (
           logger.log(`Progress score incremented for profile ${profile.url} (${profile.id}) - increment: ${score}`)
         }
 
-        logger.info(`[updateWalletNFTs_0_a] Updating NFTs for profile ${profile.url} (${profileId}) is in progress`)
+        logger.info(`[updateWalletNFTs_0_a] Updating NFTs for profile ${profile.url} (${profile.id}) is in progress`)
       } else {
         let start: number = new Date().getTime()
         const constantStart = start
@@ -142,7 +142,7 @@ const updateWalletNFTs = async (
           if (!wallet) {
             await removeProfileIdFromRelevantKeys(
               ProfileCacheEnum.WALLET_NFTS,
-              profileId,
+              profile.url,
               chainId,
             )
             logger.info(`[updateWallet_NFTs-1] No wallet found for ID ${profile.ownerWalletId} (url = ${profile.url})`)
@@ -197,7 +197,7 @@ const updateWalletNFTs = async (
               cache.zadd(`${CacheKeys.UPDATED_WALLET_NFTS_PROFILE}_${chainId}`, ttl, profile.id),
               removeProfileIdFromRelevantKeys(
                 ProfileCacheEnum.WALLET_NFTS,
-                profileId,
+                profile.url,
                 chainId,
               ),
             ])
@@ -210,45 +210,45 @@ const updateWalletNFTs = async (
       }
     }
   } catch (err) {
-    await cache.zrem(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, [profileId])
+    await cache.zrem(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, [profileUrl])
     logger.error(`[updateWalletNFTs-error]: ${err} `)
   }
 }
 
-const processProfileUpdate = async (profileId: string, chainId: string): Promise<void> => {
+const processProfileUpdate = async (profileUrl: string, chainId: string): Promise<void> => {
   let start = new Date().getTime()
-  const profile = await repositories.profile.findById(profileId)
+  const profile = await repositories.profile.findOne({ where: { url: profileUrl } })
   if (!profile) {
     await removeProfileIdFromRelevantKeys(
       ProfileCacheEnum.PROFILE_OWNER,
-      profileId,
+      profileUrl,
       chainId,
     )
-    logger.info(`2. [processProfileUpdate] No profile found for ID ${profile.url} (${profileId}}, ${getTimeStamp(start)}`)
+    logger.info(`2. [processProfileUpdate] No profile found for ${profileUrl}, ${getTimeStamp(start)}`)
   } else {
     // check if updating NFTs for profile is in progress.
-    const inProgress = await cache.zscore(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, profileId)
+    const inProgress = await cache.zscore(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, profile.url)
     if (inProgress) {
       const inProgressScore = Number(inProgress)
-      const fails: string = await cache.zscore(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, profileId)
+      const fails: string = await cache.zscore(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, profile.url)
       const failScore = Number(fails)
       if (inProgressScore > PROFILE_PROGRESS_THRESHOLD) {
         if (failScore > inProgressScore) {
           logger.log({ profile }, `Profile stuck in progress longer than expected: profile ${profile.url} (${profile.id}), fail_score: ${failScore}`)
-          await cache.zrem(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, [profile.id])
+          await cache.zrem(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, [profile.url])
         } else {
-          await cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id)
-          await cache.zadd(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, 'INCR', 1, profile.id)
+          await cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.url)
+          await cache.zadd(`${CacheKeys.PROFILE_FAIL_SCORE}_${chainId}`, 'INCR', 1, profile.url)
         }
-        await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id])
+        await cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.url])
         logger.log(`Threshold crossed ${failScore + 1} times for profile ${profile.url} (${profile.id}) - current progress score: ${inProgressScore}`)
       } else {
         const score: number = Number(failScore) || 1
-        await cache.zadd(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, 'INCR', score, profile.id)
+        await cache.zadd(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, 'INCR', score, profile.url)
         logger.log(`Progress score incremented for profile ${profile.url} (${profile.id}) - increment: ${score}`)
       }
 
-      logger.info(`3. [processProfileUpdate] Updating NFTs for profile ${profile.url} (${profileId}) is in progress`)
+      logger.info(`3. [processProfileUpdate] Updating NFTs for profile ${profile.url} (${profile.id}) is in progress`)
     } else {
       if (profile.ownerWalletId) {
         const wallet = await repositories.wallet.findOne({
@@ -260,7 +260,7 @@ const processProfileUpdate = async (profileId: string, chainId: string): Promise
         if (!wallet) {
           await removeProfileIdFromRelevantKeys(
             ProfileCacheEnum.PROFILE_OWNER,
-            profileId,
+            profile.url,
             chainId,
           )
           logger.info(`4. [processProfileUpdate] No wallet found for ID ${profile.ownerWalletId} (url = ${profile.url})`)
@@ -283,10 +283,10 @@ const processProfileUpdate = async (profileId: string, chainId: string): Promise
             now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
             const ttl = now.getTime()
             await Promise.all([
-              cache.zadd(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, ttl, profile.id),
+              cache.zadd(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, ttl, profile.url),
               removeProfileIdFromRelevantKeys(
                 ProfileCacheEnum.PROFILE_OWNER,
-                profileId,
+                profile.url,
                 chainId,
               ),
             ])
@@ -313,30 +313,36 @@ export const updateNFTsOwnershipForProfilesHandler = async (job: Job): Promise<a
     const cachedProfiles = await cache.zrevrangebyscore(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, '+inf', '(0')
 
     let nftsToProcess = 0
-    for (const profileId of cachedProfiles) {
+    for (const profileUrl of cachedProfiles) {
       if (nftsToProcess > MAX_NFTS_TO_PROCESS) {
         logger.info(`[updateNFTsOwnershipForProfilesHandler] Max NFTs to process reached: ${nftsToProcess} > ${MAX_NFTS_TO_PROCESS}`)
         break
       }
 
-      const estimateNftsCount = await repositories.nft.count({
-        profileId,
-      })
-
       const profile = await repositories.profile.findOne({
         where: {
-          id: profileId,
+          id: profileUrl,
           chainId,
         },
       })
 
-      // process profile before exiting (in case 1 profile > max nfts to process)
-      await cache.zadd(`${CacheKeys.UPDATE_WALLET_NFTS_PROFILE}_${chainId}`, 1, profileId) //O(log(N))
-      processProfileUpdate(profileId, chainId)
-        .catch(err => logger.error(err))
-
-      nftsToProcess += estimateNftsCount
-      logger.info(`2. [updateNFTsOwnershipForProfilesHandler] Updating NFTs for profile ${profile.url} => (estimateNftsCount = ${estimateNftsCount})`)
+      // only process if profile url exists
+      if (profile) {
+        const estimateNftsCount = await repositories.nft.count({
+          ownerWalletId: profile.ownerWalletId,
+        })
+  
+        // process profile before exiting (in case 1 profile > max nfts to process)
+        await cache.zadd(`${CacheKeys.UPDATE_WALLET_NFTS_PROFILE}_${chainId}`, 1, profileUrl) //O(log(N))
+        processProfileUpdate(profileUrl, chainId)
+          .catch(err => logger.error(err))
+  
+        nftsToProcess += estimateNftsCount
+        logger.info(`2. [updateNFTsOwnershipForProfilesHandler] Updating NFTs for profile ${profile.url} => (estimateNftsCount = ${estimateNftsCount})`)
+      } else {
+        logger.info(`[updateNFTsOwnershipForProfilesHandler] Profile not found for url ${profileUrl}`)
+        continue
+      }
     }
   } catch (err) {
     logger.error(`[updateNFTsOwnershipForProfilesHandler] Error in updateNFTsOwneshipForForProfilesHandler: ${err}`)
@@ -542,7 +548,7 @@ export const updateNFTsForNonProfilesHandler = async (job: Job): Promise<any> =>
             logger.log(`[updateNFTsForNonProfilesHandler]: Wallet Id: ${walletId} has at least one profile ${profile.id} - url: ${profile.url}`)
             await Promise.all([
               cache.zrem(`${CacheKeys.UPDATE_NFTS_NON_PROFILE}_${chainId}`, [walletId]),        // remove non profile update
-              cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id), // add in profile update
+              cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.url), // add in profile update
             ])
           }
         }
