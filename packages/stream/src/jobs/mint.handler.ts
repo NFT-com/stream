@@ -653,7 +653,7 @@ const syncProfileEvents = async (
                 )
               }
               const toWallet = await repositories.wallet.findByChainAddress(
-                `${chainId}`
+                `${chainId}`,
                 ethers.utils.getAddress(to),
               )
               if (!toWallet) {
