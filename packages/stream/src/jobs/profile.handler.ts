@@ -329,7 +329,7 @@ export const updateNFTsOwnershipForProfilesHandler = async (job: Job): Promise<a
       // only process if profile url exists
       if (profile) {
         const estimateNftsCount = await repositories.nft.count({
-          ownerWalletId: profile.ownerWalletId,
+          walletId: profile.ownerWalletId,
         })
   
         // process profile before exiting (in case 1 profile > max nfts to process)
