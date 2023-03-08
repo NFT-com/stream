@@ -67,11 +67,11 @@ export const nftExternalOrderBatchProcessor = async (job: Job): Promise<void> =>
   }
 }
 
-export const nftExternalOrders = async (job: Job): Promise<void> => {
+export const nftExternalOrders = async (job: Job, token: string): Promise<void> => {
   logger.debug('initiated external orders for nfts', job.data)
   try {
     if (!nftOrderSubqueue) {
-      await job.moveToFailed(new Error('nft-cron-queue is not defined!'), `${job.id}-token`)
+      await job.moveToFailed(new Error('nft-cron-queue is not defined!'), token)
     }
 
     const existingJobs: Bull.Job[] = await nftOrderSubqueue.getJobs(['active', 'completed', 'delayed', 'failed', 'paused', 'waiting'])
