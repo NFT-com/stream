@@ -332,13 +332,13 @@ export const updateNFTsOwnershipForProfilesHandler = async (job: Job): Promise<a
         },
       })
 
-      nftsToProcess += estimateNftsCount
-      logger.info(`2. [updateNFTsOwnershipForProfilesHandler] Updating NFTs for profile ${profile.url} => (estimateNftsCount = ${estimateNftsCount})`)
-
-      // add to cache
+      // process profile before exiting (in case 1 profile > max nfts to process)
       await cache.zadd(`${CacheKeys.UPDATE_WALLET_NFTS_PROFILE}_${chainId}`, 1, profileId) //O(log(N))
       processProfileUpdate(profileId, chainId)
         .catch(err => logger.error(err))
+
+      nftsToProcess += estimateNftsCount
+      logger.info(`2. [updateNFTsOwnershipForProfilesHandler] Updating NFTs for profile ${profile.url} => (estimateNftsCount = ${estimateNftsCount})`)
     }
   } catch (err) {
     logger.error(`[updateNFTsOwnershipForProfilesHandler] Error in updateNFTsOwneshipForForProfilesHandler: ${err}`)
