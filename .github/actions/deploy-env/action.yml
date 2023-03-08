@@ -58,7 +58,7 @@ runs:
         export DOCKER_BUILDKIT=1
         docker pull ${{ env.REPO }}:deps || true
         docker pull ${{ env.REPO }}:build || true
-        docker build . -f stream/stream.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target deps --cache-from ${{ env.REPO }}:deps -t ${{ env.REPO }}:deps
+        docker build . -f stream/stream.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target deps --no-cache=true -t ${{ env.REPO }}:deps
         docker build . -f stream/stream.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target build --cache-from ${{ env.REPO }}:deps --cache-from ${{ env.REPO }}:build -t ${{ env.REPO }}:build
         docker build . -f stream/stream.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target release --cache-from ${{ env.REPO }}:deps --cache-from ${{ env.REPO }}:build -t ${{ env.REPO }}:latest -t ${{ env.REPO }}:${{ github.sha }}
         docker push ${{ env.REPO }}:deps
