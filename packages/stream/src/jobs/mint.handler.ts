@@ -368,7 +368,7 @@ const syncMintedProfileEvents = async (
               where: {
                 tokenId: BigNumber.from(tokenId).toString(),
                 url: profileUrl,
-                chainId,
+                chainId: `${chainId}`,
               },
             })
             if (!profile) {
@@ -575,7 +575,7 @@ const syncResolverEvents = async (
           const profile = await repositories.profile.findOne({
             where: {
               url: profileUrl,
-              chainId,
+              chainId: `${chainId}`,
             },
           })
           if (profile) {
@@ -633,7 +633,7 @@ const syncProfileEvents = async (
             const profile = await repositories.profile.findOne({
               where: {
                 tokenId,
-                chainId,
+                chainId: `${chainId}`,
               },
             })
             if (profile) {
