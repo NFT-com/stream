@@ -204,6 +204,11 @@ const updateWalletNFTs = async (
           }
         } else {
           logger.log(`Owner wallet Id is null for profile id: ${profile.id} and url: ${profile.url}`)
+          await removeProfileIdFromRelevantKeys(
+            ProfileCacheEnum.WALLET_NFTS,
+            profile.url,
+            chainId,
+          )
         }
     
         logger.info(`[updateWalletNFTs-6] completed updating NFTs for profile ${profile.url} (${profile.id}), TOTAL: ${getTimeStamp(constantStart)}`)
@@ -297,6 +302,11 @@ const processProfileUpdate = async (profileUrl: string, chainId: string): Promis
         }
       } else {
         logger.log(`Owner wallet Id is null for profile id: ${profile.id} and url: ${profile.url}`)
+        await removeProfileIdFromRelevantKeys(
+          ProfileCacheEnum.PROFILE_OWNER,
+          profileUrl,
+          chainId,
+        )
       }
     }
   }
