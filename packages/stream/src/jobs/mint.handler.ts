@@ -130,7 +130,7 @@ export const getPastLogs = async (
     return { logs: [], lastProcessedBlock: toBlock }
   }
 
-  const max_Blocks = maxBlocks ?? MAX_BLOCKS
+  const max_Blocks = maxBlocks ??= MAX_BLOCKS
 
   try {
     // If there are too many blocks, we will split it up...
