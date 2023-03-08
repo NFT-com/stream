@@ -681,7 +681,7 @@ process.on('uncaughtException', async (err) => {
   await gracefulShutdown()
 })
 process.on('unhandledRejection', async (reason, p) => {
-  logger.error({ p, reason }, `Unhandled Rejection at: ${p}, reason: ${reason}`)
+  logger.error({ p, reason }, `Unhandled Rejection, reason: ${reason}`)
   const activeSpan = trace.getActiveSpan()
   activeSpan && activeSpan.setAttribute('sampling.priority', 1)
   await gracefulShutdown()
