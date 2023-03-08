@@ -615,7 +615,7 @@ const syncProfileEvents = async (
         logger.info(evt.args, `Found event ${evt.name} with chainId: ${chainId}`)
         if (evt.name === EventName.ExtendExpiry) {
           const [profileUrl,extendExpiry] = evt.args
-          const profile = await repositories.profile.findByURL(profileUrl, chainId)
+          const profile = await repositories.profile.findByURL(profileUrl, `${chainId}`)
           if (profile) {
             const timestamp = BigNumber.from(extendExpiry).toString()
             if (Number(timestamp) !== 0) {
@@ -653,7 +653,7 @@ const syncProfileEvents = async (
                 )
               }
               const toWallet = await repositories.wallet.findByChainAddress(
-                chainId,
+                `${chainId}`
                 ethers.utils.getAddress(to),
               )
               if (!toWallet) {
