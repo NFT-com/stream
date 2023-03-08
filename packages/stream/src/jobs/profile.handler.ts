@@ -331,7 +331,7 @@ export const updateNFTsOwnershipForProfilesHandler = async (job: Job): Promise<a
 
       const profile = await repositories.profile.findOne({
         where: {
-          id: profileUrl,
+          url: profileUrl,
           chainId,
         },
       })
@@ -350,7 +350,7 @@ export const updateNFTsOwnershipForProfilesHandler = async (job: Job): Promise<a
         nftsToProcess += estimateNftsCount
         logger.info(`2. [updateNFTsOwnershipForProfilesHandler] Updating NFTs for profile ${profile.url} => (estimateNftsCount = ${estimateNftsCount})`)
       } else {
-        logger.info(`[updateNFTsOwnershipForProfilesHandler] Profile not found for url ${profileUrl}`)
+        logger.info(`[updateNFTsOwnershipForProfilesHandler] Profile not found for url ${profileUrl}, chainId=${chainId}`)
         continue
       }
     }
