@@ -64,7 +64,7 @@ const splitGetLogs = async (
 
   // Split block range in half...
   const midBlock = (fromBlock + toBlock) >> 1
-  
+
   // eslint-disable-next-line no-use-before-define
   const first = await getPastLogs(
     provider,
@@ -240,13 +240,13 @@ export const getResolverEvents = async (
     )
     return {
       logs: logs,
-      latestBlockNumber: lastProcessedBlock,
+      latestBlockNumber: Number(lastProcessedBlock),
     }
   } catch (e) {
     logger.error(`Error in getResolverEvents: ${e}`)
     return {
       logs: [],
-      latestBlockNumber: latestBlock,
+      latestBlockNumber: Number(latestBlock),
     }
   }
 }
@@ -272,7 +272,7 @@ export const getMintedProfileEvents = async (
       Number(maxBlocks),
     )
     return {
-      logs: logs,
+      logs: logs.logs,
       latestBlockNumber: latestBlock.number,
     }
   } catch (e) {
