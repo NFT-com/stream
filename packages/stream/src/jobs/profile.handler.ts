@@ -111,16 +111,16 @@ const updateWalletNFTs = async (
         if (inProgressScore > PROFILE_PROGRESS_THRESHOLD) {
           if (failScore > inProgressScore) {
             logger.log({ profile }, `Profile stuck in progress longer than expected: profile ${profile.url} (${profile.id}), fail_score: ${failScore}`)
-            await cache.zrem(`${CacheKeys.PROFILE_WALLET_FAIL_SCORE}_${chainId}`, [profile.id])
+            await cache.zrem(`${CacheKeys.PROFILE_WALLET_FAIL_SCORE}_${chainId}`, [profile.url])
           } else {
-            await cache.zadd(`${CacheKeys.UPDATE_WALLET_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id)
-            await cache.zadd(`${CacheKeys.PROFILE_WALLET_FAIL_SCORE}_${chainId}`, 'INCR', 1, profile.id)
+            await cache.zadd(`${CacheKeys.UPDATE_WALLET_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.url)
+            await cache.zadd(`${CacheKeys.PROFILE_WALLET_FAIL_SCORE}_${chainId}`, 'INCR', 1, profile.url)
           }
-          await cache.zrem(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, [profile.id])
+          await cache.zrem(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, [profile.url])
           logger.log(`Threshold crossed ${failScore + 1} times for profile ${profile.url} (${profile.id}) - current progress score: ${inProgressScore}`)
         } else {
           const score: number = Number(failScore) || 1
-          await cache.zadd(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, 'INCR', score, profile.id)
+          await cache.zadd(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, 'INCR', score, profile.url)
           logger.log(`Progress score incremented for profile ${profile.url} (${profile.id}) - increment: ${score}`)
         }
 
@@ -148,7 +148,7 @@ const updateWalletNFTs = async (
             )
             logger.info(`[updateWalletNFTs-5] No wallet found for ID ${profile.ownerWalletId} (url = ${profile.url})`)
           } else {
-            await cache.zadd(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, 'INCR', 1, profile.id)
+            await cache.zadd(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, 'INCR', 1, profile.url)
             await nftService.updateWalletNFTs(profile.ownerUserId, wallet, chainId)
             logger.info(`[updateWalletNFTs-6] nftService.updateWalletNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
             start = new Date().getTime()
