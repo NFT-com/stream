@@ -17,7 +17,7 @@ const repositories = db.newRepositories()
 
 const PROFILE_NFTS_EXPIRE_DURATION = Number(process.env.PROFILE_NFTS_EXPIRE_DURATION)
 const PROFILE_PROGRESS_THRESHOLD = Number(process.env.PROFILE_PROGRESS_THRESHOLD || 10)
-const MAX_PROFILES_TO_PROCESS_PER_BATCH = 10
+const MAX_NFTS_TO_PROCESS = 3000
 
 export const nftUpdateBatchProcessor = async (job: Job): Promise<boolean> => {
   logger.info(`initiated nft update batch processor for profile ${job.data.profileId} - index : ${job.data.index}`)
@@ -312,17 +312,33 @@ export const updateNFTsOwnershipForProfilesHandler = async (job: Job): Promise<a
     // 2. update NFTs for profiles cached in UPDATE_NFTS_PROFILE cache
     const cachedProfiles = await cache.zrevrangebyscore(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, '+inf', '(0')
 
-    let processed = 0
+    let nftsToProcess = 0
     for (const profileId of cachedProfiles) {
-      if (processed >= MAX_PROFILES_TO_PROCESS_PER_BATCH) {
+      if (nftsToProcess > MAX_NFTS_TO_PROCESS) {
+        logger.info(`[updateNFTsOwnershipForProfilesHandler] Max NFTs to process reached: ${nftsToProcess} > ${MAX_NFTS_TO_PROCESS}`)
         break
       }
+
+      const estimateNftsCount = await repositories.nft.count({
+        where: {
+          profileId,
+        },
+      })
+
+      const profile = await repositories.profile.findOne({
+        where: {
+          id: profileId,
+          chainId,
+        },
+      })
+
+      nftsToProcess += estimateNftsCount
+      logger.info(`2. [updateNFTsOwnershipForProfilesHandler] Updating NFTs for profile ${profile.url} => (estimateNftsCount = ${estimateNftsCount})`)
+
       // add to cache
       await cache.zadd(`${CacheKeys.UPDATE_WALLET_NFTS_PROFILE}_${chainId}`, 1, profileId) //O(log(N))
       processProfileUpdate(profileId, chainId)
         .catch(err => logger.error(err))
-      
-      processed++
     }
   } catch (err) {
     logger.error(`[updateNFTsOwnershipForProfilesHandler] Error in updateNFTsOwneshipForForProfilesHandler: ${err}`)
