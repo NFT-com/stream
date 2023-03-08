@@ -283,7 +283,7 @@ const processProfileUpdate = async (profileUrl: string, chainId: string): Promis
             now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
             const ttl = now.getTime()
             await Promise.all([
-              cache.zadd(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, ttl, profile.id),
+              cache.zadd(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, ttl, profile.url),
               removeProfileIdFromRelevantKeys(
                 ProfileCacheEnum.PROFILE_OWNER,
                 profile.url,

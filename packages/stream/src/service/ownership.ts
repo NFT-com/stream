@@ -209,8 +209,8 @@ export const atomicOwnershipUpdate = async (
 
                 try {
                   await Promise.all([
-                    cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id]),
-                    cache.zrem(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, [profile.id]),
+                    cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.url]),
+                    cache.zrem(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, [profile.url]),
                   ])
                   //await nftService.executeUpdateNFTsForProfile(profile.id, chainId)
                   // logger.info(`executeUpdateNFTsForProfile in ownership for profileId: ${profile.id}, url: ${profile.url}`)
