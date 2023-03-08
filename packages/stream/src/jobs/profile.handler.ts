@@ -331,7 +331,7 @@ export const updateNFTsOwnershipForProfilesHandler = async (job: Job): Promise<a
 
       const profile = await repositories.profile.findOne({
         where: {
-          id: profileUrl,
+          url: profileUrl,
           chainId,
         },
       })
