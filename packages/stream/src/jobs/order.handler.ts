@@ -437,7 +437,7 @@ const fulfillOrCancelOpenSea = async (
     , {
       status,
     })
-    logger.log(`OS order with orderhash: ${orderHash} has been ${status}`)
+    logger.debug(`OS order with orderhash: ${orderHash} has been ${status}`)
   } else {
     // collect all
     openSeaInvalidCounterArray.push(orderHash)
@@ -505,7 +505,7 @@ const fulfillOrCancelX2Y2 = async (
     , {
       status,
     })
-    logger.log(`X2Y2 order with orderhash: ${orderHash} has been ${status}`)
+    logger.debug(`X2Y2 order with orderhash: ${orderHash} has been ${status}`)
   }
 }
 

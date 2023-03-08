@@ -212,7 +212,7 @@ const updateWalletNFTs = async (
 }
 
 const processProfileUpdate = async (profileId: string, chainId: string): Promise<void> => {
-  const start = new Date().getTime()
+  let start = new Date().getTime()
   const profile = await repositories.profile.findById(profileId)
   if (!profile) {
     await removeProfileIdFromRelevantKeys(
@@ -261,6 +261,9 @@ const processProfileUpdate = async (profileId: string, chainId: string): Promise
         logger.info(`4. [processProfileUpdate] No wallet found for ID ${profile.ownerWalletId} (url = ${profile.url})`)
       } else {
         try {
+          logger.info(`5. [processProfileUpdate] Updating NFTs for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+          start = new Date().getTime()
+
           // keep profile to cache, so we won't repeat profiles in progress
           await cache.zadd(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, 'INCR', 1, profile.id)
           nftService.initiateWeb3(chainId)
@@ -270,7 +273,7 @@ const processProfileUpdate = async (profileId: string, chainId: string): Promise
             wallet.address,
             chainId,
           )
-          logger.info(`5. [processProfileUpdate] checked NFT contract addresses for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+          logger.info(`6. [processProfileUpdate] checked NFT contract addresses for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
           const now: Date = new Date()
           now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
           const ttl = now.getTime()
@@ -314,7 +317,7 @@ export const updateNFTsOwnershipForProfilesHandler = async (job: Job): Promise<a
 
 export const updateNFTsForProfilesHandler = async (job: Job): Promise<any> => {
   const chainId: string =  job.data?.chainId || process.env.CHAIN_ID
-  logger.info('1: [updateNFTsForProfilesHandler]')
+  logger.info('1: [updateNFTsForProfilesHandler] starting updateWalletNFTs (import new nfts) sync!')
   try {
     // 1. remove expired profiles from the UPDATED_NFTS_PROFILE cache
     await removeExpiredTimestampedZsetMembers(`${CacheKeys.UPDATED_WALLET_NFTS_PROFILE}_${chainId}`)
@@ -509,9 +512,11 @@ export const updateNFTsForNonProfilesHandler = async (job: Job): Promise<any> =>
   
           if (profile) {
             logger.log(`[updateNFTsForNonProfilesHandler]: Wallet Id: ${walletId} has at least one profile ${profile.id} - url: ${profile.url}`)
+            await Promise.all([
+              cache.zrem(`${CacheKeys.UPDATE_NFTS_NON_PROFILE}_${chainId}`, [walletId]),        // remove non profile update
+              cache.zadd(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.id), // add in profile update
+            ])
           }
-          logger.log(`[updateNFTsForNonProfilesHandler]: Wallet Id: ${walletId} does not exist!, ${getTimeStamp(start)}}`)
-          start = new Date().getTime()
         }
       } else {
         logger.log(`[updateNFTsForNonProfilesHandler]: WalletId is incorrect: ${walletId}, ${getTimeStamp(start)}}`)

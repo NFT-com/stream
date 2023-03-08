@@ -5,7 +5,7 @@ import { _logger } from '@nftcom/shared'
 import { redisConfig } from '../config'
 import { cache, CacheKeys } from '../service/cache'
 import { collectionBannerImageSync, collectionIssuanceDateSync, collectionNameSync, collectionSyncHandler, nftRaritySyncHandler, nftSyncHandler, raritySync, spamCollectionSyncHandler } from './collection.handler'
-import { getEthereumEvents } from './mint.handler'
+// import { getEthereumEvents } from './mint.handler'
 import { syncTxsFromNFTPortHandler } from './nftport.handler'
 import { nftExternalOrdersOnDemand, orderReconciliationHandler } from './order.handler'
 import { profileGKOwnersHandler, saveProfileExpireAt, updateNFTsForNonProfilesHandler, updateNFTsForProfilesHandler, updateNFTsOwnershipForProfilesHandler } from './profile.handler'
@@ -497,7 +497,8 @@ const listenToJobs = async (): Promise<void> => {
       workers.push(new Worker(queue.name, orderReconciliationHandler, defaultWorkerOpts))
       break
     default:
-      workers.push(new Worker(queue.name, getEthereumEvents, defaultWorkerOpts))
+      logger.info(`No worker for queue ${queue.name} found`)
+      // workers.push(new Worker(queue.name, getEthereumEvents, defaultWorkerOpts))
     }
   }
 }
