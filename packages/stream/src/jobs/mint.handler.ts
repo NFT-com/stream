@@ -33,16 +33,17 @@ export const provider = (
   }
 }
 
-// /**
-//  * recursive method to split blocks for getting event logs
-//  * @param provider
-//  * @param fromBlock
-//  * @param toBlock
-//  * @param address
-//  * @param topics
-//  * @param maxBlocks
-//  * @param currentStackLv
-//  */
+/**
+ * recursive method to split blocks for getting event logs
+ * @param provider
+ * @param fromBlock
+ * @param toBlock
+ * @param address
+ * @param topics
+ * @param maxBlocks
+ * @param currentStackLv
+  * @param totalLogs
+ */
 const splitGetLogs = async (
   provider: ethers.providers.BaseProvider,
   fromBlock: number,
@@ -51,7 +52,7 @@ const splitGetLogs = async (
   topics: any[],
   maxBlocks: number,
   currentStackLv: number,
-  totalLogs: number, // New parameter to track total logs
+  totalLogs: number,
 ): Promise<{
   logs: ethers.providers.Log[]
   lastProcessedBlock: number
