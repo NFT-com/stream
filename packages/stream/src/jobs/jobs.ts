@@ -8,7 +8,7 @@ import { collectionBannerImageSync, collectionIssuanceDateSync, collectionNameSy
 import { getEthereumEvents } from './mint.handler'
 import { syncTxsFromNFTPortHandler } from './nftport.handler'
 import { nftExternalOrdersOnDemand, orderReconciliationHandler } from './order.handler'
-import { profileGKOwnersHandler, saveProfileExpireAt, updateNFTsForNonProfilesHandler, updateNFTsForProfilesHandler, updateNFTsOwnershipForProfilesHandler } from './profile.handler'
+import { profileGKOwnersHandler, pullNewNFTsHandler, saveProfileExpireAt, updateNFTsForNonProfilesHandler, updateNFTsOwnershipForProfilesHandler } from './profile.handler'
 import { searchListingIndexHandler } from './search.handler'
 import { nftExternalOrderBatchProcessor, nftExternalOrders } from './sync.handler'
 import { syncTrading } from './trading.handler'
@@ -473,7 +473,7 @@ const listenToJobs = async (): Promise<void> => {
       workers.push(new Worker(queue.name, updateNFTsOwnershipForProfilesHandler, defaultWorkerOpts))
       break
     case QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS:
-      workers.push(new Worker(queue.name, updateNFTsForProfilesHandler, {
+      workers.push(new Worker(queue.name, pullNewNFTsHandler, {
         ...defaultWorkerOpts,
         concurrency: 10,
       }))
