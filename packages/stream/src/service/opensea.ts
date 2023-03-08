@@ -174,7 +174,7 @@ export const client = new OpenSeaStreamClient({
 })
 
 export const connectClient = (): void => {
-  logger.log('---Connecting to client----')
+  logger.log('----Connecting to client-----')
   try {
     client.connect()
   } catch (err) {
