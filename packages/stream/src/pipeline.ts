@@ -146,6 +146,10 @@ const initializeStreamsForAllSlugs = (): void => {
 }
 
 export const initiateStreaming = async (): Promise<void> => {
-  logger.log('initiate streaming')
-  return initializeStreamsForAllSlugs()
+  try {
+    logger.log('initiate streaming')
+    return initializeStreamsForAllSlugs()
+  } catch (err) {
+    logger.error(err, 'error in initiateStreaming')
+  }
 }
