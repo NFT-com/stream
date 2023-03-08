@@ -580,7 +580,7 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
           }
         }
       } catch (err) {
-        logger.error(err, `Error occured while fetching contract NFT for ${collection.contract}`)
+        logger.debug(err, `Error occured while fetching contract NFT for ${collection.contract}`)
       }
     }
   } catch (err) {
