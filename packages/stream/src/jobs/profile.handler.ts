@@ -131,6 +131,7 @@ const updateWalletNFTs = async (
         logger.info(`[updateWalletNFTs-0_b] starting nftService.updateWalletNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
         start = new Date().getTime()
 
+        // profile.ownerWalletId can be null -- so this won't actually work
         const wallet = await repositories.wallet.findOne({
           where: {
             id: profile.ownerWalletId,
