@@ -212,7 +212,7 @@ export const atomicOwnershipUpdate = async (
                     cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.url]),
                     cache.zrem(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, [profile.url]),
                   ])
-                  //await nftService.executeUpdateNFTsForProfile(profile.id, chainId)
+                  // await nftService.executeUpdateNFTsForProfile(profile.id, chainId)
                   // logger.info(`executeUpdateNFTsForProfile in ownership for profileId: ${profile.id}, url: ${profile.url}`)
                 } catch (err) {
                   logger.error(err, `Error in clearing cache for new profileId:${profile.id}, url: ${profile.url}`)
