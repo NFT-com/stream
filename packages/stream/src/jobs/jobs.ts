@@ -502,7 +502,7 @@ const listenToJobs = async (): Promise<void> => {
     //   workers.push(new Worker(queue.name, orderReconciliationHandler, defaultWorkerOpts))
     //   break
     default:
-      logger.info(`No worker for default queue ${queue.name}`)
+      logger.info(`No worker for default queue ${queue.name}!`)
       // workers.push(new Worker(queue.name, getEthereumEvents, defaultWorkerOpts))
     }
   }
