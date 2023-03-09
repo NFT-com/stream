@@ -307,6 +307,7 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
           },
           {
             removeOnComplete: true,
+            removeOnFail: true,
             repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_nfts_streams',
           })
@@ -318,6 +319,7 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
           },
           {
             removeOnComplete: true,
+            removeOnFail: true,
             repeat: { every: 1 * 60000 },
             jobId: 'update_non_profiles_nfts_streams',
           })
@@ -329,6 +331,7 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
           },
           {
             removeOnComplete: true,
+            removeOnFail: true,
             repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_wallet_nfts_streams',
           })
