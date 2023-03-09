@@ -436,74 +436,73 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
   return new Promise(resolve => resolve(undefined))
 }
 
-const workers = []
 const defaultWorkerOpts = { connection, prefix: queuePrefix }
 const listenToJobs = async (): Promise<void> => {
   for (const queue of queues.values()) {
     switch (queue.name) {
     // case QUEUE_TYPES.SYNC_CONTRACTS:
-    //   workers.push(new Worker(queue.name, nftExternalOrders, defaultWorkerOpts))
+    //   new Worker(queue.name, nftExternalOrders, defaultWorkerOpts)
     //   break
     // case QUEUE_TYPES.SYNC_COLLECTION_IMAGES:
-    //   workers.push(new Worker(queue.name, collectionBannerImageSync, defaultWorkerOpts))
+    //   new Worker(queue.name, collectionBannerImageSync, defaultWorkerOpts)
     //   break
     // case QUEUE_TYPES.SYNC_TRADING:
-    //   workers.push(new Worker(queue.name, syncTrading, defaultWorkerOpts))
+    //   new Worker(queue.name, syncTrading, defaultWorkerOpts)
     //   break
     // case QUEUE_TYPES.SYNC_COLLECTION_NAME:
-    //   workers.push(new Worker(queue.name, collectionNameSync, defaultWorkerOpts))
+    //   new Worker(queue.name, collectionNameSync, defaultWorkerOpts)
     //   break
     // case QUEUE_TYPES.SYNC_TXS_NFTPORT:
-    //   workers.push(new Worker(queue.name, syncTxsFromNFTPortHandler, defaultWorkerOpts))
+    //   new Worker(queue.name, syncTxsFromNFTPortHandler, defaultWorkerOpts)
     //   break
     // case QUEUE_TYPES.SYNC_COLLECTIONS:
-    //   workers.push(new Worker(queue.name, collectionSyncHandler, defaultWorkerOpts))
+    //   new Worker(queue.name, collectionSyncHandler, defaultWorkerOpts)
     //   break
     // case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
-    //   workers.push(new Worker(queue.name, raritySync, defaultWorkerOpts))
+    //   new Worker(queue.name, raritySync, defaultWorkerOpts)
     //   break
     // case QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY:
-    //   workers.push(new Worker(queue.name, nftRaritySyncHandler, defaultWorkerOpts))
+    //   new Worker(queue.name, nftRaritySyncHandler, defaultWorkerOpts)
     //   break
     // case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
-    //   workers.push(new Worker(queue.name, spamCollectionSyncHandler, defaultWorkerOpts))
+    //   new Worker(queue.name, spamCollectionSyncHandler, defaultWorkerOpts)
     //   break
     // case QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND:
-    //   workers.push(new Worker(queue.name, nftExternalOrdersOnDemand, defaultWorkerOpts))
+    //   new Worker(queue.name, nftExternalOrdersOnDemand, defaultWorkerOpts)
     //   break
     case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
-      workers.push(new Worker(queue.name, updateNFTsOwnershipForProfilesHandler, defaultWorkerOpts))
+      new Worker(queue.name, updateNFTsOwnershipForProfilesHandler, defaultWorkerOpts)
       break
     case QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS:
-      workers.push(new Worker(queue.name, pullNewNFTsHandler, {
+      new Worker(queue.name, pullNewNFTsHandler, {
         ...defaultWorkerOpts,
         concurrency: 10,
-      }))
+      })
       break
     case QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS:
-      workers.push(new Worker(queue.name, updateNFTsForNonProfilesHandler, {
+      new Worker(queue.name, updateNFTsForNonProfilesHandler, {
         ...defaultWorkerOpts,
         concurrency: 10,
-      }))
+      })
       break
     // case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
-    //   workers.push(new Worker(queue.name, collectionIssuanceDateSync, defaultWorkerOpts))
+    //   new Worker(queue.name, collectionIssuanceDateSync, defaultWorkerOpts)
     //   break
     // case QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT:
-    //   workers.push(new Worker(queue.name, saveProfileExpireAt, defaultWorkerOpts))
+    //   new Worker(queue.name, saveProfileExpireAt, defaultWorkerOpts)
     //   break
     // case QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS:
-    //   workers.push(new Worker(queue.name, profileGKOwnersHandler, defaultWorkerOpts))
+    //   new Worker(queue.name, profileGKOwnersHandler, defaultWorkerOpts)
     //   break
     // case QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE:
-    //   workers.push(new Worker(queue.name, searchListingIndexHandler, defaultWorkerOpts))
+    //   new Worker(queue.name, searchListingIndexHandler, defaultWorkerOpts)
     //   break
     // case QUEUE_TYPES.RECONCILE_ORDERS:
-    //   workers.push(new Worker(queue.name, orderReconciliationHandler, defaultWorkerOpts))
+    //   new Worker(queue.name, orderReconciliationHandler, defaultWorkerOpts)
     //   break
     default:
       logger.info(`No worker for default queue ${queue.name}!`)
-      // workers.push(new Worker(queue.name, getEthereumEvents, defaultWorkerOpts))
+      // new Worker(queue.name, getEthereumEvents, defaultWorkerOpts)
     }
   }
 }
