@@ -106,9 +106,9 @@ const updateWalletNFTs = async (
       // check if updating NFTs for profile is in progress.
       const inProgress = await cache.zscore(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, profile.url)
       if (inProgress) {
-        const inProgressScore = Number(inProgress)
+        const inProgressScore = Number(inProgress) || 0
         const fails: string = await cache.zscore(`${CacheKeys.PROFILE_WALLET_FAIL_SCORE}_${chainId}`, profile.url)
-        const failScore = Number(fails)
+        const failScore = Number(fails) || 0
         if (inProgressScore > PROFILE_PROGRESS_THRESHOLD) {
           if (failScore > inProgressScore) {
             logger.log({ profile }, `Profile stuck in progress longer than expected: profile ${profile.url} (${profile.id}), fail_score: ${failScore}`)
@@ -346,25 +346,18 @@ export const pullNewNFTsHandler = async (job: Job): Promise<any> => {
 
       // only process if profile url exists
       if (profile) {
-        const inProgress = await cache.zscore(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, profile.url)
+        const estimateNftsCount = profile?.ownerWalletId ?
+          await repositories.nft.count({
+            walletId: profile.ownerWalletId,
+          }) :
+          0
+  
+        logger.info(`2. [pullNewNFTsHandler] Updating NFTs for profile ${profile.url} ==> (estimateNftsCount = ${estimateNftsCount})`)
 
-        if (!inProgress) {
-          const estimateNftsCount = profile?.ownerWalletId ?
-            await repositories.nft.count({
-              walletId: profile.ownerWalletId,
-            }) :
-            0
-    
-          logger.info(`2. [pullNewNFTsHandler] Updating NFTs for profile ${profile.url} ==> (estimateNftsCount = ${estimateNftsCount})`)
+        updateWalletNFTs(profileUrl, chainId)
+          .catch(err => logger.error(err))
 
-          updateWalletNFTs(profileUrl, chainId)
-            .catch(err => logger.error(err))
-
-          nftsToProcess += estimateNftsCount
-        } else {
-          await cache.zadd(`${CacheKeys.UPDATE_WALLET_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.url)
-          logger.info(`[pullNewNFTsHandler] skipping profile ${profile.url} because it is already in progress`)
-        }
+        nftsToProcess += estimateNftsCount
       }
     }
   } catch (err) {
