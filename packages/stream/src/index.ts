@@ -27,7 +27,7 @@ import {
 import { initiateStreaming } from './pipeline'
 import { cache, CacheKeys, removeExpiredTimestampedZsetMembers } from './service/cache'
 import { startProvider, stopProvider } from './service/on-chain'
-import { client } from './service/opensea'
+// import { client } from './service/opensea'
 
 const logger = _logger.Factory(_logger.Context.General, _logger.Context.Misc)
 const chainId: string = process.env.CHAIN_ID || '5'
@@ -638,7 +638,7 @@ const bootstrap = (): Promise<void> => {
     .then(db.connectPg)
     .then(startAndListen)
     .then(startServer)
-    .then(client.connect)
+    // .then(client.connect)
     .then(initiateStreaming)
     .then(() => startProvider(chainId))
     .then(fp.pause(500))
@@ -659,7 +659,7 @@ const gracefulShutdown = (): Promise<void> => {
   return stopServer()
     .then(killPort)
     .then(stopAndDisconnect)
-    .then(client.disconnect)
+    // .then(client.disconnect)
     .then(stopProvider)
     .then(fp.pause(500))
     .then(db.disconnect)
