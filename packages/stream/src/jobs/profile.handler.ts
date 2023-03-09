@@ -92,6 +92,7 @@ const updateWalletNFTs = async (
   chainId: string,
 ): Promise<void> => {
   try {
+    logger.info(`[updateWalletNFTs_0] Starting updateWalletNFTs for ${profileUrl} on chain ${chainId}`)
     const profile = await repositories.profile.findOne({ where: { url: profileUrl } })
     if (!profile) {
       await removeProfileIdFromRelevantKeys(
