@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Job, Queue, Worker } from 'bullmq'
 
 import { _logger } from '@nftcom/shared'
@@ -62,9 +63,9 @@ const collectionSubqueueName = 'collection-batch-processor'
 // const nftSyncSubqueuePrefix: string = 'nft-sync'
 // const nftSyncSubqueueName: string = 'nft-sync-batch-processor'
 
-export let nftOrderSubqueue: Queue = null
+export const nftOrderSubqueue: Queue = null
 // export let nftUpdateSubqueue: Bull.Queue = null
-export let collectionSyncSubqueue: Queue = null
+export const collectionSyncSubqueue: Queue = null
 export const nftSyncSubqueue: Queue = null
 
 const networkList = process.env.SUPPORTED_NETWORKS.split('|')
@@ -88,116 +89,116 @@ const createQueues = (): Promise<void> => {
       }))
     })
 
-    // add trading handler job to queue...
-    queues.set(QUEUE_TYPES.SYNC_TRADING, new Queue(
-      QUEUE_TYPES.SYNC_TRADING, {
-        prefix: queuePrefix,
-        connection,
-      }))
+    // // add trading handler job to queue...
+    // queues.set(QUEUE_TYPES.SYNC_TRADING, new Queue(
+    //   QUEUE_TYPES.SYNC_TRADING, {
+    //     prefix: queuePrefix,
+    //     connection,
+    //   }))
 
-    // add composite image generation job to queue...
-    queues.set(QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, new Queue(
-      QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, {
-        prefix: queuePrefix,
-        connection,
-      }))
+    // // add composite image generation job to queue...
+    // queues.set(QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, new Queue(
+    //   QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE, {
+    //     prefix: queuePrefix,
+    //     connection,
+    //   }))
 
-    // sync collection images...
-    queues.set(QUEUE_TYPES.SYNC_COLLECTION_IMAGES, new Queue(
-      QUEUE_TYPES.SYNC_COLLECTION_IMAGES, {
-        prefix: queuePrefix,
-        connection,
-      }))
+    // // sync collection images...
+    // queues.set(QUEUE_TYPES.SYNC_COLLECTION_IMAGES, new Queue(
+    //   QUEUE_TYPES.SYNC_COLLECTION_IMAGES, {
+    //     prefix: queuePrefix,
+    //     connection,
+    //   }))
 
-    // sync collection images...
-    queues.set(QUEUE_TYPES.SYNC_COLLECTION_NAME, new Queue(
-      QUEUE_TYPES.SYNC_COLLECTION_NAME, {
-        prefix: queuePrefix,
-        connection,
-      }))
+    // // sync collection images...
+    // queues.set(QUEUE_TYPES.SYNC_COLLECTION_NAME, new Queue(
+    //   QUEUE_TYPES.SYNC_COLLECTION_NAME, {
+    //     prefix: queuePrefix,
+    //     connection,
+    //   }))
 
-    queues.set(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, new Queue(
-      QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, {
-        prefix: queuePrefix,
-        connection,
-      }))
+    // queues.set(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, new Queue(
+    //   QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, {
+    //     prefix: queuePrefix,
+    //     connection,
+    //   }))
 
-    queues.set(QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS, new Queue(
-      QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS, {
-        prefix: queuePrefix,
-        connection,
-      }))
+    // queues.set(QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS, new Queue(
+    //   QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS, {
+    //     prefix: queuePrefix,
+    //     connection,
+    //   }))
 
-    // sync external orders
-    queues.set(QUEUE_TYPES.SYNC_CONTRACTS, new Queue(
-      QUEUE_TYPES.SYNC_CONTRACTS, {
-        prefix: queuePrefix,
-        connection,
-      }))
+    // // sync external orders
+    // queues.set(QUEUE_TYPES.SYNC_CONTRACTS, new Queue(
+    //   QUEUE_TYPES.SYNC_CONTRACTS, {
+    //     prefix: queuePrefix,
+    //     connection,
+    //   }))
 
-    // sync txs from nftport
-    queues.set(QUEUE_TYPES.SYNC_TXS_NFTPORT, new Queue(
-      QUEUE_TYPES.SYNC_TXS_NFTPORT, {
-        prefix: queuePrefix,
-        connection,
-      }))
+    // // sync txs from nftport
+    // queues.set(QUEUE_TYPES.SYNC_TXS_NFTPORT, new Queue(
+    //   QUEUE_TYPES.SYNC_TXS_NFTPORT, {
+    //     prefix: queuePrefix,
+    //     connection,
+    //   }))
 
-    // sync external collections
-    queues.set(QUEUE_TYPES.SYNC_COLLECTIONS, new Queue(
-      QUEUE_TYPES.SYNC_COLLECTIONS, {
-        prefix: queuePrefix,
-        connection,
-      }))
+    // // sync external collections
+    // queues.set(QUEUE_TYPES.SYNC_COLLECTIONS, new Queue(
+    //   QUEUE_TYPES.SYNC_COLLECTIONS, {
+    //     prefix: queuePrefix,
+    //     connection,
+    //   }))
 
-    // sync collection rarity
-    queues.set(QUEUE_TYPES.SYNC_COLLECTION_RARITY, new Queue(
-      QUEUE_TYPES.SYNC_COLLECTION_RARITY, {
-        prefix: queuePrefix,
-        connection,
-      }))
+    // // sync collection rarity
+    // queues.set(QUEUE_TYPES.SYNC_COLLECTION_RARITY, new Queue(
+    //   QUEUE_TYPES.SYNC_COLLECTION_RARITY, {
+    //     prefix: queuePrefix,
+    //     connection,
+    //   }))
 
-    // sync nft/null nft rarity
-    queues.set(QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY, new Queue(
-      QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY, {
-        prefix: queuePrefix,
-        connection,
-      }))
+    // // sync nft/null nft rarity
+    // queues.set(QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY, new Queue(
+    //   QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY, {
+    //     prefix: queuePrefix,
+    //     connection,
+    //   }))
 
-    // sync collection issuance date
-    queues.set(QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, new Queue(
-      QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, {
-        prefix: queuePrefix,
-        connection,
-      }))
+    // // sync collection issuance date
+    // queues.set(QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, new Queue(
+    //   QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, {
+    //     prefix: queuePrefix,
+    //     connection,
+    //   }))
 
-    // sync spam collections
-    queues.set(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, new Queue(
-      QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, {
-        prefix: queuePrefix,
-        connection,
-      }))
+    // // sync spam collections
+    // queues.set(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, new Queue(
+    //   QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, {
+    //     prefix: queuePrefix,
+    //     connection,
+    //   }))
 
-    //order subqueue
-    nftOrderSubqueue = new Queue(orderSubqueueName, {
-      connection,
-      prefix: orderSubqueuePrefix,
-    })
-    subqueueWorkers.push(new Worker(
-      nftOrderSubqueue.name,
-      nftExternalOrderBatchProcessor,
-      { connection, prefix: orderSubqueuePrefix },
-    ))
+    // //order subqueue
+    // nftOrderSubqueue = new Queue(orderSubqueueName, {
+    //   connection,
+    //   prefix: orderSubqueuePrefix,
+    // })
+    // subqueueWorkers.push(new Worker(
+    //   nftOrderSubqueue.name,
+    //   nftExternalOrderBatchProcessor,
+    //   { connection, prefix: orderSubqueuePrefix },
+    // ))
 
-    //collection subqueue
-    collectionSyncSubqueue = new Queue(collectionSubqueueName, {
-      connection,
-      prefix: collectionSubqueuePrefix,
-    })
-    subqueueWorkers.push(new Worker(
-      collectionSyncSubqueue.name,
-      nftSyncHandler,
-      { connection, prefix: collectionSubqueuePrefix },
-    ))
+    // //collection subqueue
+    // collectionSyncSubqueue = new Queue(collectionSubqueueName, {
+    //   connection,
+    //   prefix: collectionSubqueuePrefix,
+    // })
+    // subqueueWorkers.push(new Worker(
+    //   collectionSyncSubqueue.name,
+    //   nftSyncHandler,
+    //   { connection, prefix: collectionSubqueuePrefix },
+    // ))
 
     //nft subqueue
     //  nftSyncSubqueue = new Bull(nftSyncSubqueueName, {
@@ -230,25 +231,25 @@ const createQueues = (): Promise<void> => {
         connection,
       }))
 
-    // external orders on demand
-    queues.set(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, new Queue(
-      QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, {
-        prefix: queuePrefix,
-        connection,
-      }))
+    // // external orders on demand
+    // queues.set(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, new Queue(
+    //   QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, {
+    //     prefix: queuePrefix,
+    //     connection,
+    //   }))
 
-    queues.set(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, new Queue(
-      QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, {
-        prefix: queuePrefix,
-        connection,
-      }))
+    // queues.set(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, new Queue(
+    //   QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, {
+    //     prefix: queuePrefix,
+    //     connection,
+    //   }))
 
-    // reconcile exchange orders
-    queues.set(QUEUE_TYPES.RECONCILE_ORDERS, new Queue(
-      QUEUE_TYPES.RECONCILE_ORDERS, {
-        prefix: queuePrefix,
-        connection,
-      }))
+    // // reconcile exchange orders
+    // queues.set(QUEUE_TYPES.RECONCILE_ORDERS, new Queue(
+    //   QUEUE_TYPES.RECONCILE_ORDERS, {
+    //     prefix: queuePrefix,
+    //     connection,
+    //   }))
 
     resolve()
   })
@@ -328,96 +329,96 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_wallet_nfts_streams',
           })
-      case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
-        return queues.get(QUEUE_TYPES.SYNC_COLLECTION_RARITY)
-          .add(QUEUE_TYPES.SYNC_COLLECTION_RARITY, {
-            SYNC_COLLECTION_RARITY: QUEUE_TYPES.SYNC_COLLECTION_RARITY,
-            chainId: process.env.CHAIN_ID,
-          },
-          {
-            repeat: { every: 5 * 60000 },
-            jobId: 'sync_collection_rarity',
-          })
-      case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
-        return queues.get(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS)
-          .add(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, {
-            SYNC_SPAM_COLLECTIONS: QUEUE_TYPES.SYNC_SPAM_COLLECTIONS,
-            chainId: process.env.CHAIN_ID,
-          },
-          {
-            repeat: { every: 24 * 60 * 60000 },
-            jobId: 'sync_spam_collections',
-          })
-      case QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT:
-        return queues.get(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT)
-          .add(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, {
-            SAVE_PROFILE_EXPIRE_AT: QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT,
-            chainId: process.env.CHAIN_ID,
-          },
-          {
-            repeat: { every: 24 * 60 * 60000 },
-            jobId: 'save_profile_expire_at',
-          })
-      case QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS:
-        return queues.get(QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS).add(
-          QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS,
-          { chainId: process.env.CHAIN_ID }, {
-            repeat: { every: 10 * 60000 },
-            jobId: 'sync_profile_gk_owners',
-          })
-      case QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND:
-        return queues.get(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND)
-          .add(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, {
-            FETCH_EXTERNAL_ORDERS_ON_DEMAND: QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND,
-            chainId: process.env.CHAIN_ID,
-          }, {
-            attempts: 5,
-            backoff: {
-              type: 'exponential',
-              delay: 2000,
-            },
-            repeat: { every: 2 * 60000 },
-            jobId: 'fetch_external_orders_on_demand',
-          })
-      case QUEUE_TYPES.SYNC_TRADING:
-        return queues.get(QUEUE_TYPES.SYNC_TRADING).add(QUEUE_TYPES.SYNC_TRADING,
-          { chainId: process.env.CHAIN_ID }, {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every 5 minutes
-            repeat: { every: 5 * 60000 },
-            jobId: 'sync_trading',
-          })
-      case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
-        return queues.get(QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE)
-          .add(QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, {
-            FETCH_COLLECTION_ISSUANCE_DATE: QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE,
-            chainId: process.env.CHAIN_ID,
-          }, {
-            attempts: 5,
-            backoff: {
-              type: 'exponential',
-              delay: 2000,
-            },
-            repeat: { every: 12 * 60 * 60000 },
-            jobId: 'fetch_collection_issuance_date',
-          })
-      case QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE:
-        return queues.get(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE)
-          .add(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, {
-            removeOnComplete: true,
-            removeOnFail: true,
-            repeat: { every: 10 * 60000 },
-            jobId: 'search_engine_listings_update',
-          })
-      case QUEUE_TYPES.RECONCILE_ORDERS:
-        return queues.get(QUEUE_TYPES.RECONCILE_ORDERS)
-          .add(QUEUE_TYPES.RECONCILE_ORDERS, {
-            chainId: process.env.CHAIN_ID,
-          }, {
-            repeat: { every: ORDER_RECONCILIATION_PERIOD * 60000 },
-            jobId: 'reconcile_orders',
-          })
+      // case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
+      //   return queues.get(QUEUE_TYPES.SYNC_COLLECTION_RARITY)
+      //     .add(QUEUE_TYPES.SYNC_COLLECTION_RARITY, {
+      //       SYNC_COLLECTION_RARITY: QUEUE_TYPES.SYNC_COLLECTION_RARITY,
+      //       chainId: process.env.CHAIN_ID,
+      //     },
+      //     {
+      //       repeat: { every: 5 * 60000 },
+      //       jobId: 'sync_collection_rarity',
+      //     })
+      // case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
+      //   return queues.get(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS)
+      //     .add(QUEUE_TYPES.SYNC_SPAM_COLLECTIONS, {
+      //       SYNC_SPAM_COLLECTIONS: QUEUE_TYPES.SYNC_SPAM_COLLECTIONS,
+      //       chainId: process.env.CHAIN_ID,
+      //     },
+      //     {
+      //       repeat: { every: 24 * 60 * 60000 },
+      //       jobId: 'sync_spam_collections',
+      //     })
+      // case QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT:
+      //   return queues.get(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT)
+      //     .add(QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT, {
+      //       SAVE_PROFILE_EXPIRE_AT: QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT,
+      //       chainId: process.env.CHAIN_ID,
+      //     },
+      //     {
+      //       repeat: { every: 24 * 60 * 60000 },
+      //       jobId: 'save_profile_expire_at',
+      //     })
+      // case QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS:
+      //   return queues.get(QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS).add(
+      //     QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS,
+      //     { chainId: process.env.CHAIN_ID }, {
+      //       repeat: { every: 10 * 60000 },
+      //       jobId: 'sync_profile_gk_owners',
+      //     })
+      // case QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND:
+      //   return queues.get(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND)
+      //     .add(QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND, {
+      //       FETCH_EXTERNAL_ORDERS_ON_DEMAND: QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND,
+      //       chainId: process.env.CHAIN_ID,
+      //     }, {
+      //       attempts: 5,
+      //       backoff: {
+      //         type: 'exponential',
+      //         delay: 2000,
+      //       },
+      //       repeat: { every: 2 * 60000 },
+      //       jobId: 'fetch_external_orders_on_demand',
+      //     })
+      // case QUEUE_TYPES.SYNC_TRADING:
+      //   return queues.get(QUEUE_TYPES.SYNC_TRADING).add(QUEUE_TYPES.SYNC_TRADING,
+      //     { chainId: process.env.CHAIN_ID }, {
+      //       removeOnComplete: true,
+      //       removeOnFail: true,
+      //       // repeat every 5 minutes
+      //       repeat: { every: 5 * 60000 },
+      //       jobId: 'sync_trading',
+      //     })
+      // case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
+      //   return queues.get(QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE)
+      //     .add(QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE, {
+      //       FETCH_COLLECTION_ISSUANCE_DATE: QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE,
+      //       chainId: process.env.CHAIN_ID,
+      //     }, {
+      //       attempts: 5,
+      //       backoff: {
+      //         type: 'exponential',
+      //         delay: 2000,
+      //       },
+      //       repeat: { every: 12 * 60 * 60000 },
+      //       jobId: 'fetch_collection_issuance_date',
+      //     })
+      // case QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE:
+      //   return queues.get(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE)
+      //     .add(QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE, {
+      //       removeOnComplete: true,
+      //       removeOnFail: true,
+      //       repeat: { every: 10 * 60000 },
+      //       jobId: 'search_engine_listings_update',
+      //     })
+      // case QUEUE_TYPES.RECONCILE_ORDERS:
+      //   return queues.get(QUEUE_TYPES.RECONCILE_ORDERS)
+      //     .add(QUEUE_TYPES.RECONCILE_ORDERS, {
+      //       chainId: process.env.CHAIN_ID,
+      //     }, {
+      //       repeat: { every: ORDER_RECONCILIATION_PERIOD * 60000 },
+      //       jobId: 'reconcile_orders',
+      //     })
       default:
         logger.info('No job for queue [publishJobs]')
         // return queues.get(chainId).add('default',
@@ -440,36 +441,36 @@ const defaultWorkerOpts = { connection, prefix: queuePrefix }
 const listenToJobs = async (): Promise<void> => {
   for (const queue of queues.values()) {
     switch (queue.name) {
-    case QUEUE_TYPES.SYNC_CONTRACTS:
-      workers.push(new Worker(queue.name, nftExternalOrders, defaultWorkerOpts))
-      break
-    case QUEUE_TYPES.SYNC_COLLECTION_IMAGES:
-      workers.push(new Worker(queue.name, collectionBannerImageSync, defaultWorkerOpts))
-      break
-    case QUEUE_TYPES.SYNC_TRADING:
-      workers.push(new Worker(queue.name, syncTrading, defaultWorkerOpts))
-      break
-    case QUEUE_TYPES.SYNC_COLLECTION_NAME:
-      workers.push(new Worker(queue.name, collectionNameSync, defaultWorkerOpts))
-      break
-    case QUEUE_TYPES.SYNC_TXS_NFTPORT:
-      workers.push(new Worker(queue.name, syncTxsFromNFTPortHandler, defaultWorkerOpts))
-      break
-    case QUEUE_TYPES.SYNC_COLLECTIONS:
-      workers.push(new Worker(queue.name, collectionSyncHandler, defaultWorkerOpts))
-      break
-    case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
-      workers.push(new Worker(queue.name, raritySync, defaultWorkerOpts))
-      break
-    case QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY:
-      workers.push(new Worker(queue.name, nftRaritySyncHandler, defaultWorkerOpts))
-      break
-    case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
-      workers.push(new Worker(queue.name, spamCollectionSyncHandler, defaultWorkerOpts))
-      break
-    case QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND:
-      workers.push(new Worker(queue.name, nftExternalOrdersOnDemand, defaultWorkerOpts))
-      break
+    // case QUEUE_TYPES.SYNC_CONTRACTS:
+    //   workers.push(new Worker(queue.name, nftExternalOrders, defaultWorkerOpts))
+    //   break
+    // case QUEUE_TYPES.SYNC_COLLECTION_IMAGES:
+    //   workers.push(new Worker(queue.name, collectionBannerImageSync, defaultWorkerOpts))
+    //   break
+    // case QUEUE_TYPES.SYNC_TRADING:
+    //   workers.push(new Worker(queue.name, syncTrading, defaultWorkerOpts))
+    //   break
+    // case QUEUE_TYPES.SYNC_COLLECTION_NAME:
+    //   workers.push(new Worker(queue.name, collectionNameSync, defaultWorkerOpts))
+    //   break
+    // case QUEUE_TYPES.SYNC_TXS_NFTPORT:
+    //   workers.push(new Worker(queue.name, syncTxsFromNFTPortHandler, defaultWorkerOpts))
+    //   break
+    // case QUEUE_TYPES.SYNC_COLLECTIONS:
+    //   workers.push(new Worker(queue.name, collectionSyncHandler, defaultWorkerOpts))
+    //   break
+    // case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
+    //   workers.push(new Worker(queue.name, raritySync, defaultWorkerOpts))
+    //   break
+    // case QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY:
+    //   workers.push(new Worker(queue.name, nftRaritySyncHandler, defaultWorkerOpts))
+    //   break
+    // case QUEUE_TYPES.SYNC_SPAM_COLLECTIONS:
+    //   workers.push(new Worker(queue.name, spamCollectionSyncHandler, defaultWorkerOpts))
+    //   break
+    // case QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND:
+    //   workers.push(new Worker(queue.name, nftExternalOrdersOnDemand, defaultWorkerOpts))
+    //   break
     case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
       workers.push(new Worker(queue.name, updateNFTsOwnershipForProfilesHandler, defaultWorkerOpts))
       break
@@ -485,21 +486,21 @@ const listenToJobs = async (): Promise<void> => {
         concurrency: 10,
       }))
       break
-    case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
-      workers.push(new Worker(queue.name, collectionIssuanceDateSync, defaultWorkerOpts))
-      break
-    case QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT:
-      workers.push(new Worker(queue.name, saveProfileExpireAt, defaultWorkerOpts))
-      break
-    case QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS:
-      workers.push(new Worker(queue.name, profileGKOwnersHandler, defaultWorkerOpts))
-      break
-    case QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE:
-      workers.push(new Worker(queue.name, searchListingIndexHandler, defaultWorkerOpts))
-      break
-    case QUEUE_TYPES.RECONCILE_ORDERS:
-      workers.push(new Worker(queue.name, orderReconciliationHandler, defaultWorkerOpts))
-      break
+    // case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
+    //   workers.push(new Worker(queue.name, collectionIssuanceDateSync, defaultWorkerOpts))
+    //   break
+    // case QUEUE_TYPES.SAVE_PROFILE_EXPIRE_AT:
+    //   workers.push(new Worker(queue.name, saveProfileExpireAt, defaultWorkerOpts))
+    //   break
+    // case QUEUE_TYPES.SYNC_PROFILE_GK_OWNERS:
+    //   workers.push(new Worker(queue.name, profileGKOwnersHandler, defaultWorkerOpts))
+    //   break
+    // case QUEUE_TYPES.SEARCH_ENGINE_LISTINGS_UPDATE:
+    //   workers.push(new Worker(queue.name, searchListingIndexHandler, defaultWorkerOpts))
+    //   break
+    // case QUEUE_TYPES.RECONCILE_ORDERS:
+    //   workers.push(new Worker(queue.name, orderReconciliationHandler, defaultWorkerOpts))
+    //   break
     default:
       logger.info(`No worker for default queue ${queue.name}`)
       // workers.push(new Worker(queue.name, getEthereumEvents, defaultWorkerOpts))
