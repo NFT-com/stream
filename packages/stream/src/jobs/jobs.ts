@@ -474,16 +474,10 @@ const listenToJobs = async (): Promise<void> => {
       new Worker(queue.name, updateNFTsOwnershipForProfilesHandler, defaultWorkerOpts)
       break
     case QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS:
-      new Worker(queue.name, pullNewNFTsHandler, {
-        ...defaultWorkerOpts,
-        concurrency: 10,
-      })
+      new Worker(queue.name, pullNewNFTsHandler, defaultWorkerOpts)
       break
     case QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS:
-      new Worker(queue.name, updateNFTsForNonProfilesHandler, {
-        ...defaultWorkerOpts,
-        concurrency: 10,
-      })
+      new Worker(queue.name, updateNFTsForNonProfilesHandler, defaultWorkerOpts)
       break
     // case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
     //   new Worker(queue.name, collectionIssuanceDateSync, defaultWorkerOpts)
