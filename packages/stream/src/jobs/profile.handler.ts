@@ -362,6 +362,7 @@ export const pullNewNFTsHandler = async (job: Job): Promise<any> => {
 
           nftsToProcess += estimateNftsCount
         } else {
+          await cache.zadd(`${CacheKeys.UPDATE_WALLET_NFTS_PROFILE}_${chainId}`, 'INCR', 1, profile.url)
           logger.info(`[pullNewNFTsHandler] skipping profile ${profile.url} because it is already in progress`)
         }
       }
