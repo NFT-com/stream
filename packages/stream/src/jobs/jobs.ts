@@ -306,6 +306,7 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             chainId: process.env.CHAIN_ID,
           },
           {
+            removeOnComplete: true,
             repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_nfts_streams',
           })
@@ -316,6 +317,7 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             chainId: process.env.CHAIN_ID,
           },
           {
+            removeOnComplete: true,
             repeat: { every: 1 * 60000 },
             jobId: 'update_non_profiles_nfts_streams',
           })
@@ -326,6 +328,7 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             chainId: process.env.CHAIN_ID,
           },
           {
+            removeOnComplete: true,
             repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_wallet_nfts_streams',
           })
