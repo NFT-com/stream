@@ -306,6 +306,8 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             chainId: process.env.CHAIN_ID,
           },
           {
+            removeOnComplete: true,
+            removeOnFail: true,
             repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_nfts_streams',
           })
@@ -316,6 +318,8 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             chainId: process.env.CHAIN_ID,
           },
           {
+            removeOnComplete: true,
+            removeOnFail: true,
             repeat: { every: 1 * 60000 },
             jobId: 'update_non_profiles_nfts_streams',
           })
@@ -326,6 +330,8 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             chainId: process.env.CHAIN_ID,
           },
           {
+            removeOnComplete: true,
+            removeOnFail: true,
             repeat: { every: 1 * 60000 },
             jobId: 'update_profiles_wallet_nfts_streams',
           })
@@ -474,16 +480,10 @@ const listenToJobs = async (): Promise<void> => {
       new Worker(queue.name, updateNFTsOwnershipForProfilesHandler, defaultWorkerOpts)
       break
     case QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS:
-      new Worker(queue.name, pullNewNFTsHandler, {
-        ...defaultWorkerOpts,
-        concurrency: 10,
-      })
+      new Worker(queue.name, pullNewNFTsHandler, defaultWorkerOpts)
       break
     case QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS:
-      new Worker(queue.name, updateNFTsForNonProfilesHandler, {
-        ...defaultWorkerOpts,
-        concurrency: 10,
-      })
+      new Worker(queue.name, updateNFTsForNonProfilesHandler, defaultWorkerOpts)
       break
     // case QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE:
     //   new Worker(queue.name, collectionIssuanceDateSync, defaultWorkerOpts)
