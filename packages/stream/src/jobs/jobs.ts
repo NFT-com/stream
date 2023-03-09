@@ -5,7 +5,7 @@ import { _logger } from '@nftcom/shared'
 import { redisConfig } from '../config'
 import { cache, CacheKeys } from '../service/cache'
 import { collectionBannerImageSync, collectionIssuanceDateSync, collectionNameSync, collectionSyncHandler, nftRaritySyncHandler, nftSyncHandler, raritySync, spamCollectionSyncHandler } from './collection.handler'
-import { getEthereumEvents } from './mint.handler'
+// import { getEthereumEvents } from './mint.handler'
 import { syncTxsFromNFTPortHandler } from './nftport.handler'
 import { nftExternalOrdersOnDemand, orderReconciliationHandler } from './order.handler'
 import { profileGKOwnersHandler, pullNewNFTsHandler, saveProfileExpireAt, updateNFTsForNonProfilesHandler, updateNFTsOwnershipForProfilesHandler } from './profile.handler'
@@ -419,14 +419,15 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             jobId: 'reconcile_orders',
           })
       default:
-        return queues.get(chainId).add('default',
-          { chainId: chainId || process.env.CHAIN_ID }, {
-            removeOnComplete: true,
-            removeOnFail: true,
-            // repeat every 3 minutes
-            repeat: { every: 3 * 60000 },
-            jobId: `chainid_${chainId}_job`,
-          })
+        logger.info('No job for queue [publishJobs]')
+        // return queues.get(chainId).add('default',
+        //   { chainId: chainId || process.env.CHAIN_ID }, {
+        //     removeOnComplete: true,
+        //     removeOnFail: true,
+        //     // repeat every 3 minutes
+        //     repeat: { every: 3 * 60000 },
+        //     jobId: `chainid_${chainId}_job`,
+        //   })
       }
     })).then(() => undefined)
   }
@@ -500,7 +501,8 @@ const listenToJobs = async (): Promise<void> => {
       workers.push(new Worker(queue.name, orderReconciliationHandler, defaultWorkerOpts))
       break
     default:
-      workers.push(new Worker(queue.name, getEthereumEvents, defaultWorkerOpts))
+      logger.info(`No worker for default queue ${queue.name}`)
+      // workers.push(new Worker(queue.name, getEthereumEvents, defaultWorkerOpts))
     }
   }
 }
