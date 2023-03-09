@@ -102,7 +102,7 @@ const updateWalletNFTs = async (
       logger.info(`[updateWalletNFTs_1] No profile found for ${profileUrl}, removoing from wallet nfts`)
     } else {
       logger.info(`[updateWalletNFTs_2] Profile found for ${profileUrl} (${profile.id}). Starting sync now`)
-      
+
       // check if updating NFTs for profile is in progress.
       const inProgress = await cache.zscore(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, profile.url)
       if (inProgress) {
@@ -352,7 +352,7 @@ export const pullNewNFTsHandler = async (job: Job): Promise<any> => {
           }) :
           0
   
-        logger.info(`2. [pullNewNFTsHandler] Updating NFTs for profile ${profile.url} => (estimateNftsCount = ${estimateNftsCount})`)
+        logger.info(`2. [pullNewNFTsHandler] Updating NFTs for profile ${profile.url} ==> (estimateNftsCount = ${estimateNftsCount})`)
 
         updateWalletNFTs(profileUrl, chainId)
           .catch(err => logger.error(err))
