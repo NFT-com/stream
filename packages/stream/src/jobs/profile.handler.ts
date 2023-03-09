@@ -338,27 +338,33 @@ export const pullNewNFTsHandler = async (job: Job): Promise<any> => {
         break
       }
 
-      const profile = await repositories.profile.findOne({
-        where: {
-          url: profileUrl,
-          chainId,
-        },
-      })
+      const inProgress = await cache.zscore(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, profileUrl)
 
-      // only process if profile url exists
-      if (profile) {
-        const estimateNftsCount = profile?.ownerWalletId ?
-          await repositories.nft.count({
-            walletId: profile.ownerWalletId,
-          }) :
-          0
-  
-        logger.info(`2. [pullNewNFTsHandler] Updating NFTs for profile ${profile.url} ==> (estimateNftsCount = ${estimateNftsCount})`)
+      if (!inProgress) {
+        const profile = await repositories.profile.findOne({
+          where: {
+            url: profileUrl,
+            chainId,
+          },
+        })
 
-        updateWalletNFTs(profileUrl, chainId)
-          .catch(err => logger.error(err))
+        // only process if profile url exists
+        if (profile) {
+          const estimateNftsCount = profile?.ownerWalletId ?
+            await repositories.nft.count({
+              walletId: profile.ownerWalletId,
+            }) :
+            0
 
-        nftsToProcess += estimateNftsCount
+          logger.info(`2. [pullNewNFTsHandler] Updating NFTs for profile ${profile.url} ==> (estimateNftsCount = ${estimateNftsCount})`)
+
+          updateWalletNFTs(profileUrl, chainId)
+            .catch(err => logger.error(err))
+
+          nftsToProcess += estimateNftsCount
+        }
+      } else {
+        logger.info(`3. [pullNewNFTsHandler] Profile ${profileUrl} is already being processed - skipping!`)
       }
     }
   } catch (err) {
