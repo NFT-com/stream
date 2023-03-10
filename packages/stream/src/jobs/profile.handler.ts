@@ -371,7 +371,7 @@ export const pullNewNFTsHandler = async (job: Job): Promise<any> => {
           logger.info(`2d. [pullNewNFTsHandler] Profile not found for url ${profileUrl}, chainId=${chainId}`)
         }
       } else {
-        logger.info(`4. [pullNewNFTsHandler] Profile ${profileUrl} is already being processed - skipping!`)
+        logger.info(`4. [pullNewNFTsHandler] Profile ${profileUrl} is already being processed - skipping`)
       }
     }
   } catch (err) {
