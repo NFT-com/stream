@@ -179,26 +179,26 @@ const createQueues = (): Promise<void> => {
       }))
 
     // //order subqueue
-    // nftOrderSubqueue = new Queue(orderSubqueueName, {
-    //   connection,
-    //   prefix: orderSubqueuePrefix,
-    // })
-    // subqueueWorkers.push(new Worker(
-    //   nftOrderSubqueue.name,
-    //   nftExternalOrderBatchProcessor,
-    //   { connection, prefix: orderSubqueuePrefix },
-    // ))
+    nftOrderSubqueue = new Queue(orderSubqueueName, {
+      connection,
+      prefix: orderSubqueuePrefix,
+    })
+    subqueueWorkers.push(new Worker(
+      nftOrderSubqueue.name,
+      nftExternalOrderBatchProcessor,
+      { connection, prefix: orderSubqueuePrefix },
+    ))
 
-    // //collection subqueue
-    // collectionSyncSubqueue = new Queue(collectionSubqueueName, {
-    //   connection,
-    //   prefix: collectionSubqueuePrefix,
-    // })
-    // subqueueWorkers.push(new Worker(
-    //   collectionSyncSubqueue.name,
-    //   nftSyncHandler,
-    //   { connection, prefix: collectionSubqueuePrefix },
-    // ))
+    //collection subqueue
+    collectionSyncSubqueue = new Queue(collectionSubqueueName, {
+      connection,
+      prefix: collectionSubqueuePrefix,
+    })
+    subqueueWorkers.push(new Worker(
+      collectionSyncSubqueue.name,
+      nftSyncHandler,
+      { connection, prefix: collectionSubqueuePrefix },
+    ))
 
     //nft subqueue
     //  nftSyncSubqueue = new Bull(nftSyncSubqueueName, {
