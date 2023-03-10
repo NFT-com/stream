@@ -62,9 +62,9 @@ const collectionSubqueueName = 'collection-batch-processor'
 // const nftSyncSubqueuePrefix: string = 'nft-sync'
 // const nftSyncSubqueueName: string = 'nft-sync-batch-processor'
 
-export const nftOrderSubqueue: Queue = null
+export let nftOrderSubqueue: Queue = null
 // export let nftUpdateSubqueue: Bull.Queue = null
-export const collectionSyncSubqueue: Queue = null
+export let collectionSyncSubqueue: Queue = null
 export const nftSyncSubqueue: Queue = null
 
 const networkList = process.env.SUPPORTED_NETWORKS.split('|')
@@ -177,7 +177,7 @@ const createQueues = (): Promise<void> => {
         connection,
       }))
 
-    // //order subqueue
+    //order subqueue
     nftOrderSubqueue = new Queue(orderSubqueueName, {
       connection,
       prefix: orderSubqueuePrefix,
