@@ -358,13 +358,17 @@ export const pullNewNFTsHandler = async (job: Job): Promise<any> => {
             }) :
             0
 
-          logger.info(`2b. [pullNewNFTsHandler] Updating NFTs for profile ${profile.url} ==> (estimateNftsCount = ${estimateNftsCount})`)
+          if (estimateNftsCount < 1000) {
+            logger.info(`2b. [pullNewNFTsHandler] Updating NFTs for profile ${profile.url} ==> (estimateNftsCount = ${estimateNftsCount})`)
 
-          updateWalletNFTs(profileUrl, chainId)
+            updateWalletNFTs(profileUrl, chainId)
 
-          nftsToProcess += estimateNftsCount
+            nftsToProcess += estimateNftsCount
+          } else {
+            logger.info(`2c. [pullNewNFTsHandler] Too many NFTs for profile ${profile.url} ==> (estimateNftsCount = ${estimateNftsCount} > 1000)`)
+          }
         } else {
-          logger.info(`2c. [pullNewNFTsHandler] Profile not found for url ${profileUrl}, chainId=${chainId}`)
+          logger.info(`2d. [pullNewNFTsHandler] Profile not found for url ${profileUrl}, chainId=${chainId}`)
         }
       } else {
         logger.info(`4. [pullNewNFTsHandler] Profile ${profileUrl} is already being processed - skipping!`)
