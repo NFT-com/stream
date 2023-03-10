@@ -17,7 +17,8 @@ const repositories = db.newRepositories()
 
 const PROFILE_NFTS_EXPIRE_DURATION = Number(process.env.PROFILE_NFTS_EXPIRE_DURATION)
 const PROFILE_PROGRESS_THRESHOLD = Number(process.env.PROFILE_PROGRESS_THRESHOLD || 10)
-const MAX_NFTS_TO_PROCESS = 500
+const MAX_NFTS_TO_PROCESS = 600
+const MAX_NFTS_PER_PROFILE = 1250
 
 export const nftUpdateBatchProcessor = async (job: Job): Promise<boolean> => {
   logger.info(`initiated nft update batch processor for profile ${job.data.profileId} - index : ${job.data.index}`)
@@ -343,7 +344,7 @@ export const pullNewNFTsHandler = async (job: Job): Promise<any> => {
             }) :
             0
 
-          if (estimateNftsCount < 1000) {
+          if (estimateNftsCount < MAX_NFTS_PER_PROFILE) {
             logger.info(`2b. [pullNewNFTsHandler] Updating NFTs for profile ${profile.url} ==> (estimateNftsCount = ${estimateNftsCount})`)
 
             updateWalletNFTs(profileUrl, chainId)
