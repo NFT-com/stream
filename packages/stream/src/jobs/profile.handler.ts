@@ -306,8 +306,8 @@ export const updateNFTsOwnershipForProfilesHandler = async (job: Job): Promise<a
   }
 }
 
-export const pullNewNFTsHandler = async (job: Job): Promise<any> => {
-  const chainId: string =  job.data?.chainId || process.env.CHAIN_ID
+export const pullNewNFTsHandler = async (): Promise<any> => {
+  const chainId = process.env.CHAIN_ID
   logger.info('1: [pullNewNFTsHandler] starting updateWalletNFTs (import new nfts) sync!')
   try {
     // 1. remove expired profiles from the UPDATED_NFTS_PROFILE cache

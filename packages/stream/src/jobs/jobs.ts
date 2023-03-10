@@ -217,13 +217,13 @@ const createQueues = (): Promise<void> => {
         connection,
       }))
 
-    queues.set(
-      QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS,
-      new Queue(QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS, {
-        prefix: queuePrefix,
-        connection,
-      }),
-    )
+    // queues.set(
+    //   QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS,
+    //   new Queue(QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS, {
+    //     prefix: queuePrefix,
+    //     connection,
+    //   }),
+    // )
 
     queues.set(QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS, new Queue(
       QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS, {
@@ -323,18 +323,18 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
             repeat: { every: 1 * 60000 },
             jobId: 'update_non_profiles_nfts_streams',
           })
-      case QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS:
-        return queues.get(QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS)
-          .add(QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS, {
-            UPDATE_PROFILES_WALLET_NFTS_STREAMS: QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS,
-            chainId: process.env.CHAIN_ID,
-          },
-          {
-            removeOnComplete: true,
-            removeOnFail: true,
-            repeat: { every: 1 * 60000 },
-            jobId: 'update_profiles_wallet_nfts_streams',
-          })
+      // case QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS:
+      //   return queues.get(QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS)
+      //     .add(QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS, {
+      //       UPDATE_PROFILES_WALLET_NFTS_STREAMS: QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS,
+      //       chainId: process.env.CHAIN_ID,
+      //     },
+      //     {
+      //       removeOnComplete: true,
+      //       removeOnFail: true,
+      //       repeat: { every: 1 * 60000 },
+      //       jobId: 'update_profiles_wallet_nfts_streams',
+      //     })
       // case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
       //   return queues.get(QUEUE_TYPES.SYNC_COLLECTION_RARITY)
       //     .add(QUEUE_TYPES.SYNC_COLLECTION_RARITY, {
@@ -479,9 +479,9 @@ const listenToJobs = async (): Promise<void> => {
     case QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS:
       new Worker(queue.name, updateNFTsOwnershipForProfilesHandler, defaultWorkerOpts)
       break
-    case QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS:
-      new Worker(queue.name, pullNewNFTsHandler, defaultWorkerOpts)
-      break
+    // case QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS:
+    //   new Worker(queue.name, pullNewNFTsHandler, defaultWorkerOpts)
+    //   break
     case QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS:
       new Worker(queue.name, updateNFTsForNonProfilesHandler, defaultWorkerOpts)
       break
@@ -507,6 +507,15 @@ const listenToJobs = async (): Promise<void> => {
   }
 }
 
+const runSimpleCronUsingSetInterval = (): Promise<void> => {
+  return new Promise((resolve) => {
+    setInterval(() => {
+      pullNewNFTsHandler()
+    }, 60000) // run every minute
+    resolve()
+  })
+}
+
 export const cleanupProgressCache = (): Promise<any> => {
   const chainId: string = process.env.CHAIN_ID
   return cache.del([
@@ -522,6 +531,7 @@ export const startAndListen = (): Promise<void> => {
     .then(() => getExistingJobs())
     .then((jobs) => checkJobQueues(jobs))
     .then((shouldPublish) => publishJobs(shouldPublish))
+    .then(() => runSimpleCronUsingSetInterval())
     .then(() => cleanupProgressCache())
     .then(() => listenToJobs())
     .then(() => {
