@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Job, Queue, Worker } from 'bullmq'
 
 import { _logger } from '@nftcom/shared'
