@@ -574,6 +574,7 @@ export const updateNFTsForNonProfilesHandler = async (job: Job): Promise<any> =>
 
 async function doUpdateWalletWork(chainId: string, profile: any, wallet: any, start: number)
   : Promise<void> {
+  const begin = new Date().getTime()
   await cache.zadd(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, 'INCR', 1, profile.url)
   await nftService.updateWalletNFTs(profile.ownerUserId, wallet, chainId)
   logger.info(`[updateWalletNFTs-6] nftService.updateWalletNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
@@ -628,5 +629,5 @@ async function doUpdateWalletWork(chainId: string, profile: any, wallet: any, st
       chainId,
     ),
   ])
-  logger.info(`[updateWalletNFTs-doUpdateWalletWork] completed updating NFTs for profile ${profile.url} (${profile.id}), TOTAL: ${getTimeStamp(start)}`)
+  logger.info(`[updateWalletNFTs-doUpdateWalletWork] completed updating NFTs for profile ${profile.url} (${profile.id}), TOTAL: ${getTimeStamp(begin)}`)
 }
