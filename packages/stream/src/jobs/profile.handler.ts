@@ -569,9 +569,9 @@ async function doUpdateWalletWork(chainId: string, profile: any, wallet: any, st
   logger.info(`[updateWalletNFTs-6] nftService.updateWalletNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
   start = new Date().getTime()
 
-  // await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
-  // logger.info(`[updateWalletNFTs-7] nftService.updateEdgesWeightForProfile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
-  // start = new Date().getTime()
+  await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
+  logger.info(`[updateWalletNFTs-7] nftService.updateEdgesWeightForProfile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+  start = new Date().getTime()
 
   await nftService.saveVisibleNFTsForProfile(profile.id, repositories)
   logger.info(`[updateWalletNFTs-8] saved amount of visible NFTs and score for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
