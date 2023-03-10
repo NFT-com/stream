@@ -561,6 +561,7 @@ export const updateNFTsForNonProfilesHandler = async (job: Job): Promise<any> =>
   }
 }
 
+// helper fn
 async function doUpdateWalletWork(chainId: string, profile: any, wallet: any, start: number)
   : Promise<void> {
   const begin = new Date().getTime()
