@@ -64,7 +64,7 @@ export const mapContractsToSlugs = async (contracts: DistinctContract[]): Promis
  * @param contract
  */
 
-// initiate all sockets
+// initiate sockets
 const initializeStreamsForAllSlugs = (): void => {
   try {
     logger.log('----initiating streams----')

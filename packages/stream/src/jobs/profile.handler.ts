@@ -17,7 +17,8 @@ const repositories = db.newRepositories()
 
 const PROFILE_NFTS_EXPIRE_DURATION = Number(process.env.PROFILE_NFTS_EXPIRE_DURATION)
 const PROFILE_PROGRESS_THRESHOLD = Number(process.env.PROFILE_PROGRESS_THRESHOLD || 10)
-const MAX_NFTS_TO_PROCESS = 100
+const MAX_NFTS_TO_PROCESS = 600
+const MAX_NFTS_PER_PROFILE = 1250
 
 export const nftUpdateBatchProcessor = async (job: Job): Promise<boolean> => {
   logger.info(`initiated nft update batch processor for profile ${job.data.profileId} - index : ${job.data.index}`)
@@ -92,6 +93,7 @@ const updateWalletNFTs = async (
   chainId: string,
 ): Promise<void> => {
   try {
+    logger.info(`[updateWalletNFTs_0] Starting updateWalletNFTs for ${profileUrl} on chain ${chainId}`)
     const profile = await repositories.profile.findOne({ where: { url: profileUrl } })
     if (!profile) {
       await removeProfileIdFromRelevantKeys(
@@ -102,13 +104,13 @@ const updateWalletNFTs = async (
       logger.info(`[updateWalletNFTs_1] No profile found for ${profileUrl}, removoing from wallet nfts`)
     } else {
       logger.info(`[updateWalletNFTs_2] Profile found for ${profileUrl} (${profile.id}). Starting sync now`)
-      
+
       // check if updating NFTs for profile is in progress.
       const inProgress = await cache.zscore(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, profile.url)
       if (inProgress) {
-        const inProgressScore = Number(inProgress)
+        const inProgressScore = Number(inProgress) || 0
         const fails: string = await cache.zscore(`${CacheKeys.PROFILE_WALLET_FAIL_SCORE}_${chainId}`, profile.url)
-        const failScore = Number(fails)
+        const failScore = Number(fails) || 0
         if (inProgressScore > PROFILE_PROGRESS_THRESHOLD) {
           if (failScore > inProgressScore) {
             logger.log({ profile }, `Profile stuck in progress longer than expected: profile ${profile.url} (${profile.id}), fail_score: ${failScore}`)
@@ -149,60 +151,7 @@ const updateWalletNFTs = async (
             )
             logger.info(`[updateWalletNFTs-5] No wallet found for ID ${profile.ownerWalletId} (url = ${profile.url})`)
           } else {
-            await cache.zadd(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, 'INCR', 1, profile.url)
-            await nftService.updateWalletNFTs(profile.ownerUserId, wallet, chainId)
-            logger.info(`[updateWalletNFTs-6] nftService.updateWalletNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
-            start = new Date().getTime()
-        
-            await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
-            logger.info(`[updateWalletNFTs-7] nftService.updateEdgesWeightForProfile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
-            start = new Date().getTime()
-        
-            await nftService.saveVisibleNFTsForProfile(profile.id, repositories)
-            logger.info(`[updateWalletNFTs-8] saved amount of visible NFTs and score for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
-            start = new Date().getTime()
-        
-            await nftService.saveProfileScore(repositories, profile)
-            logger.info(`[updateWalletNFTs-9] saveProfileScore ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
-            start = new Date().getTime()
-        
-            // refresh NFTs for associated addresses and contract
-            let msg = await nftService.updateNFTsForAssociatedAddresses(
-              repositories,
-              profile,
-              chainId,
-            )
-            logger.info(`[updateWalletNFTs-10] after updateNFTsForAssociatedAddresses ${msg}, ${getTimeStamp(start)}`)
-            start = new Date().getTime()
-        
-            msg = await nftService.updateCollectionForAssociatedContract(
-              repositories,
-              profile,
-              chainId,
-              wallet.address,
-            )
-            logger.info(`[updateWalletNFTs-11] updateCollectionForAssociatedContract ${msg}, ${getTimeStamp(start)}`)
-            start = new Date().getTime()
-        
-            // if gkIconVisible is true, we check if this profile owner still owns genesis key,
-            if (profile.gkIconVisible) {
-              await nftService.updateGKIconVisibleStatus(repositories, chainId, profile)
-              logger.info(`[updateWalletNFTs-12] gkIconVisible updated for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
-              start = new Date().getTime()
-            }
-            
-            // Once we update NFTs for profile, we cache it to UPDATED_NFTS_PROFILE with expire date
-            const now: Date = new Date()
-            now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
-            const ttl = now.getTime()
-            await Promise.all([
-              cache.zadd(`${CacheKeys.UPDATED_WALLET_NFTS_PROFILE}_${chainId}`, ttl, profile.url),
-              removeProfileIdFromRelevantKeys(
-                ProfileCacheEnum.WALLET_NFTS,
-                profile.url,
-                chainId,
-              ),
-            ])
+            doUpdateWalletWork(chainId, profile, wallet, start)
           }
         } else {
           logger.log(`[updateWalletNFTs-13] Owner wallet Id is null for profile id: ${profile.id} and url: ${profile.url}`)
@@ -334,13 +283,7 @@ export const updateNFTsOwnershipForProfilesHandler = async (job: Job): Promise<a
     // 2. update NFTs for profiles cached in UPDATE_NFTS_PROFILE cache
     const cachedProfiles = await cache.zrevrangebyscore(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, '+inf', '(0')
 
-    let nftsToProcess = 0
     for (const profileUrl of cachedProfiles) {
-      if (nftsToProcess > MAX_NFTS_TO_PROCESS) {
-        logger.info(`[updateNFTsOwnershipForProfilesHandler] Max NFTs to process reached: ${nftsToProcess} > ${MAX_NFTS_TO_PROCESS}`)
-        break
-      }
-
       const profile = await repositories.profile.findOne({
         where: {
           url: profileUrl,
@@ -350,19 +293,10 @@ export const updateNFTsOwnershipForProfilesHandler = async (job: Job): Promise<a
 
       // only process if profile url exists
       if (profile) {
-        const estimateNftsCount = profile?.ownerWalletId ?
-          await repositories.nft.count({
-            walletId: profile.ownerWalletId,
-          }) :
-          0
-  
         // process profile before exiting (in case 1 profile > max nfts to process)
-        await cache.zadd(`${CacheKeys.UPDATE_WALLET_NFTS_PROFILE}_${chainId}`, 1, profileUrl) //O(log(N))
+        await cache.zadd(`${CacheKeys.UPDATE_WALLET_NFTS_PROFILE}_${chainId}`, 1, profileUrl)
         processProfileUpdate(profileUrl, chainId)
           .catch(err => logger.error(err))
-  
-        nftsToProcess += estimateNftsCount
-        logger.info(`2. [updateNFTsOwnershipForProfilesHandler] Updating NFTs for profile ${profile.url} => (estimateNftsCount = ${estimateNftsCount})`)
       } else {
         logger.info(`[updateNFTsOwnershipForProfilesHandler] Profile not found for url ${profileUrl}, chainId=${chainId}`)
         continue
@@ -390,27 +324,40 @@ export const pullNewNFTsHandler = async (job: Job): Promise<any> => {
         break
       }
 
-      const profile = await repositories.profile.findOne({
-        where: {
-          url: profileUrl,
-          chainId,
-        },
-      })
+      const inProgress = await cache.zscore(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, profileUrl)
 
-      // only process if profile url exists
-      if (profile) {
-        const estimateNftsCount = profile?.ownerWalletId ?
-          await repositories.nft.count({
-            walletId: profile.ownerWalletId,
-          }) :
-          0
-  
-        logger.info(`2. [pullNewNFTsHandler] Updating NFTs for profile ${profile.url} => (estimateNftsCount = ${estimateNftsCount})`)
+      if (!inProgress) {
+        logger.info(`2a. [pullNewNFTsHandler] Looking up profile ${profileUrl}, chainId=${chainId}`)
 
-        updateWalletNFTs(profileUrl, chainId)
-          .catch(err => logger.error(err))
+        const profile = await repositories.profile.findOne({
+          where: {
+            url: profileUrl,
+            chainId,
+          },
+        })
 
-        nftsToProcess += estimateNftsCount
+        // only process if profile url exists
+        if (profile) {
+          const estimateNftsCount = profile?.ownerWalletId ?
+            await repositories.nft.count({
+              walletId: profile.ownerWalletId,
+            }) :
+            0
+
+          if (estimateNftsCount < MAX_NFTS_PER_PROFILE) {
+            logger.info(`2b. [pullNewNFTsHandler] Updating NFTs for profile ${profile.url} ==> (estimateNftsCount = ${estimateNftsCount})`)
+
+            updateWalletNFTs(profileUrl, chainId)
+
+            nftsToProcess += estimateNftsCount
+          } else {
+            logger.info(`2c. [pullNewNFTsHandler] Too many NFTs for profile ${profile.url} ==> (estimateNftsCount = ${estimateNftsCount} > 1000)`)
+          }
+        } else {
+          logger.info(`2d. [pullNewNFTsHandler] Profile not found for url ${profileUrl}, chainId=${chainId}`)
+        }
+      } else {
+        logger.info(`4. [pullNewNFTsHandler] Profile ${profileUrl} is already being processed - skipping`)
       }
     }
   } catch (err) {
@@ -613,4 +560,65 @@ export const updateNFTsForNonProfilesHandler = async (job: Job): Promise<any> =>
   } catch (err) {
     logger.error(err, `[updateNFTsForNonProfilesHandler]: Error in non-profile sync job, ${getTimeStamp(start)}`)
   }
+}
+
+// helper fn
+async function doUpdateWalletWork(chainId: string, profile: any, wallet: any, start: number)
+  : Promise<void> {
+  const begin = new Date().getTime()
+  await cache.zadd(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, 'INCR', 1, profile.url)
+  await nftService.updateWalletNFTs(profile.ownerUserId, wallet, chainId)
+  logger.info(`[updateWalletNFTs-6] nftService.updateWalletNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+  start = new Date().getTime()
+
+  await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
+  logger.info(`[updateWalletNFTs-7] nftService.updateEdgesWeightForProfile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+  start = new Date().getTime()
+
+  await nftService.saveVisibleNFTsForProfile(profile.id, repositories)
+  logger.info(`[updateWalletNFTs-8] saved amount of visible NFTs and score for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+  start = new Date().getTime()
+
+  await nftService.saveProfileScore(repositories, profile)
+  logger.info(`[updateWalletNFTs-9] saveProfileScore ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+  start = new Date().getTime()
+
+  // refresh NFTs for associated addresses and contract
+  let msg = await nftService.updateNFTsForAssociatedAddresses(
+    repositories,
+    profile,
+    chainId,
+  )
+  logger.info(`[updateWalletNFTs-10] after updateNFTsForAssociatedAddresses ${msg}, ${getTimeStamp(start)}`)
+  start = new Date().getTime()
+
+  msg = await nftService.updateCollectionForAssociatedContract(
+    repositories,
+    profile,
+    chainId,
+    wallet.address,
+  )
+  logger.info(`[updateWalletNFTs-11] updateCollectionForAssociatedContract ${msg}, ${getTimeStamp(start)}`)
+  start = new Date().getTime()
+
+  // if gkIconVisible is true, we check if this profile owner still owns genesis key,
+  if (profile.gkIconVisible) {
+    await nftService.updateGKIconVisibleStatus(repositories, chainId, profile)
+    logger.info(`[updateWalletNFTs-12] gkIconVisible updated for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+    start = new Date().getTime()
+  }
+
+  // Once we update NFTs for profile, we cache it to UPDATED_NFTS_PROFILE with expire date
+  const now: Date = new Date()
+  now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
+  const ttl = now.getTime()
+  await Promise.all([
+    cache.zadd(`${CacheKeys.UPDATED_WALLET_NFTS_PROFILE}_${chainId}`, ttl, profile.url),
+    removeProfileIdFromRelevantKeys(
+      ProfileCacheEnum.WALLET_NFTS,
+      profile.url,
+      chainId,
+    ),
+  ])
+  logger.info(`[updateWalletNFTs-doUpdateWalletWork] completed updating NFTs for profile ${profile.url} (${profile.id}), TOTAL: ${getTimeStamp(begin)}`)
 }
