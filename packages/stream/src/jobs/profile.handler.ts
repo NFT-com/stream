@@ -17,7 +17,7 @@ const repositories = db.newRepositories()
 
 const PROFILE_NFTS_EXPIRE_DURATION = Number(process.env.PROFILE_NFTS_EXPIRE_DURATION)
 const PROFILE_PROGRESS_THRESHOLD = Number(process.env.PROFILE_PROGRESS_THRESHOLD || 10)
-const MAX_NFTS_TO_PROCESS = 100
+const MAX_NFTS_TO_PROCESS = 500
 
 export const nftUpdateBatchProcessor = async (job: Job): Promise<boolean> => {
   logger.info(`initiated nft update batch processor for profile ${job.data.profileId} - index : ${job.data.index}`)
@@ -282,13 +282,7 @@ export const updateNFTsOwnershipForProfilesHandler = async (job: Job): Promise<a
     // 2. update NFTs for profiles cached in UPDATE_NFTS_PROFILE cache
     const cachedProfiles = await cache.zrevrangebyscore(`${CacheKeys.UPDATE_NFTS_PROFILE}_${chainId}`, '+inf', '(0')
 
-    let nftsToProcess = 0
     for (const profileUrl of cachedProfiles) {
-      if (nftsToProcess > MAX_NFTS_TO_PROCESS) {
-        logger.info(`[updateNFTsOwnershipForProfilesHandler] Max NFTs to process reached: ${nftsToProcess} > ${MAX_NFTS_TO_PROCESS}`)
-        break
-      }
-
       const profile = await repositories.profile.findOne({
         where: {
           url: profileUrl,
@@ -298,19 +292,10 @@ export const updateNFTsOwnershipForProfilesHandler = async (job: Job): Promise<a
 
       // only process if profile url exists
       if (profile) {
-        const estimateNftsCount = profile?.ownerWalletId ?
-          await repositories.nft.count({
-            walletId: profile.ownerWalletId,
-          }) :
-          0
-  
         // process profile before exiting (in case 1 profile > max nfts to process)
-        await cache.zadd(`${CacheKeys.UPDATE_WALLET_NFTS_PROFILE}_${chainId}`, 1, profileUrl) //O(log(N))
+        await cache.zadd(`${CacheKeys.UPDATE_WALLET_NFTS_PROFILE}_${chainId}`, 1, profileUrl)
         processProfileUpdate(profileUrl, chainId)
           .catch(err => logger.error(err))
-  
-        nftsToProcess += estimateNftsCount
-        logger.info(`2. [updateNFTsOwnershipForProfilesHandler] Updating NFTs for profile ${profile.url} => (estimateNftsCount = ${estimateNftsCount})`)
       } else {
         logger.info(`[updateNFTsOwnershipForProfilesHandler] Profile not found for url ${profileUrl}, chainId=${chainId}`)
         continue
