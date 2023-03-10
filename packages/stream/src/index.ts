@@ -675,7 +675,7 @@ process.on('SIGINT', gracefulShutdown)
 process.on('SIGTERM', gracefulShutdown)
 // catches uncaught exceptions
 process.on('uncaughtException', async (err) => {
-  logger.error(err, 'Uncaught Exception thrown')
+  logger.error(err, 'Uncaught Exception thrown!')
   const activeSpan = trace.getActiveSpan()
   activeSpan && activeSpan.setAttribute('sampling.priority', 1)
   await gracefulShutdown()
