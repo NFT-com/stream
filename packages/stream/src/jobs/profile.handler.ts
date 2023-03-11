@@ -351,7 +351,7 @@ export const pullNewNFTsHandler = async (job: Job): Promise<any> => {
 
             nftsToProcess += estimateNftsCount
           } else {
-            logger.info(`2c. [pullNewNFTsHandler] Too many NFTs for profile ${profile.url} ==> (estimateNftsCount = ${estimateNftsCount} > 1000)`)
+            logger.info(`2c. [pullNewNFTsHandler] Too many NFTs for profile ${profile.url} ==> (estimateNftsCount = ${estimateNftsCount} > ${MAX_NFTS_PER_PROFILE})`)
           }
         } else {
           logger.info(`2d. [pullNewNFTsHandler] Profile not found for url ${profileUrl}, chainId=${chainId}`)
