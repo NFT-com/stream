@@ -307,7 +307,7 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
           {
             removeOnComplete: true,
             removeOnFail: true,
-            repeat: { every: 1 * 60000 },
+            repeat: { every: 15000 }, // every 15 seconds
             jobId: 'update_profiles_nfts_streams',
           })
       case QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS:
@@ -319,7 +319,7 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
           {
             removeOnComplete: true,
             removeOnFail: true,
-            repeat: { every: 1 * 60000 },
+            repeat: { every: 15000 }, // every 15 seconds
             jobId: 'update_non_profiles_nfts_streams',
           })
       case QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS:
@@ -331,7 +331,7 @@ const publishJobs = (shouldPublish: boolean): Promise<void> => {
           {
             removeOnComplete: true,
             removeOnFail: true,
-            repeat: { every: 1 * 60000 },
+            repeat: { every: 15000 }, // every 15 seconds
             jobId: 'update_profiles_wallet_nfts_streams',
           })
       case QUEUE_TYPES.SYNC_COLLECTION_RARITY:
