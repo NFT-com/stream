@@ -250,6 +250,8 @@ const processProfileUpdate = async (profileUrl: string, chainId: string): Promis
                 profile.url,
                 chainId,
               ),
+              cache.del[`${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${profile.id}`],
+              cache.del[`${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${profile.id}`],
             ])
           } catch (err) {
             logger.error(`[processProfileUpdate] Error in updateNFTsOwnershipForProfilesHandler: ${err}`)
@@ -619,6 +621,8 @@ async function doUpdateWalletWork(chainId: string, profile: any, wallet: any, st
       profile.url,
       chainId,
     ),
+    cache.del[`${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${profile.id}`],
+    cache.del[`${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${profile.id}`],
   ])
   logger.info(`[updateWalletNFTs-doUpdateWalletWork] completed updating NFTs for profile ${profile.url} (${profile.id}), TOTAL: ${getTimeStamp(begin)}`)
 }
