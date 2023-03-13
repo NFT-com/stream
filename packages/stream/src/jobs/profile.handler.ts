@@ -17,8 +17,8 @@ const repositories = db.newRepositories()
 
 const PROFILE_NFTS_EXPIRE_DURATION = Number(process.env.PROFILE_NFTS_EXPIRE_DURATION)
 const PROFILE_PROGRESS_THRESHOLD = Number(process.env.PROFILE_PROGRESS_THRESHOLD || 10)
-const MAX_NFTS_TO_PROCESS = 100000
-const MAX_NFTS_PER_PROFILE = 50000
+const MAX_NFTS_TO_PROCESS = 100000 // max nfts to process per batch
+const MAX_NFTS_PER_PROFILE = 50000 // max nfts to process per profile
 
 export const nftUpdateBatchProcessor = async (job: Job): Promise<boolean> => {
   logger.info(`initiated nft update batch processor for profile ${job.data.profileId} - index : ${job.data.index}`)
@@ -569,12 +569,18 @@ async function doUpdateWalletWork(chainId: string, profile: any, wallet: any, st
   : Promise<void> {
   const begin = new Date().getTime()
   await cache.zadd(`${CacheKeys.PROFILES_WALLET_IN_PROGRESS}_${chainId}`, 'INCR', 1, profile.url)
-  await nftService.updateWalletNFTs(profile.ownerUserId, wallet, chainId)
+  await nftService.updateWalletNFTs(
+    profile.ownerUserId,
+    wallet,
+    chainId,
+    true, // excludeSpam
+    true, // excludeAirdrops
+  )
   logger.info(`[updateWalletNFTs-6] nftService.updateWalletNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
   start = new Date().getTime()
 
-  await nftService.updateEdgesWeightForProfile(profile.id, wallet.id)
-  logger.info(`[updateWalletNFTs-7] nftService.updateEdgesWeightForProfile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+  await nftService.createNullEdgesForProfile(profile.id, wallet.id)
+  logger.info(`[updateWalletNFTs-7] nftService.createNullEdgesForProfile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
   start = new Date().getTime()
 
   await nftService.saveVisibleNFTsForProfile(profile.id, repositories)
