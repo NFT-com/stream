@@ -18,7 +18,7 @@ const repositories = db.newRepositories()
 const PROFILE_NFTS_EXPIRE_DURATION = Number(process.env.PROFILE_NFTS_EXPIRE_DURATION)
 const PROFILE_PROGRESS_THRESHOLD = Number(process.env.PROFILE_PROGRESS_THRESHOLD || 10)
 const MAX_NFTS_TO_PROCESS = 100000
-const MAX_NFTS_PER_PROFILE = 2500
+const MAX_NFTS_PER_PROFILE = 50000
 
 export const nftUpdateBatchProcessor = async (job: Job): Promise<boolean> => {
   logger.info(`initiated nft update batch processor for profile ${job.data.profileId} - index : ${job.data.index}`)
