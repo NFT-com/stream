@@ -6,7 +6,7 @@ import { IsNull } from 'typeorm'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import {  core,nftService } from '@nftcom/gql/service'
+import {  core, nftService } from '@nftcom/gql/service'
 import { _logger, contracts, db, entity, helper } from '@nftcom/shared'
 
 import { cache, CacheKeys, removeExpiredTimestampedZsetMembers } from '../service/cache'
