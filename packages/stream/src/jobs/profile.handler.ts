@@ -574,7 +574,7 @@ async function doUpdateWalletWork(chainId: string, profile: any, wallet: any, st
     wallet,
     chainId,
     true, // excludeSpam
-    true, // excludeAirdrops
+    false, // excludeAirdrops
   )
   logger.info(`[updateWalletNFTs-6] nftService.updateWalletNFTs ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
   start = new Date().getTime()
