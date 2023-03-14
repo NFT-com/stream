@@ -151,7 +151,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
               logger.error(err)
             }
             
-            // create if not exist, update if it does exist.
+            // create if not exist, update if it does exist
             const nftEntity: entity.NFT = nftEntityBuilder({ ...nft, owner }, chainId)
             const processNFT: entity.NFT = existingNFTs.find(
               (existingNft: entity.NFT) => {
