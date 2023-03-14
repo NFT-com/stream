@@ -320,7 +320,7 @@ export const retrieveSlugsForContracts = async (
     }
     return slugs
   } catch (err) {
-    logger.error('----opensea slug fetch error----:Contracts API:---', err)
+    logger.error('----opensea slug fetch error----::Contracts API::---', err)
     return []
   }
 }
