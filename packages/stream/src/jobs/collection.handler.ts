@@ -188,7 +188,6 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
             }
           } catch (errSave) {
             logger.log(`error while saving nftSyncHandler but continuing ${errSave}...${startToken}...${queryParams}`)
-            // logger.log(`error nftPromiseArray: ${nftPromiseArray}`)
             logger.log(`error existing: ${existingNFTs}`)
 
             if (!collectionNFTs?.data?.nextToken) {
