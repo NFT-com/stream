@@ -248,6 +248,8 @@ const processProfileUpdate = async (profileUrl: string, chainId: string): Promis
 
             now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
             const ttl = now.getTime()
+
+            await cache.del([`${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${profile.id}`, `${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${profile.id}`])
             await Promise.all([
               cache.zadd(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, ttl, profile.url),
               removeProfileIdFromRelevantKeys(
@@ -255,8 +257,6 @@ const processProfileUpdate = async (profileUrl: string, chainId: string): Promis
                 profile.url,
                 chainId,
               ),
-              cache.del[`${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${profile.id}`],
-              cache.del[`${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${profile.id}`],
             ])
           } catch (err) {
             logger.error(`[processProfileUpdate] Error in updateNFTsOwnershipForProfilesHandler: ${err}`)
@@ -343,7 +343,7 @@ export const pullNewNFTsHandler = async (job: Job): Promise<any> => {
           },
         })
 
-        // only process if profile url exists
+        // only process if profile exists
         if (profile) {
           const estimateNftsCount = profile?.ownerWalletId ?
             await repositories.nft.count({
@@ -596,7 +596,7 @@ async function doUpdateWalletWork(chainId: string, profile: any, wallet: any, st
   logger.info(`[updateWalletNFTs-9] saveProfileScore ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
   start = new Date().getTime()
 
-  // refresh NFTs for associated addresses and contract
+  // refresh NFTs for associated addresses and contracts
   let msg = await nftService.updateNFTsForAssociatedAddresses(
     repositories,
     profile,
@@ -625,6 +625,8 @@ async function doUpdateWalletWork(chainId: string, profile: any, wallet: any, st
   const now: Date = new Date()
   now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
   const ttl = now.getTime()
+  
+  await cache.del([`${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${profile.id}`, `${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${profile.id}`])
   await Promise.all([
     cache.zadd(`${CacheKeys.UPDATED_WALLET_NFTS_PROFILE}_${chainId}`, ttl, profile.url),
     removeProfileIdFromRelevantKeys(
@@ -632,8 +634,6 @@ async function doUpdateWalletWork(chainId: string, profile: any, wallet: any, st
       profile.url,
       chainId,
     ),
-    cache.del[`${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${profile.id}`],
-    cache.del[`${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${profile.id}`],
   ])
   logger.info(`[updateWalletNFTs-doUpdateWalletWork] completed updating NFTs for profile ${profile.url} (${profile.id}), TOTAL: ${getTimeStamp(begin)}`)
 }
