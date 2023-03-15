@@ -240,7 +240,12 @@ const processProfileUpdate = async (profileUrl: string, chainId: string): Promis
               chainId,
             )
             logger.info(`6. [processProfileUpdate] checked NFT contract addresses for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
+            start = new Date().getTime()
+
+            await nftService.syncEdgesWithNFTs(profile.id)
+            logger.info(`7. [processProfileUpdate] syncEdgesWithNFTs for profile ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
             const now: Date = new Date()
+
             now.setMilliseconds(now.getMilliseconds() + PROFILE_NFTS_EXPIRE_DURATION)
             const ttl = now.getTime()
             await Promise.all([

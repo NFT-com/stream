@@ -38,7 +38,7 @@ export const provider = (
   chainId: providers.Networkish = 1, // mainnet default
   infura?: boolean,
 ): ethers.providers.BaseProvider => {
-  if (process.env.USE_ZMOK == 'true' && Number(chainId) == 1) { // zmok only supports mainnet and rinkeby (feb 2023)
+  if (process.env.USE_ZMOK == 'true' && Number(chainId) == 1) { // zmok only supports mainnet and rinkeby (Feb 2023)
     logger.info('Using zmok provider [eventLogParser]')
     return new ethers.providers.JsonRpcProvider(process.env.ZMOK_RPC_URL)
   } else if (infura) { // dedicated key
