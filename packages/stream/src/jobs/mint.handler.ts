@@ -1,4 +1,4 @@
-import { Job } from 'bull'
+import { Job } from 'bullmq'
 import { BigNumber, ethers, utils } from 'ethers'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -721,7 +721,7 @@ export const getEthereumEvents = async (job: Job): Promise<any> => {
   try {
     const { chainId = process.env.CHAIN_ID } = job.data
 
-    const chainProvider = provider(Number(chainId))
+    const chainProvider = provider.provider(Number(chainId))
     const profileAuctionAddress = checksumAddress(contracts.profileAuctionAddress(chainId))
     const nftResolverAddress = checksumAddress(contracts.nftResolverAddress(chainId))
     const profileAddress = checksumAddress(contracts.nftProfileAddress(chainId))
