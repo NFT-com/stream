@@ -343,7 +343,7 @@ export const pullNewNFTsHandler = async (job: Job): Promise<any> => {
           },
         })
 
-        // only process if profile url exists
+        // only process if profile exists
         if (profile) {
           const estimateNftsCount = profile?.ownerWalletId ?
             await repositories.nft.count({
