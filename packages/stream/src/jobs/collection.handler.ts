@@ -1,6 +1,6 @@
 
 import { AxiosInstance, AxiosResponse } from 'axios'
-import Bull, { Job } from 'bull'
+import Bull, { Job } from 'bullmq'
 import { BigNumber } from 'ethers'
 import { FindOptionsWhere,ILike, In, IsNull, Not } from 'typeorm'
 
@@ -31,7 +31,7 @@ const exceptionBannerUrls: string[] = [
   'https://cdn.nft.com/collectionBanner_default.png',
 ]
 
-const subQueueBaseOptions: Bull.JobOptions = {
+const subQueueBaseOptions: Bull.JobsOptions = {
   attempts: 2,
   removeOnComplete: true,
   removeOnFail: true,
@@ -151,7 +151,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
               logger.error(err)
             }
             
-            // create if not exist, update if does
+            // create if not exist, update if it does exist
             const nftEntity: entity.NFT = nftEntityBuilder({ ...nft, owner }, chainId)
             const processNFT: entity.NFT = existingNFTs.find(
               (existingNft: entity.NFT) => {
@@ -188,7 +188,6 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
             }
           } catch (errSave) {
             logger.log(`error while saving nftSyncHandler but continuing ${errSave}...${startToken}...${queryParams}`)
-            // logger.log(`error nftPromiseArray: ${nftPromiseArray}`)
             logger.log(`error existing: ${existingNFTs}`)
 
             if (!collectionNFTs?.data?.nextToken) {
@@ -349,7 +348,7 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
         const job: Bull.Job = await collectionSyncSubqueue.getJob(jobId)
 
         if (!job || !job?.isActive() || !job?.isWaiting()) {
-          collectionSyncSubqueue.add(
+          collectionSyncSubqueue.add(jobId,
             { contract, chainId, startTokenParam },
             {
               ...subQueueBaseOptions,
@@ -360,7 +359,7 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
               
         if (job) {
           // clean up
-          if (job.isStuck() || job.isPaused() || job.isDelayed() || job.isCompleted()) {
+          if (job.isWaiting() || job.isWaitingChildren() || job.isDelayed() || job.isCompleted()) {
             logger.log(`Stack trace: ${job.stacktrace}`)
             await job.remove()
           }
@@ -372,9 +371,6 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
           }
         }
       }
-      // const process = collectionSyncSubqueue.getJobCounts()
-      // process subqueues in series; hence concurrency is explicitly set to one for rate limits
-      collectionSyncSubqueue.process(1, nftSyncHandler)
     }
     logger.log('completed collection sync')
   } catch (err) {
@@ -583,7 +579,7 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
           }
         }
       } catch (err) {
-        logger.error(err, `Error occured while fetching contract NFT for ${collection.contract}`)
+        logger.debug(err, `Error occured while fetching contract NFT for ${collection.contract}`)
       }
     }
   } catch (err) {

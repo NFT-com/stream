@@ -168,10 +168,13 @@ export const client = new OpenSeaStreamClient({
   connectOptions: {
     transport: WebSocket,
   },
+  onError: (err: Error) => {
+    logger.error(err, 'OpenSeaStreamClient error')
+  },
 })
 
 export const connectClient = (): void => {
-  logger.log('---Connecting to client----')
+  logger.log('----Connecting to client-----')
   try {
     client.connect()
   } catch (err) {

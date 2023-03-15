@@ -1,4 +1,4 @@
-import { Job } from 'bull'
+import { Job } from 'bullmq'
 import { ethers, utils } from 'ethers'
 
 import { _logger, contracts, defs, helper, provider } from '@nftcom/shared'
@@ -52,9 +52,9 @@ const listenApprovalEvents = async (
   try {
     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
 
-    logger.info(`Approval logs ${logs.length}`)
+    logger.info(`Approval logs ${logs.logs.length}`)
 
-    const promises = logs.map(async (log) => {
+    const promises = logs.logs.map(async (log) => {
       const event = marketplaceIface.parseLog(log)
       const structHash = event.args.structHash
       const makerAddress = utils.getAddress(event.args.maker)
@@ -97,9 +97,9 @@ const listenApprovalEvents = async (
 //   try {
 //     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
 //
-//     logger.debug('NonceIncremented logs', logs.length)
+//     logger.debug('NonceIncremented logs', logs.logs.length)
 //
-//     const promises = logs.map(async (log) => {
+//     const promises = logs.logs.map(async (log) => {
 //       const event = marketplaceIface.parseLog(log)
 //       const makerAddress = event.args.maker
 //       const nonce = Number(event.args.newNonce)
@@ -165,9 +165,9 @@ const listenCancelEvents = async (
   try {
     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
 
-    logger.info(`Cancel logs ${logs.length}`)
+    logger.info(`Cancel logs ${logs.logs.length}`)
 
-    const promises = logs.map(async (log) => {
+    const promises = logs.logs.map(async (log) => {
       const event = marketplaceIface.parseLog(log)
       const structHash = event.args.structHash
       const makerAddress = utils.getAddress(event.args.maker)
@@ -211,9 +211,9 @@ const listenMatchEvents = async (
   try {
     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
 
-    logger.info(`Match logs ${logs.length}`)
+    logger.info(`Match logs ${logs.logs.length}`)
 
-    const promises = logs.map(async (log) => {
+    const promises = logs.logs.map(async (log) => {
       try {
         const event = eventIface.parseLog(log)
         const sellHash = log.topics[1]
@@ -270,10 +270,10 @@ const listenMatchTwoAEvents = async (
   try {
     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
 
-    logger.info(`Match2A logs ${logs.length}`)
+    logger.info(`Match2A logs ${logs.logs.length}`)
 
     await Promise.allSettled(
-      logs.map(async (log) => {
+      logs.logs.map(async (log) => {
         const event = eventIface.parseLog(log)
         const makerHash = log.topics[1]
         const makerAddress = utils.getAddress(event.args.makerAddress)
@@ -323,9 +323,9 @@ const listenMatchTwoBEvents = async (
   try {
     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
 
-    logger.info(`Match2B logs ${logs.length}`)
+    logger.info(`Match2B logs ${logs.logs.length}`)
 
-    const promises = logs.map(async (log) => {
+    const promises = logs.logs.map(async (log) => {
       const event = eventIface.parseLog(log)
 
       const makerHash = log.topics[1]
@@ -378,9 +378,9 @@ const listenMatchThreeAEvents = async (
   try {
     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
 
-    logger.info(`Match3A logs ${logs.length}`)
+    logger.info(`Match3A logs ${logs.logs.length}`)
 
-    const promises = logs.map(async (log) => {
+    const promises = logs.logs.map(async (log) => {
       const event = eventIface.parseLog(log)
       const takerHash = log.topics[1]
       const makerAddress = utils.getAddress(event.args.makerAddress)
@@ -429,9 +429,9 @@ const listenMatchThreeBEvents = async (
   try {
     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
 
-    logger.info(`Match3B logs ${logs.length}`)
+    logger.info(`Match3B logs ${logs.logs.length}`)
 
-    const promises = logs.map(async (log) => {
+    const promises = logs.logs.map(async (log) => {
       const event = eventIface.parseLog(log)
       const takerHash = log.topics[1]
 
@@ -481,9 +481,9 @@ const listenBuyNowInfoEvents = async (
   try {
     const logs = await getPastLogs(provider, address, topics, cachedBlock, latestBlock)
 
-    logger.info(`BuyNowInfo logs : ${logs.length}`)
+    logger.info(`BuyNowInfo logs : ${logs.logs.length}`)
 
-    const promises = logs.map(async (log) => {
+    const promises = logs.logs.map(async (log) => {
       const event = eventIface.parseLog(log)
 
       const makerHash = log.topics[1]

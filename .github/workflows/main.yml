@@ -22,7 +22,7 @@ jobs:
           secrets: ${{ toJSON(secrets) }}
           stage: dev
   deploy-staging:
-    if: ${{ github.ref_name == 'main' }}
+    if: ${{ github.ref_name == 'main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'staging')) }}
     runs-on: ubuntu-latest
     environment: nftcom_stream_staging
     steps:

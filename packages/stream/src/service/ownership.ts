@@ -19,7 +19,7 @@ export const checksumAddress = (address: string): string | undefined => {
   }
   return
 }
-export const updateOwnership = async (
+export const atomicOwnershipUpdate = async (
   contract: string,
   tokenId: string,
   prevOwner: string,
@@ -37,7 +37,7 @@ export const updateOwnership = async (
     logger.error(err, 'Error while casting tokenId to hex')
   }
   if (csContract && csPrevOwner && csNewOwner && hexTokenId) {
-    logger.log(
+    logger.info(
       `NFT ownership transfer started for contract: ${csContract},
       tokenId: ${hexTokenId},
       previous owner: ${csPrevOwner},
@@ -99,7 +99,7 @@ export const updateOwnership = async (
                   },
                 })
               
-                logger.log(`Old owner profiles length: ${oldOwnerProfiles.length}, batch: ${i}`)
+                logger.info(`Old owner profiles length: ${oldOwnerProfiles.length}, batch: ${i}`)
                 for (const profile of oldOwnerProfiles) {
                   const key1 = `${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${profile.id}`,
                     key2 = `${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${profile.id}`
@@ -107,7 +107,7 @@ export const updateOwnership = async (
                     cache.keys(`${key1}*`),
                     cache.keys(`${key2}*`),
                   )
-                  logger.log(`Old profileId: ${profile.id}, key1: ${key1}, key2: ${key2}.`)
+                  logger.info(`Old profileId: ${profile.id}, key1: ${key1}, key2: ${key2}.`)
                 }
     
                 if (cachePromise.length) {
@@ -117,24 +117,24 @@ export const updateOwnership = async (
                       for (const keys of keysArray) {
                         if (keys?.length) {
                           await cache.del(...keys)
-                          logger.log(`Key deleted: ${keys}`)
+                          logger.info(`Key deleted: ${keys}`)
                         }
                       }
                     }
                     cachePromise = []
                   } catch (err) {
-                    logger.log(err, 'Error while clearing cache...')
+                    logger.info(err, 'Error while clearing cache...')
                   }
                 }
               }
             } else {
-              logger.log(`NFT wallet id and user id are null or undefined. WalletId: ${existingNFT.walletId}, UserId: ${existingNFT.userId}`)
+              logger.info(`NFT wallet id and user id are null or undefined. WalletId: ${existingNFT.walletId}, UserId: ${existingNFT.userId}`)
             }
          
             // if this NFT is a profile NFT...
             if (ethers.utils.getAddress(existingNFT.contract) ==
                       ethers.utils.getAddress(contracts.nftProfileAddress(chainId))) {
-              logger.log(`Profile is being processed as a Profile NFT - contract ${existingNFT.contract}, tokenId: ${hexTokenId}`)
+              logger.info(`Profile is being processed as a Profile NFT - contract ${existingNFT.contract}, tokenId: ${hexTokenId}`)
               const previousWallet = await repositories.wallet.findById(existingNFT.walletId)
               if (previousWallet) {
                 const profile: entity.Profile = await repositories.profile.findOne({ where: {
@@ -169,7 +169,7 @@ export const updateOwnership = async (
             }
             const newOwnerProfileCount: number = await repositories.profile.count(profileQuery)
   
-            logger.log(`New owner profiles count: ${newOwnerProfileCount}`)
+            logger.info(`New owner profiles count: ${newOwnerProfileCount}`)
   
             for (let i=0; i < newOwnerProfileCount; i += MAX_PROCESS_BATCH_SIZE) {
               const newOwnerProfiles: entity.Profile[] = await repositories.profile.find({
@@ -182,7 +182,7 @@ export const updateOwnership = async (
                 },
               })
   
-              logger.log(`New owner profiles length: ${newOwnerProfiles.length}, batch: ${i}`)
+              logger.info(`New owner profiles length: ${newOwnerProfiles.length}, batch: ${i}`)
   
               for (const profile of newOwnerProfiles) {
                 //
@@ -209,13 +209,11 @@ export const updateOwnership = async (
 
                 try {
                   await Promise.all([
-                    cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.id]),
-                    cache.zrem(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, [profile.id]),
+                    cache.zrem(`${CacheKeys.PROFILES_IN_PROGRESS}_${chainId}`, [profile.url]),
+                    cache.zrem(`${CacheKeys.UPDATED_NFTS_PROFILE}_${chainId}`, [profile.url]),
                   ])
-                  //await nftService.executeUpdateNFTsForProfile(profile.id, chainId)
-                  // logger.info(`executeUpdateNFTsForProfile in ownership for profileId: ${profile.id}, url: ${profile.url}`)
                 } catch (err) {
-                  logger.error(err, `Error in clearing cache for new profileId:${profile.id}, url: ${profile.url}`)
+                  logger.error(err, `Error in clearing cache for new profileId: ${profile.id}, url: ${profile.url}`)
                 }
               }
             }

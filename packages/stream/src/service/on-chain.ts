@@ -8,7 +8,7 @@ import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
 import { delay } from '../utils'
 import { cancelEntityBuilder, txEntityBuilder, txX2Y2ProtocolDataParser } from '../utils/builder/orderBuilder'
-import { checksumAddress, updateOwnership } from './ownership'
+import { atomicOwnershipUpdate,checksumAddress } from './ownership'
 import {
   approvalEventHandler,
   buyNowInfoEventHandler,
@@ -415,7 +415,7 @@ const keepAlive = ({
             // update NFT ownership
             const tokenId: string = helper.bigNumberToHex(order.protocolData?.tokenId)
 
-            await updateOwnership(
+            await atomicOwnershipUpdate(
               checksumContract,
               tokenId,
               maker,
@@ -483,7 +483,7 @@ const keepAlive = ({
             // update NFT ownership
             const tokenId: string = helper.bigNumberToHex(order.protocolData?.tokenId)
 
-            await updateOwnership(
+            await atomicOwnershipUpdate(
               checksumContract,
               tokenId,
               maker,
@@ -671,7 +671,7 @@ const keepAlive = ({
               order.protocolData?.parameters?.offer?.[0]?.identifierOrCriteria,
             )
 
-            await updateOwnership(
+            await atomicOwnershipUpdate(
               contract,
               tokenId,
               offerer,
@@ -692,7 +692,7 @@ const keepAlive = ({
         `)
           }
         } catch (err) {
-          logger.error(`Evt: ${OSSeaportEventName.OrderFulfilled} -- Err: ${err}`)
+          logger.error(err, `Evt: ${OSSeaportEventName.OrderFulfilled}`)
         }
       } else {
         // not relevant in our search space
@@ -812,7 +812,7 @@ const keepAlive = ({
             const tokenId: string = helper.bigNumberToHex(
               order.protocolData?.tokenId,
             )
-            await updateOwnership(
+            await atomicOwnershipUpdate(
               contract,
               tokenId,
               order.makerAddress,
@@ -930,7 +930,7 @@ const keepAlive = ({
             const tokenId: string = helper.bigNumberToHex(
               order.protocolData?.tokenId,
             )
-            await updateOwnership(
+            await atomicOwnershipUpdate(
               contract,
               tokenId,
               maker,
@@ -1185,6 +1185,7 @@ const keepAlive = ({
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   provider._websocket.on('close', (err: any) => {
+    logger.error({ err }, 'Websocket closing')
     if (keepAliveInterval) clearInterval(keepAliveInterval)
     if (pingTimeout) clearTimeout(pingTimeout)
     onDisconnect(err)
@@ -1228,12 +1229,12 @@ export const startProvider = (
         provider,
         chainId,
         onDisconnect: (err) => {
+          logger.error({ err }, 'The ws connection was closed')
           startProvider(chainId)
-          logger.error(err, 'The ws connection was closed')
         },
       })
     } catch (err) {
-      logger.error('WS Error', err)
+      logger.error(err, 'WS Error')
     }
   }
   return Promise.resolve()

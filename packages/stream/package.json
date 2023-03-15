@@ -17,7 +17,7 @@
         "@babel/runtime": "^7.18.3",
         "@nftcom/gql": "file:../../../NFT-backend/packages/gql",
         "@nftcom/shared": "file:../../../NFT-backend/packages/shared",
-        "@opensea/stream-js": "^0.0.20",
+        "@opensea/stream-js": "^0.0.23",
         "@opentelemetry/exporter-trace-otlp-http": "0.34.0",
         "@opentelemetry/instrumentation-express": "0.32.0",
         "@opentelemetry/instrumentation-http": "0.34.0",
@@ -28,7 +28,7 @@
         "aws-sdk": "^2.1269.0",
         "axios": "^0.27.2",
         "axios-retry": "^3.3.1",
-        "bull": "^4.2.0",
+        "bullmq": "^3.10.1",
         "dotenv": "^10.0.0",
         "ethers": "^5.6.9",
         "express": "^4.18.1",
@@ -40,7 +40,7 @@
         "qs": "^6.11.0",
         "source-map-support": "^0.5.21",
         "typeorm": "^0.3.10",
-        "ws": "^8.8.1",
+        "ws": "^8.12.1",
         "zod": "^3.19.1"
     },
     "devDependencies": {
