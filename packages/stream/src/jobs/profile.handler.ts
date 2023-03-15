@@ -591,7 +591,7 @@ async function doUpdateWalletWork(chainId: string, profile: any, wallet: any, st
   logger.info(`[updateWalletNFTs-9] saveProfileScore ${profile.url} (${profile.id}), ${getTimeStamp(start)}`)
   start = new Date().getTime()
 
-  // refresh NFTs for associated addresses and contract
+  // refresh NFTs for associated addresses and contracts
   let msg = await nftService.updateNFTsForAssociatedAddresses(
     repositories,
     profile,
