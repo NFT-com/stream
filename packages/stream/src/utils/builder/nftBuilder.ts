@@ -90,7 +90,7 @@ export const nftEntityBuilder = (
         helper.bigNumberToString(nft.id.tokenId),
       ),
       description: nftService.getNftDescription(nft),
-      imageURL: nftService.getNftImage(nft?.metadata),
+      imageURL: nftService.getNftImage(nft),
       traits: nftService.getMetadataTraits(nft?.metadata),
     },
     chainId,
