@@ -36,7 +36,6 @@ export enum QUEUE_TYPES {
   UPDATE_PROFILES_NFTS_STREAMS = 'UPDATE_PROFILES_NFTS_STREAMS',
   UPDATE_NON_PROFILES_NFTS_STREAMS = 'UPDATE_NON_PROFILES_NFTS_STREAMS',
   UPDATE_PROFILES_WALLET_NFTS_STREAMS = 'UPDATE_PROFILES_WALLET_NFTS_STREAMS',
-  FETCH_EXTERNAL_ORDERS = 'FETCH_EXTERNAL_ORDERS',
   FETCH_EXTERNAL_ORDERS_ON_DEMAND = 'FETCH_EXTERNAL_ORDERS_ON_DEMAND',
   GENERATE_COMPOSITE_IMAGE = 'GENERATE_COMPOSITE_IMAGE',
   FETCH_COLLECTION_ISSUANCE_DATE = 'FETCH_COLLECTION_ISSUANCE_DATE',
@@ -49,8 +48,8 @@ export enum QUEUE_TYPES {
 }
 
 /* ------------------------------- Handler Map ------------------------------ */
-const handlerMap: Record<string, { handler: any; repeat: number; secondaryOptions?: any }> = {
-  [QUEUE_TYPES.SYNC_CONTRACTS]: { handler: getEthereumEvents, repeat: 15000 },
+const handlerMap: Record<string, { handler: any; repeat?: number; secondaryOptions?: any }> = {
+  [QUEUE_TYPES.SYNC_CONTRACTS]: { handler: nftExternalOrders },
   [QUEUE_TYPES.SYNC_COLLECTIONS]: { handler: collectionSyncHandler, repeat: 15000 },
   [QUEUE_TYPES.SYNC_COLLECTION_IMAGES]: { handler: collectionBannerImageSync, repeat: 15000 },
   [QUEUE_TYPES.SYNC_COLLECTION_NAME]: { handler: collectionNameSync, repeat: 15000 },
@@ -60,7 +59,6 @@ const handlerMap: Record<string, { handler: any; repeat: number; secondaryOption
   [QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS]: { handler: updateNFTsOwnershipForProfilesHandler, repeat: 15000 },
   [QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS]: { handler: updateNFTsForNonProfilesHandler, repeat: 15000 },
   [QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS]: { handler: pullNewNFTsHandler, repeat: 15000 },
-  [QUEUE_TYPES.FETCH_EXTERNAL_ORDERS]: { handler: nftExternalOrders, repeat: 15000 },
   [QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND]: { handler: nftExternalOrdersOnDemand, repeat: 2 * 60000,
     secondaryOptions: {
       attempts: 5,
@@ -260,9 +258,15 @@ const getWorkerOptions = (queueName: string): WorkerOptions => {
 
 const listenToJobs = async (): Promise<void> => {
   for (const queue of queues.values()) {
-    const handler = handlerMap[queue.name].handler
-    const workerOptions = getWorkerOptions(queue.name)
-    new Worker(queue.name, handler, workerOptions)
+    logger.info('🐮 listening to queue', queue.name)
+    if (Object.prototype.hasOwnProperty.call(handlerMap, queue.name)) {
+      const handler = handlerMap[queue.name].handler
+      const workerOptions = getWorkerOptions(queue.name)
+      new Worker(queue.name, handler, workerOptions)
+    } else {
+      logger.info(`🚨 No handler found for queue: ${queue.name}`)
+      new Worker(queue.name, getEthereumEvents, defaultWorkerOpts)
+    }
   }
 }
 
