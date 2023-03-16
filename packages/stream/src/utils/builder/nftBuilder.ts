@@ -66,7 +66,7 @@ export const nftEntityBuilderCryptoPunks = (
       name: nft?.metadata?.name,
       description: '',
       imageURL: nft?.cached_file_url,
-      traits: nftService.getMetadata(undefined, nft),
+      traits: nftService.getMetadataTraits(undefined, { nft }),
     },
     chainId,
   } as entity.NFT
@@ -91,7 +91,7 @@ export const nftEntityBuilder = (
       ),
       description: nftService.getNftDescription(nft),
       imageURL: nftService.getNftImage(nft?.metadata),
-      traits: nftService.getMetadata(nft?.metadata),
+      traits: nftService.getMetadataTraits(nft?.metadata),
     },
     chainId,
   } as entity.NFT
