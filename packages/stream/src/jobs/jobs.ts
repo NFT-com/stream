@@ -260,9 +260,14 @@ const getWorkerOptions = (queueName: string): WorkerOptions => {
 
 const listenToJobs = async (): Promise<void> => {
   for (const queue of queues.values()) {
-    const handler = handlerMap[queue.name].handler
-    const workerOptions = getWorkerOptions(queue.name)
-    new Worker(queue.name, handler, workerOptions)
+    logger.info('🐮 listening to queue', queue.name)
+    if (Object.prototype.hasOwnProperty.call(handlerMap, queue.name)) {
+      const handler = handlerMap[queue.name].handler
+      const workerOptions = getWorkerOptions(queue.name)
+      new Worker(queue.name, handler, workerOptions)
+    } else {
+      logger.error(`🚨 No handler found for queue: ${queue.name}`)
+    }
   }
 }
 
