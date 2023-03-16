@@ -48,8 +48,8 @@ export enum QUEUE_TYPES {
 }
 
 /* ------------------------------- Handler Map ------------------------------ */
-const handlerMap: Record<string, { handler: any; repeat: number; secondaryOptions?: any }> = {
-  [QUEUE_TYPES.SYNC_CONTRACTS]: { handler: nftExternalOrders, repeat: 15000 },
+const handlerMap: Record<string, { handler: any; repeat?: number; secondaryOptions?: any }> = {
+  [QUEUE_TYPES.SYNC_CONTRACTS]: { handler: nftExternalOrders },
   [QUEUE_TYPES.SYNC_COLLECTIONS]: { handler: collectionSyncHandler, repeat: 15000 },
   [QUEUE_TYPES.SYNC_COLLECTION_IMAGES]: { handler: collectionBannerImageSync, repeat: 15000 },
   [QUEUE_TYPES.SYNC_COLLECTION_NAME]: { handler: collectionNameSync, repeat: 15000 },
