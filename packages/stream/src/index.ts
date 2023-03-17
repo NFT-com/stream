@@ -291,23 +291,22 @@ app.post('/uploadCollections', authMiddleWare, upload.single('file'), async (_re
       }
     }
 
-    // sync collection + timestamp
-    const jobId = `sync_collections_from_csv:${Date.now()}`
-    queues.get(QUEUE_TYPES.SYNC_COLLECTIONS)
-      .add('syncCollectionsFromCsv', {
-        SYNC_CONTRACTS: QUEUE_TYPES.SYNC_COLLECTIONS,
-        collections: validCollections,
-        chainId: process.env.CHAIN_ID,
-      }, {
-        removeOnComplete: true,
-        removeOnFail: true,
-        jobId,
-      })
-
     // response msg
     const responseMsg = []
 
     if (validCollections.length) {
+      // sync collection + timestamp
+      const jobId = `sync_collections_from_csv:${Date.now()}`
+      queues.get(QUEUE_TYPES.SYNC_COLLECTIONS)
+        .add('syncCollectionsFromCsv', {
+          SYNC_CONTRACTS: QUEUE_TYPES.SYNC_COLLECTIONS,
+          collections: validCollections,
+          chainId: process.env.CHAIN_ID,
+        }, {
+          removeOnComplete: true,
+          removeOnFail: true,
+          jobId,
+        })
       responseMsg.push(`Sync started for the following collections: ${validCollections.map(i => i.address).join(', ')}.`)
     }
 
