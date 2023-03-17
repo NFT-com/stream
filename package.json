@@ -44,5 +44,8 @@
   "engines": {
     "node": ">=16",
     "npm": ">=7"
+  },
+  "dependencies": {
+    "dd-trace": "^3.15.0"
   }
 }

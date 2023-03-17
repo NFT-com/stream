@@ -151,7 +151,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
               logger.error(err)
             }
             
-            // create if not exist, update if does
+            // create if not exist, update if it does exist
             const nftEntity: entity.NFT = nftEntityBuilder({ ...nft, owner }, chainId)
             const processNFT: entity.NFT = existingNFTs.find(
               (existingNft: entity.NFT) => {
@@ -188,7 +188,6 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
             }
           } catch (errSave) {
             logger.log(`error while saving nftSyncHandler but continuing ${errSave}...${startToken}...${queryParams}`)
-            // logger.log(`error nftPromiseArray: ${nftPromiseArray}`)
             logger.log(`error existing: ${existingNFTs}`)
 
             if (!collectionNFTs?.data?.nextToken) {

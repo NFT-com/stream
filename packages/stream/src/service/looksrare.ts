@@ -217,8 +217,7 @@ export const retrieveMultipleOrdersLooksrare = async (
       }
     }
   } catch (err) {
-    logger.error(`Error in retrieveMultipleOrdersLooksrare: ${err}`)
-    // Sentry.captureMessage(`Error in retrieveOrdersLooksrare: ${err}`)
+    logger.error(err, `Error in retrieveMultipleOrdersLooksrare: ${err}`)
   }
   return responseAggregator
 }

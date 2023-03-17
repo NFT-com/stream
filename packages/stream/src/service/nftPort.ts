@@ -129,7 +129,7 @@ export const retrieveNFTDetailsNFTPort = async (
       return undefined
     }
   } catch (err) {
-    logger.error(`Error in retrieveNFTDetailsNFTPort: ${err}`)
+    logger.error(err, `Error in retrieveNFTDetailsNFTPort: ${err}`)
     return undefined
   }
 }
