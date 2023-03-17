@@ -7,12 +7,11 @@ import { Result } from '@ethersproject/abi'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import { core, looksrareService, openseaService, x2y2Service } from '@nftcom/gql/service'
-import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
+import { _logger, contracts, db, defs, entity, helper, provider } from '@nftcom/shared'
 
 import { MulticallResponse } from '../interface'
 import { cache, CacheKeys, removeExpiredTimestampedZsetMembers, ttlForTimestampedZsetMembers } from '../service/cache'
 import { checksumAddress } from '../service/ownership'
-import { provider } from '../utils/logParser/eventLogParser'
 
 export const repositories = db.newRepositories()
 const logger = _logger.Factory(_logger.Context.Bull)
@@ -361,7 +360,7 @@ const reconcileInvalidCounterOrdersOpenSea = async (
         seaportAbi,
         chainId,
         true,
-        provider(Number(chainId), true),
+        provider.provider(Number(chainId), true),
       )
 
       for (let i=0; i < results.length; i++) {
@@ -532,7 +531,7 @@ const fetchDataUsingMulticallAndReconcile = async (
         abi,
         chainId,
         true,
-        provider(Number(chainId), true),
+        provider.provider(Number(chainId), true),
       )
 
     let openSeaPromiseArray = [],
