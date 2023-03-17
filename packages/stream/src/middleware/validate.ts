@@ -3,6 +3,11 @@ import { AnyZodObject, z } from 'zod'
 
 export type SyncCollectionInput = { address: string; startToken?: string; type?: string };
 
+export interface SyncCollectionRawInput extends SyncCollectionInput {
+  network: string
+  chainId: string
+}
+
 export enum CollectionType {
   OFFICIAL = 'official',
   SPAM = 'spam',
@@ -32,6 +37,14 @@ export const collectionSyncSchema = z.object({
           invalid_type_error: 'address must be a string',
         },
       ),
+      network: z.string( {
+        required_error: 'network is required',
+        invalid_type_error: 'network must be a string',
+      }),
+      chainId: z.string( {
+        required_error: 'chainId is required',
+        invalid_type_error: 'chainId must be a string',
+      }),
       startToken: z.string().optional(),
       type: z.string().optional(),
     })).nonempty({

@@ -21,6 +21,7 @@ import {
   collectionSyncSchema,
   nftRaritySyncSchema,
   SyncCollectionInput,
+  SyncCollectionRawInput,
   syncTxsFromNFTPortSchema,
   validate,
 } from './middleware/validate'
@@ -28,6 +29,7 @@ import { initiateStreaming } from './pipeline'
 import { cache, CacheKeys, removeExpiredTimestampedZsetMembers } from './service/cache'
 import { startProvider, stopProvider } from './service/on-chain'
 import { client } from './service/opensea'
+import { ALLOWED_NETWORKS, chainFromId } from './utils'
 
 const logger = _logger.Factory(_logger.Context.General, _logger.Context.Misc)
 const chainId: string = process.env.CHAIN_ID || '5'
@@ -35,7 +37,7 @@ logger.log(`Chain Id for environment: ${chainId}`)
 
 const upload = multer({ storage: multer.memoryStorage(),
   limits: {
-    fields: 3,
+    fields: 5,
   },
   fileFilter: (_req, file, cb) => {
     file.mimetype === 'text/csv' ? cb(null, true) : cb(new Error('Only csvs are allowed'))
@@ -195,41 +197,46 @@ app.post('/collectionSync', authMiddleWare, validate(collectionSyncSchema), asyn
     const invalidCollections: SyncCollectionInput[] = []
     const recentlyRefreshed: SyncCollectionInput[] = []
     for (let i = 0; i < collections.length; i++) {
-      const collection: SyncCollectionInput = collections[i]
+      const collection: SyncCollectionRawInput = collections[i]
       const collecionSynced: number = await cache.sismember(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, helper.checkSum(collection.address) + (collections[i]?.startToken || ''))
       if (collecionSynced) {
         recentlyRefreshed.push(collection)
       } else {
         try {
-          const checkSumedContract: string = helper.checkSum(collection.address)
-          validCollections.push({
-            address: checkSumedContract,
-            startToken: collection?.startToken,
-            type: collection?.type,
-          })
+          const chain = await chainFromId(collection.chainId)
+          if (collection.network === chain && ALLOWED_NETWORKS.includes(collection.network)) {
+            const checkSumedContract: string = helper.checkSum(collection.address)
+            validCollections.push({
+              address: checkSumedContract,
+              startToken: collection?.startToken,
+              type: collection?.type,
+            })
+          } else {
+            invalidCollections.push(collection)
+          }
         } catch (err) {
           logger.error(`err: ${err}`)
           invalidCollections.push(collection)
         }
       }
     }
-    // sync collection + timestamp
-    const jobId = `sync_collections:${Date.now()}`
-    queues.get(QUEUE_TYPES.SYNC_COLLECTIONS)
-      .add('syncCollections', {
-        SYNC_CONTRACTS: QUEUE_TYPES.SYNC_COLLECTIONS,
-        collections: validCollections,
-        chainId: process.env.CHAIN_ID,
-      }, {
-        removeOnComplete: true,
-        removeOnFail: true,
-        jobId,
-      })
-
     // response msg
     const responseMsg = []
 
     if (validCollections.length) {
+      // sync collection + timestamp
+      const jobId = `sync_collections:${Date.now()}`
+      queues.get(QUEUE_TYPES.SYNC_COLLECTIONS)
+        .add('syncCollections', {
+          SYNC_CONTRACTS: QUEUE_TYPES.SYNC_COLLECTIONS,
+          collections: validCollections,
+          chainId: process.env.CHAIN_ID,
+        }, {
+          removeOnComplete: true,
+          removeOnFail: true,
+          jobId,
+        })
+
       responseMsg.push(`Sync started for the following collections: ${validCollections.map(i => i.address).join(', ')}.`)
     }
 
@@ -265,13 +272,20 @@ app.post('/uploadCollections', authMiddleWare, upload.single('file'), async (_re
           const rowSplit: string[] = row.split(',')
           const contract: string = rowSplit?.[0]
           const type: string = rowSplit?.[1]?.replace('\r', '')
+          const network: string = rowSplit?.[2]?.replace('\r', '')
+          const chainId: string = rowSplit?.[3]?.replace('\r', '')
           try {
             const checksumContract: string = helper.checkSum(contract)
             const collecionSynced: number = await cache.sismember(`${CacheKeys.RECENTLY_SYNCED}_${chainId}`, helper.checkSum(checksumContract))
             if (collecionSynced) {
               recentlyRefreshed.push({ address: checksumContract })
             } else {
-              validCollections.push({ address: checksumContract, type })
+              const chain = await chainFromId(chainId)
+              if (network === chain && ALLOWED_NETWORKS.includes(network)) {
+                validCollections.push({ address: checksumContract, type })
+              } else {
+                invalidCollections.push({ address: contract })
+              }
             }
           } catch (err) {
             invalidCollections.push({ address: contract })

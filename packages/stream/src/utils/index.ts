@@ -1,3 +1,5 @@
+export const ALLOWED_NETWORKS: string[] = ['ethereum', 'goerli']
+
 export const delay = (ms: number) : Promise<any> => new Promise(resolve => setTimeout(resolve, ms))
 
 export const lookupEnvKeyOrThrow = (key: string): string => {
