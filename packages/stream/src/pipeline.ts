@@ -118,7 +118,7 @@ const initializeStreamsForAllSlugs = (): void => {
                                                                   
                       if (!order) {
                         try {
-                          logger.info(`order with orderHash: ${orderHash} for ${nftId}: eventPayload: ${JSON.stringify(eventPayload)}`)
+                          logger.info(`[seaport-streams] order with orderHash: ${orderHash} for ${nftId}: eventPayload: ${JSON.stringify(eventPayload)}`)
                           const newOrder: Partial<entity.TxOrder> = await streamOrderEntityBuilder(
                             eventType,
                             eventPayload,
