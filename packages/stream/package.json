@@ -17,7 +17,7 @@
         "@babel/runtime": "^7.18.3",
         "@nftcom/gql": "file:../../../NFT-backend/packages/gql",
         "@nftcom/shared": "file:../../../NFT-backend/packages/shared",
-        "@opensea/stream-js": "^0.0.23",
+        "@opensea/stream-js": "^0.0.25",
         "@opentelemetry/exporter-trace-otlp-http": "0.34.0",
         "@opentelemetry/instrumentation-express": "0.32.0",
         "@opentelemetry/instrumentation-http": "0.34.0",
