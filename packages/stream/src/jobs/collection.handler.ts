@@ -152,7 +152,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
             }
             
             // create if not exist, update if it does exist
-            const nftEntity: entity.NFT = nftEntityBuilder({ ...nft, owner }, chainId)
+            const nftEntity: entity.NFT = await nftEntityBuilder({ ...nft, owner }, chainId)
             const processNFT: entity.NFT = existingNFTs.find(
               (existingNft: entity.NFT) => {
                 if( existingNft.tokenId === BigNumber.from(nft.id.tokenId).toHexString()) {

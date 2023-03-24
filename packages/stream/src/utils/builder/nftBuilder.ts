@@ -72,10 +72,10 @@ export const nftEntityBuilderCryptoPunks = (
   } as entity.NFT
 }
 
-export const nftEntityBuilder = (
+export const nftEntityBuilder = async (
   nft: NFTAlchemy & { owner: string },
   chainId: string,
-): entity.NFT => {
+): Promise<entity.NFT> => {
   const csOwner = checkSumOwner(nft.owner)
   return {
     contract: helper.checkSum(nft.contract.address),
@@ -84,13 +84,13 @@ export const nftEntityBuilder = (
     owner: csOwner,
     metadata: {
       name: nftService.getNftName(
-        nft?.metadata,
-        undefined,
         nft,
+        undefined,
+        nft.contractMetadata,
         helper.bigNumberToString(nft.id.tokenId),
       ),
-      description: nftService.getNftDescription(nft),
-      imageURL: nftService.getNftImage(nft),
+      description: nftService.getNftDescription(nft, undefined, nft.contractMetadata),
+      imageURL: await nftService.getNftImage(nft),
       traits: nftService.getMetadataTraits(nft?.metadata),
     },
     chainId,
