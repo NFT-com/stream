@@ -146,6 +146,34 @@ const CALL_BATCH_SIZE = 1000
 //   }
 // }
 
+const filterExistingSeaportListings = async (listings): Promise<entity.TxOrder[] | []> => {
+  if (listings.length) {
+    logger.info('order.handler.filterExistingSeaportListings -> pre-filter', JSON.stringify(listings))
+    const orderHashes = listings.map(listing => listing.orderHash)
+
+    // Find existing orderHashes in the TxOrder table
+    const existingOrderHashes = await repositories.txOrder.find({
+      where: {
+        orderHash: {
+          $in: orderHashes, // Using 'in' filter
+        },
+      },
+      select: ['orderHash'],
+    })
+
+    const existingOrderHashSet = new Set(existingOrderHashes.map(txOrder => txOrder.orderHash))
+
+    // Filter out the listings that have an orderHash already in the TxOrder table
+    const filteredListings = listings.filter(
+      listing => !existingOrderHashSet.has(listing.orderHash))
+
+    logger.info('order.handler.filterExistingSeaportListings -> post-filter', JSON.stringify(filteredListings))
+    return filteredListings
+  }
+
+  return []
+}
+
 export const nftExternalOrdersOnDemand = async (job: Job): Promise<void> => {
   logger.debug('external orders on demand', job.data)
   try {
@@ -197,7 +225,9 @@ export const nftExternalOrdersOnDemand = async (job: Job): Promise<void> => {
       if (opensea.status === 'fulfilled') {
         // opensea listings
         if (opensea.value.listings.length) {
-          listings.push(...opensea.value.listings)
+          // filter out listings that already exist in the TxOrder table -> this is to avoid overwriting listings with existing fields like signature
+          const nonExistingListings = await filterExistingSeaportListings(opensea.value.listings)
+          listings.push(...nonExistingListings)
         }
 
         // opensea offers
