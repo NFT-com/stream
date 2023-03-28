@@ -61,42 +61,42 @@ app.get('/health', async (_req, res) => {
 })
 
 // sync external orders - authenticated
-app.get('/syncOS', authMiddleWare, async (_req, res) => {
-  try {
-    queues.get(QUEUE_TYPES.SYNC_CONTRACTS)
-      .add('syncOS', {
-        SYNC_CONTRACTS: QUEUE_TYPES.SYNC_CONTRACTS,
-        chainId: process.env.CHAIN_ID,
-      }, {
-        removeOnComplete: true,
-        removeOnFail: true,
-        jobId: 'fetch_os_orders',
-      })
-    res.status(200).send({ message: 'Started Sync!' })
-  } catch (error) {
-    logger.error(`err: ${error}`)
-    res.status(400).send(error)
-  }
-})
+// app.get('/syncOS', authMiddleWare, async (_req, res) => {
+//   try {
+//     queues.get(QUEUE_TYPES.SYNC_CONTRACTS)
+//       .add('syncOS', {
+//         SYNC_CONTRACTS: QUEUE_TYPES.SYNC_CONTRACTS,
+//         chainId: process.env.CHAIN_ID,
+//       }, {
+//         removeOnComplete: true,
+//         removeOnFail: true,
+//         jobId: 'fetch_os_orders',
+//       })
+//     res.status(200).send({ message: 'Started Sync!' })
+//   } catch (error) {
+//     logger.error(`err: ${error}`)
+//     res.status(400).send(error)
+//   }
+// })
 
 // sync external orders - authenticated
-app.get('/syncLR', authMiddleWare, async (_req, res) => {
-  try {
-    queues.get(QUEUE_TYPES.SYNC_CONTRACTS)
-      .add('syncLR', {
-        SYNC_CONTRACTS: QUEUE_TYPES.SYNC_CONTRACTS,
-        chainId: process.env.CHAIN_ID,
-      }, {
-        removeOnComplete: true,
-        removeOnFail: true,
-        jobId: 'fetch_lr_orders',
-      })
-    res.status(200).send({ message: 'Stated Sync!' })
-  } catch (error) {
-    logger.error(`err: ${error}`)
-    res.status(400).send(error)
-  }
-})
+// app.get('/syncLR', authMiddleWare, async (_req, res) => {
+//   try {
+//     queues.get(QUEUE_TYPES.SYNC_CONTRACTS)
+//       .add('syncLR', {
+//         SYNC_CONTRACTS: QUEUE_TYPES.SYNC_CONTRACTS,
+//         chainId: process.env.CHAIN_ID,
+//       }, {
+//         removeOnComplete: true,
+//         removeOnFail: true,
+//         jobId: 'fetch_lr_orders',
+//       })
+//     res.status(200).send({ message: 'Stated Sync!' })
+//   } catch (error) {
+//     logger.error(`err: ${error}`)
+//     res.status(400).send(error)
+//   }
+// })
 
 // force stop external orders sync - authenticated
 app.get('/stopSync', authMiddleWare, async (_req, res) => {
