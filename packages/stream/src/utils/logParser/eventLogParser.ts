@@ -93,7 +93,7 @@ export const fulfillOrCancelSeaport = async (
         )
 
         await repositories.txCancel.save(cancelledEntity)
-        logger.debug(`
+        logger.info(`
             Evt Saved: ${OSSeaportEventName.OrderCancelled} for orderHash ${orderHash},
             offerer ${offerer},
             zone ${zone}
@@ -103,6 +103,8 @@ export const fulfillOrCancelSeaport = async (
       logger.error(`Evt: ${OSSeaportEventName.OrderCancelled} -- Err: ${err}`)
     }
   } else if (evt.name === OSSeaportEventName.CounterIncremented) {
+    logger.info(`Evt: ${OSSeaportEventName.CounterIncremented}, args: ${JSON.stringify(evt.args)}, typeof newCounter: ${typeof evt.args[0]}, typeof offerer: ${typeof evt.args[1]}`)
+    
     const [newCounter, offerer] = evt.args
     try {
       const orders: entity.TxOrder[] = await repositories.txOrder.find({
