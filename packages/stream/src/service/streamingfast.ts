@@ -17,25 +17,30 @@ const client = new Client({
 let interval: NodeJS.Timeout | null = null
 let latestBlockNumber: number | null = null
 
-const handleNotification = async (msg: string): Promise<void> => {
+interface PgNotification {
+  payload: string
+}
+
+const handleNotification = async (msg: PgNotification): Promise<void> => {
   // if latestBlockNumber is not set, call getLatestBlockNumber and store the result in latestBlockNumber
   if (latestBlockNumber === null) latestBlockNumber = await getLatestBlockNumber()
 
   const [schema, blockNumber, tokenId, contractAddress, quantity, fromAddress, toAddress, txHash, timestamp] = msg.payload.split('|')
 
-  const blockDifference = Math.abs(latestBlockNumber - blockNumber)
+  const blockDifference = Math.abs(latestBlockNumber - Number(blockNumber))
   if (blockDifference <= blockRange) {
     if (fromAddress == '0000000000000000000000000000000000000000') {
-      console.log(`[MINTED]: ${schema}/${contractAddress}/${tokenId} to ${toAddress}, ${quantity > 1 ? `quantity=${quantity}, ` : ''}`)
+      console.log(`[MINTED]: ${schema}/${contractAddress}/${tokenId} to ${toAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}`)
     } else if (toAddress == '0000000000000000000000000000000000000000') {
-      console.log(`[BURNED]: ${schema}/${contractAddress}/${tokenId} from ${fromAddress}, ${quantity > 1 ? `quantity=${quantity}, ` : ''}`)
+      console.log(`[BURNED]: ${schema}/${contractAddress}/${tokenId} from ${fromAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}`)
     } else {
-      console.log(`[TRANSFERRED]: ${schema}/${contractAddress}/${tokenId} from ${fromAddress} to ${toAddress}, ${quantity > 1 ? `quantity=${quantity}, ` : ''}`)
+      console.log(`[TRANSFERRED]: ${schema}/${contractAddress}/${tokenId} from ${fromAddress} to ${toAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}`)
     }
   }
 }
 
 export function startStreamingFast(): void {
+  logger.info('---------> ⚡️ starting streaming fast listener, waiting for new transfers...')
   if (interval || client.listeners('notification').length) {
     logger.warn('StreamingFast is already running')
     return
@@ -44,8 +49,6 @@ export function startStreamingFast(): void {
   client.connect()
 
   client.query('LISTEN transfers')
-
-  console.log('Waiting for new inserts...')
 
   // Call getLatestBlockNumber every 5 minutes and store the result in latestBlockNumber
   interval = setInterval(async () => {
@@ -56,6 +59,7 @@ export function startStreamingFast(): void {
 }
 
 export function stopStreamingFast(): void {
+  logger.info('---------> 🛑 stopping streaming fast listener')
   if (!interval || !client.listeners('notification').length) {
     logger.warn('StreamingFast is not running')
     return
