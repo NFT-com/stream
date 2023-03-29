@@ -8,7 +8,7 @@ import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
 import { delay } from '../utils'
 import { cancelEntityBuilder, txEntityBuilder, txX2Y2ProtocolDataParser } from '../utils/builder/orderBuilder'
-import { atomicOwnershipUpdate,checksumAddress } from './ownership'
+import { atomicOwnershipUpdate, checksumAddress } from './ownership'
 import {
   approvalEventHandler,
   buyNowInfoEventHandler,
