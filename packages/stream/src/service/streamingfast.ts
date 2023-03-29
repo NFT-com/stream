@@ -23,21 +23,22 @@ let interval: NodeJS.Timeout = null
 
 const handleFilter = async (contractAddress: string, tokenId: string): Promise<boolean> => {
   if (ONLY_OFFICIAL_FILTER) {
-    !(await repositories.collection.findOne({
+    const collection = await repositories.collection.findOne({
       where: { contract: helper.checkSum(contractAddress) },
-    })).isOfficial
+    })
+    if (!collection?.isOfficial) return false
   }
 
   if (REMOVE_SPAM_FILTER) {
-    return Boolean(await cache.sismember(
+    if (await cache.sismember(
       CacheKeys.SPAM_COLLECTIONS, helper.checkSum(contractAddress),
-    ))
+    )) return false
   }
 
   if (ONLY_EXISTING_NFT_FILTER) {
     const nftExists = await repositories.nft.exists({
-      contractAddress,
-      tokenId,
+      contract: helper.checkSum(contractAddress),
+      tokenId: helper.checkSum(tokenId),
     })
     if (!nftExists) {
       nftDoesNotExist.emit('nft', { contractAddress, tokenId })
@@ -49,7 +50,7 @@ const handleFilter = async (contractAddress: string, tokenId: string): Promise<b
 }
 
 nftDoesNotExist.on('nft', ({ contractAddress, tokenId }) => {
-  logger.info({ contractAddress, tokenId }, 'NFT does not exist')
+  logger.warn({ contractAddress, tokenId }, 'NFT does not exist')
 })
 
 const handleNotification = async (msg: any): Promise<void> => {
@@ -71,6 +72,8 @@ const handleNotification = async (msg: any): Promise<void> => {
     } else {
       console.log(`[TRANSFERRED]: ${schema}/${contractAddress}/${tokenId} from ${fromAddress} to ${toAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}`)
     }
+  } else {
+    logger.warn({ schema, blockNumber, tokenId, contractAddress, quantity, fromAddress, toAddress, txHash, timestamp }, 'Filtered Transfer')
   }
 }
 
