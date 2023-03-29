@@ -67,11 +67,11 @@ const handleNotification = async (msg: any): Promise<void> => {
     await handleFilter(contractAddress, tokenId)
   ) {
     if (fromAddress === '0000000000000000000000000000000000000000') {
-      console.log(`[MINTED]: ${schema}/${contractAddress}/${tokenId} to ${toAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}`)
+      logger.info(`streamingFast: [MINTED]: ${schema}/${contractAddress}/${tokenId} to ${toAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}, https://etherscan.io/tx/${txHash}`)
     } else if (toAddress === '0000000000000000000000000000000000000000') {
-      console.log(`[BURNED]: ${schema}/${contractAddress}/${tokenId} from ${fromAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}`)
+      logger.info(`streamingFast: [BURNED]: ${schema}/${contractAddress}/${tokenId} from ${fromAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}, https://etherscan.io/tx/${txHash}`)
     } else {
-      console.log(`[TRANSFERRED]: ${schema}/${contractAddress}/${tokenId} from ${fromAddress} to ${toAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}`)
+      logger.info(`streamingFast: [TRANSFERRED]: ${schema}/${contractAddress}/${tokenId} from ${fromAddress} to ${toAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}, https://etherscan.io/tx/${txHash}`)
     }
   } else {
     logger.warn({ schema, blockNumber, tokenId, contractAddress, quantity, fromAddress, toAddress, txHash, timestamp }, 'Filtered Transfer')
