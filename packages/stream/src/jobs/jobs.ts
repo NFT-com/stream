@@ -209,22 +209,27 @@ const publishJobs = async (shouldPublish: boolean): Promise<void> => {
   didPublish = true
   const chainId = process.env.CHAIN_ID
 
-  const jobPromises = Object.entries(handlerMap).map(async ([queueType, { repeat, secondaryOptions }]) => {
-    const queue = queues.get(queueType)
-    const defaultJobOptions = {
-      removeOnComplete: true,
-      removeOnFail: true,
-      jobId: queueType,
-    }
+  const jobPromises = Object.entries(handlerMap)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    .filter(([_, { repeat }]) => {
+      return repeat // don't create a job for a non-repeatable queue
+    })
+    .map(async ([queueType, { repeat, secondaryOptions }]) => {
+      const queue = queues.get(queueType)
+      const defaultJobOptions = {
+        removeOnComplete: true,
+        removeOnFail: true,
+        jobId: queueType,
+      }
 
-    const finalJobOptions = {
-      ...defaultJobOptions,
-      ...(repeat ? { repeat: { every: repeat } } : {}),
-      ...(secondaryOptions ? secondaryOptions : {}),
-    }
+      const finalJobOptions = {
+        ...defaultJobOptions,
+        ...(repeat ? { repeat: { every: repeat } } : {}),
+        ...(secondaryOptions ? secondaryOptions : {}),
+      }
 
-    await queue.add(queueType, { queueType, chainId }, finalJobOptions)
-  })
+      await queue.add(queueType, { queueType, chainId }, finalJobOptions)
+    })
 
   // Default case
   jobPromises.push((async () => {
