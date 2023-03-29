@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { BigNumber } from 'ethers'
 import { Client } from 'pg'
 import { EventEmitter } from 'stream'
 
@@ -38,7 +39,7 @@ const handleFilter = async (contractAddress: string, tokenId: string): Promise<b
   if (ONLY_EXISTING_NFT_FILTER) {
     const nftExists = await repositories.nft.exists({
       contract: helper.checkSum(contractAddress),
-      tokenId: helper.checkSum(tokenId),
+      tokenId: BigNumber.from(`0x${tokenId}`).toHexString(),
     })
     if (!nftExists) {
       nftDoesNotExist.emit('nft', { contractAddress, tokenId })
@@ -63,7 +64,7 @@ const handleNotification = async (msg: any): Promise<void> => {
   const blockDifference = Math.abs(latestBlockNumber - Number(blockNumber))
 
   if (blockDifference <= blockRange &&
-    handleFilter(contractAddress, tokenId)
+    await handleFilter(contractAddress, tokenId)
   ) {
     if (fromAddress === '0000000000000000000000000000000000000000') {
       console.log(`[MINTED]: ${schema}/${contractAddress}/${tokenId} to ${toAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}`)
