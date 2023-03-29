@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Client } from 'pg'
+import { EventEmitter } from 'stream'
 
 import { _logger, db, helper } from '@nftcom/shared'
 
@@ -11,6 +12,7 @@ const repositories = db.newRepositories()
 const connectionString = 'postgresql://app:nftcom1234@sf-substreams-instance-1.clmsk3iud7e0.us-east-1.rds.amazonaws.com:5432/app'
 const logger = _logger.Factory('STREAMINGFAST')
 const client = new Client({ connectionString })
+const nftDoesNotExist = new EventEmitter()
 const blockRange = 200                  // 200 blocks padding for internal of latest block numbers
 const REMOVE_SPAM_FILTER = true         // filter out spam transfers
 const ONLY_OFFICIAL_FILTER = true       // only listen to official contracts
@@ -21,7 +23,7 @@ let interval: NodeJS.Timeout = null
 
 const handleFilter = async (contractAddress: string, tokenId: string): Promise<boolean> => {
   if (ONLY_OFFICIAL_FILTER) {
-    return (await repositories.collection.findOne({
+    !(await repositories.collection.findOne({
       where: { contract: helper.checkSum(contractAddress) },
     })).isOfficial
   }
@@ -33,11 +35,22 @@ const handleFilter = async (contractAddress: string, tokenId: string): Promise<b
   }
 
   if (ONLY_EXISTING_NFT_FILTER) {
-    // TODO: @tim
+    const nftExists = await repositories.nft.exists({
+      contractAddress,
+      tokenId,
+    })
+    if (!nftExists) {
+      nftDoesNotExist.emit('nft', { contractAddress, tokenId })
+      return nftExists
+    }
   }
 
   return true
 }
+
+nftDoesNotExist.on('nft', ({ contractAddress, tokenId }) => {
+  logger.info({ contractAddress, tokenId }, 'NFT does not exist')
+})
 
 const handleNotification = async (msg: any): Promise<void> => {
   // if latestBlockNumber is not set, call getLatestBlockNumber and store the result in latestBlockNumber
