@@ -9,29 +9,23 @@ import { atomicOwnershipUpdate } from './ownership'
 const connectionString = 'postgresql://app:nftcom1234@sf-substreams-instance-1.clmsk3iud7e0.us-east-1.rds.amazonaws.com:5432/app'
 const blockRange = 200 // 200 blocks padding for internal of latest block numbers
 const logger = _logger.Factory('STREAMINGFAST')
+const client = new Client({ connectionString })
+let latestBlockNumber: number = null
+let interval: NodeJS.Timeout = null
 
-const client = new Client({
-  connectionString,
-})
-
-let interval: NodeJS.Timeout | null = null
-let latestBlockNumber: number | null = null
-
-interface PgNotification {
-  payload: string
-}
-
-const handleNotification = async (msg: PgNotification): Promise<void> => {
+const handleNotification = async (msg: any): Promise<void> => {
   // if latestBlockNumber is not set, call getLatestBlockNumber and store the result in latestBlockNumber
-  if (latestBlockNumber === null) latestBlockNumber = await getLatestBlockNumber()
+  if (latestBlockNumber === null) {
+    latestBlockNumber = await getLatestBlockNumber()
+  }
 
   const [schema, blockNumber, tokenId, contractAddress, quantity, fromAddress, toAddress, txHash, timestamp] = msg.payload.split('|')
 
   const blockDifference = Math.abs(latestBlockNumber - Number(blockNumber))
   if (blockDifference <= blockRange) {
-    if (fromAddress == '0000000000000000000000000000000000000000') {
+    if (fromAddress === '0000000000000000000000000000000000000000') {
       console.log(`[MINTED]: ${schema}/${contractAddress}/${tokenId} to ${toAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}`)
-    } else if (toAddress == '0000000000000000000000000000000000000000') {
+    } else if (toAddress === '0000000000000000000000000000000000000000') {
       console.log(`[BURNED]: ${schema}/${contractAddress}/${tokenId} from ${fromAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}`)
     } else {
       console.log(`[TRANSFERRED]: ${schema}/${contractAddress}/${tokenId} from ${fromAddress} to ${toAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}`)
