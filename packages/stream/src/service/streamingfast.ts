@@ -54,6 +54,10 @@ nftDoesNotExist.on('nft', ({ contractAddress, tokenId }) => {
   logger.warn({ contractAddress, tokenId }, 'NFT does not exist')
 })
 
+const ensureHexPrefix = (value: string): string => {
+  return value.startsWith('0x') ? value : `0x${value}`
+}
+
 const handleNotification = async (msg: any): Promise<void> => {
   // if latestBlockNumber is not set, call getLatestBlockNumber and store the result in latestBlockNumber
   if (latestBlockNumber === null) {
@@ -62,28 +66,32 @@ const handleNotification = async (msg: any): Promise<void> => {
 
   const [schema, blockNumber, tokenId, contractAddress, quantity, fromAddress, toAddress, txHash, timestamp] = msg.payload.split('|')
   const blockDifference = Math.abs(latestBlockNumber - Number(blockNumber))
-  const hexTokenId = tokenId.startsWith('0x') ? tokenId : `0x${tokenId}`
+  const hexTokenId = ensureHexPrefix(tokenId)
+  const hexContractAddress = ensureHexPrefix(contractAddress)
+  const hexFromAddress = ensureHexPrefix(fromAddress)
+  const hexToAddress = ensureHexPrefix(toAddress)
+  const hexTxHash = ensureHexPrefix(txHash)
 
   if (blockDifference <= blockRange &&
     await handleFilter(contractAddress, hexTokenId)
   ) {
-    if (fromAddress === '0000000000000000000000000000000000000000') {
-      logger.info(`streamingFast: [MINTED]: ${schema}/${contractAddress}/${hexTokenId} to ${toAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}, https://etherscan.io/tx/0x${txHash}`)
-    } else if (toAddress === '0000000000000000000000000000000000000000') {
-      logger.info(`streamingFast: [BURNED]: ${schema}/${contractAddress}/${hexTokenId} from ${fromAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}, https://etherscan.io/tx/0x${txHash}`)
+    if (fromAddress === '0x0000000000000000000000000000000000000000') {
+      logger.info(`streamingFast: [MINTED]: ${schema}/${hexContractAddress}/${hexTokenId} to ${hexToAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}, https://etherscan.io/tx/${hexTxHash}`)
+    } else if (hexToAddress === '0x0000000000000000000000000000000000000000') {
+      logger.info(`streamingFast: [BURNED]: ${schema}/${hexContractAddress}/${hexTokenId} from ${hexFromAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}, https://etherscan.io/tx/${hexTxHash}`)
     } else {
       const start = new Date().getTime()
       await atomicOwnershipUpdate(
-        contractAddress,
+        hexContractAddress,
         hexTokenId,
-        fromAddress,
-        toAddress,
+        hexFromAddress,
+        hexToAddress,
         '1', // mainnet ETH
       )
-      logger.info(`streamingFast (took ${new Date().getTime() - start} ms): [TRANSFERRED]: ${schema}/${contractAddress}/${hexTokenId} from ${fromAddress} to ${toAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}, https://etherscan.io/tx/0x${txHash}`)
+      logger.info(`streamingFast (took ${new Date().getTime() - start} ms): [TRANSFERRED]: ${schema}/${hexContractAddress}/${hexTokenId} from ${hexFromAddress} to ${hexToAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}, https://etherscan.io/tx/${hexTxHash}`)
     }
   } else {
-    logger.warn({ schema, blockNumber, hexTokenId, contractAddress, quantity, fromAddress, toAddress, txHash, timestamp }, 'Filtered Transfer')
+    logger.warn({ schema, blockNumber, hexTokenId, hexContractAddress, quantity, hexFromAddress, hexToAddress, txHash, timestamp }, 'Filtered Transfer')
   }
 }
 
