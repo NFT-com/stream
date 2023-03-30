@@ -68,9 +68,9 @@ const handleNotification = async (msg: any): Promise<void> => {
     await handleFilter(contractAddress, hexTokenId)
   ) {
     if (fromAddress === '0000000000000000000000000000000000000000') {
-      logger.info(`streamingFast: [MINTED]: ${schema}/${contractAddress}/${hexTokenId} to ${toAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}, https://etherscan.io/tx/${txHash}`)
+      logger.info(`streamingFast: [MINTED]: ${schema}/${contractAddress}/${hexTokenId} to ${toAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}, https://etherscan.io/tx/0x${txHash}`)
     } else if (toAddress === '0000000000000000000000000000000000000000') {
-      logger.info(`streamingFast: [BURNED]: ${schema}/${contractAddress}/${hexTokenId} from ${fromAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}, https://etherscan.io/tx/${txHash}`)
+      logger.info(`streamingFast: [BURNED]: ${schema}/${contractAddress}/${hexTokenId} from ${fromAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}, https://etherscan.io/tx/0x${txHash}`)
     } else {
       const start = new Date().getTime()
       await atomicOwnershipUpdate(
@@ -80,7 +80,7 @@ const handleNotification = async (msg: any): Promise<void> => {
         toAddress,
         '1', // mainnet ETH
       )
-      logger.info(`streamingFast (took ${new Date().getTime() - start} ms): [TRANSFERRED]: ${schema}/${contractAddress}/${hexTokenId} from ${fromAddress} to ${toAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}, https://etherscan.io/tx/${txHash}`)
+      logger.info(`streamingFast (took ${new Date().getTime() - start} ms): [TRANSFERRED]: ${schema}/${contractAddress}/${hexTokenId} from ${fromAddress} to ${toAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}, https://etherscan.io/tx/0x${txHash}`)
     }
   } else {
     logger.warn({ schema, blockNumber, hexTokenId, contractAddress, quantity, fromAddress, toAddress, txHash, timestamp }, 'Filtered Transfer')
