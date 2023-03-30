@@ -39,7 +39,7 @@ const handleFilter = async (contractAddress: string, tokenId: string): Promise<b
   if (ONLY_EXISTING_NFT_FILTER) {
     const nftExists = await repositories.nft.exists({
       contract: helper.checkSum(contractAddress),
-      tokenId: BigNumber.from(`0x${tokenId}`).toHexString(),
+      tokenId,
     })
     if (!nftExists) {
       nftDoesNotExist.emit('nft', { contractAddress, tokenId })
@@ -67,14 +67,15 @@ const handleNotification = async (msg: any): Promise<void> => {
   const [schema, blockNumber, tokenId, contractAddress, quantity, fromAddress, toAddress, txHash, timestamp] = msg.payload.split('|')
   const blockDifference = Math.abs(latestBlockNumber - Number(blockNumber))
   const hexTokenId = ensureHexPrefix(tokenId)
-  const hexContractAddress = ensureHexPrefix(contractAddress)
-  const hexFromAddress = ensureHexPrefix(fromAddress)
-  const hexToAddress = ensureHexPrefix(toAddress)
-  const hexTxHash = ensureHexPrefix(txHash)
 
   if (blockDifference <= blockRange &&
     await handleFilter(contractAddress, hexTokenId)
   ) {
+    const hexContractAddress = ensureHexPrefix(contractAddress)
+    const hexFromAddress = ensureHexPrefix(fromAddress)
+    const hexToAddress = ensureHexPrefix(toAddress)
+    const hexTxHash = ensureHexPrefix(txHash)
+
     if (fromAddress === '0x0000000000000000000000000000000000000000') {
       logger.info(`streamingFast: [MINTED]: ${schema}/${hexContractAddress}/${hexTokenId} to ${hexToAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}, https://etherscan.io/tx/${hexTxHash}`)
     } else if (hexToAddress === '0x0000000000000000000000000000000000000000') {
