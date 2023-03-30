@@ -145,7 +145,6 @@ const createSubqueue = (
 const createQueues = (): Promise<void> => {
   return new Promise((resolve) => {
     networks.forEach((chainId: string, network: string) => {
-      logger.info({ chainId, network }, 'Setting default queue')
       queues.set(network, new Queue(chainId, { prefix: queuePrefix, connection }))
     })
 
@@ -234,7 +233,6 @@ const publishJobs = async (shouldPublish: boolean): Promise<void> => {
 
   // Default case
   jobPromises.push((async () => {
-    logger.info({ queues: Array.from(queues.keys()), chainId }, 'Adding default queue')
     await queues.get(chainId).add('default', { chainId: chainId || process.env.CHAIN_ID }, {
       removeOnComplete: true,
       removeOnFail: true,
