@@ -69,4 +69,5 @@ WORKDIR /app/stream/packages/stream
 
 EXPOSE 8080
 
+
 CMD ["npm", "start"]
