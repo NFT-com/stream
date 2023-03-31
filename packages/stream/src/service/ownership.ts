@@ -331,9 +331,10 @@ export const atomicOwnershipUpdate = async (
       })
       await seService.indexNFTs([savedNFT])
       await nftService.updateCollectionForNFTs([savedNFT])
+      await handleNewOwnerProfile(wallet, savedNFT, chainId)
       logger.info(
         { duration: `${performance.now() - startNewNFT}ms` },
-        `streamingFast: new NFT saved in db ${savedNFT.id} completed in ${performance.now() - startNewNFT}ms`,
+        `streamingFast: new NFT ${csContract}/${hexTokenId} (owner=${csNewOwner}) saved in db ${savedNFT.id} completed in ${performance.now() - startNewNFT}ms`,
       )
     }
   } catch (err) {
