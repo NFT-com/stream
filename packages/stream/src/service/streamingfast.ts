@@ -76,7 +76,7 @@ const handleNotification = async (msg: any): Promise<void> => {
   if (blockDifference <= blockRange &&
     await handleFilter(contractAddress, hexTokenId)
   ) {
-    if (fromAddress === '0x0000000000000000000000000000000000000000') {
+    if (hexFromAddress === '0x0000000000000000000000000000000000000000') {
       logger.info(`streamingFast: [MINTED]: ${schema}/${hexContractAddress}/${hexTokenId} to ${hexToAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}https://etherscan.io/tx/${hexTxHash}`)
     } else if (hexToAddress === '0x0000000000000000000000000000000000000000') {
       logger.info(`streamingFast: [BURNED]: ${schema}/${hexContractAddress}/${hexTokenId} from ${hexFromAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}https://etherscan.io/tx/${hexTxHash}`)
