@@ -2,7 +2,7 @@ import { BigNumber, ethers } from 'ethers'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore:next-line
-import {  nftService } from '@nftcom/gql/service'
+import { nftService } from '@nftcom/gql/service'
 import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
 import { cache, CacheKeys } from './cache'
@@ -26,14 +26,18 @@ export const checksumAddress = (address: string): string | undefined => {
  * @param chainId - The chain ID of the blockchain network.
  */
 const processProfileNFT = async (existingNFT: entity.NFT): Promise<void> => {
-  logger.info(`Profile is being processed as a Profile NFT - contract ${existingNFT.contract}, tokenId: ${existingNFT.tokenId}`)
+  logger.info(
+    `Profile is being processed as a Profile NFT - contract ${existingNFT.contract}, tokenId: ${existingNFT.tokenId}`,
+  )
   const previousWallet = await repositories.wallet.findById(existingNFT.walletId)
   if (previousWallet) {
-    const profile: entity.Profile = await repositories.profile.findOne({ where: {
-      tokenId: BigNumber.from(existingNFT.tokenId).toString(),
-      ownerWalletId: previousWallet.id,
-      ownerUserId: previousWallet.userId,
-    } })
+    const profile: entity.Profile = await repositories.profile.findOne({
+      where: {
+        tokenId: BigNumber.from(existingNFT.tokenId).toString(),
+        ownerWalletId: previousWallet.id,
+        ownerUserId: previousWallet.userId,
+      },
+    })
 
     // If this NFT was the previous owner's preferred profile...
     if (profile && profile?.id === previousWallet.profileId) {
@@ -53,11 +57,7 @@ const processProfileNFT = async (existingNFT: entity.NFT): Promise<void> => {
  * @param chainId - The chain ID of the blockchain network.
  * @returns A Promise that resolves to void.
  */
-const handleNewOwnerProfile = async (
-  wallet: entity.Wallet,
-  updatedNFT: entity.NFT,
-  chainId: string,
-): Promise<void> => {
+const handleNewOwnerProfile = async (wallet: entity.Wallet, updatedNFT: entity.NFT, chainId: string): Promise<void> => {
   const profileQuery = {
     ownerWalletId: wallet.id,
     ownerUserId: wallet.userId,
@@ -91,7 +91,10 @@ const handleNewOwnerProfile = async (
         })
         logger.info(`updated edges for profile in ownership for profileId: ${profile.id}, url: ${profile.url}.`)
       } catch (err) {
-        logger.error(err, `Error in updateEdgesWeightForProfile in ownership for profileId:${profile.id}, url: ${profile.url}`)
+        logger.error(
+          err,
+          `Error in updateEdgesWeightForProfile in ownership for profileId:${profile.id}, url: ${profile.url}`,
+        )
       }
 
       try {
@@ -131,15 +134,14 @@ const deleteCacheKeys = async (existingNFT: entity.NFT, chainId: string): Promis
       ownerWalletId: existingNFT.walletId,
       ownerUserId: existingNFT.userId,
     }
-   
-    const oldOwnerProfileCount: number = await repositories.profile
-      .count(oldOwnerProfileQuery)
+
+    const oldOwnerProfileCount: number = await repositories.profile.count(oldOwnerProfileQuery)
 
     logger.log(`Old owner profiles count: ${oldOwnerProfileCount} - query: ${JSON.stringify(oldOwnerProfileQuery)}`)
 
-    for (let i=0; i < oldOwnerProfileCount; i+= MAX_PROCESS_BATCH_SIZE) {
+    for (let i = 0; i < oldOwnerProfileCount; i += MAX_PROCESS_BATCH_SIZE) {
       const oldOwnerProfiles: entity.Profile[] = await repositories.profile.find({
-        where:  oldOwnerProfileQuery,
+        where: oldOwnerProfileQuery,
         skip: i,
         take: MAX_PROCESS_BATCH_SIZE,
         select: {
@@ -147,16 +149,13 @@ const deleteCacheKeys = async (existingNFT: entity.NFT, chainId: string): Promis
           url: true,
         },
       })
-    
+
       logger.info(`Old owner profiles length: ${oldOwnerProfiles.length}, batch: ${i}`)
       let cachePromise = []
       for (const profile of oldOwnerProfiles) {
         const key1 = `${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${profile.id}`,
           key2 = `${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${profile.id}`
-        cachePromise.push(
-          cache.keys(`${key1}*`),
-          cache.keys(`${key2}*`),
-        )
+        cachePromise.push(cache.keys(`${key1}*`), cache.keys(`${key2}*`))
         logger.info(`Old profileId: ${profile.id}, key1: ${key1}, key2: ${key2}.`)
       }
 
@@ -204,12 +203,15 @@ const updateNFTWithWallet = async (
     if (existingNFT.userId || existingNFT.walletId) {
       await deleteCacheKeys(existingNFT, chainId)
     } else {
-      logger.info(`NFT wallet id and user id are null or undefined. WalletId: ${existingNFT.walletId}, UserId: ${existingNFT.userId}`)
+      logger.info(
+        `NFT wallet id and user id are null or undefined. WalletId: ${existingNFT.walletId}, UserId: ${existingNFT.userId}`,
+      )
     }
 
     // If this NFT is a profile NFT, process it as such
-    if (ethers.utils.getAddress(existingNFT.contract) ===
-      ethers.utils.getAddress(contracts.nftProfileAddress(chainId))) {
+    if (
+      ethers.utils.getAddress(existingNFT.contract) === ethers.utils.getAddress(contracts.nftProfileAddress(chainId))
+    ) {
       await processProfileNFT(existingNFT)
     }
   }
@@ -236,10 +238,7 @@ const updateNFTWithWallet = async (
  * @param csNewOwner - The new owner's checksum address.
  * @returns The updated NFT entity.
  */
-const updateNFTWithoutWallet = async (
-  existingNFT: entity.NFT,
-  csNewOwner: string,
-): Promise<entity.NFT> => {
+const updateNFTWithoutWallet = async (existingNFT: entity.NFT, csNewOwner: string): Promise<entity.NFT> => {
   const updatedNFT = await repositories.nft.updateOneById(existingNFT.id, {
     owner: csNewOwner,
     walletId: null,
@@ -290,11 +289,7 @@ export const atomicOwnershipUpdate = async (
   }
 
   try {
-    const wallet = await repositories.wallet.findByNetworkChainAddress(
-      'ethereum',
-      chainId,
-      csNewOwner,
-    )
+    const wallet = await repositories.wallet.findByNetworkChainAddress('ethereum', chainId, csNewOwner)
 
     const existingNFT: entity.NFT = await repositories.nft.findOne({
       where: {
@@ -305,28 +300,46 @@ export const atomicOwnershipUpdate = async (
 
     if (existingNFT) {
       if (!wallet) {
-        const updatedNFT: entity.NFT = await updateNFTWithoutWallet(
-          existingNFT,
-          csNewOwner,
-        )
+        const updatedNFT: entity.NFT = await updateNFTWithoutWallet(existingNFT, csNewOwner)
         logger.info(`Ownership transfer for non-user-owned NFT ${updatedNFT.id} completed.`)
       } else {
-        const updatedNFT: entity.NFT = await updateNFTWithWallet(
-          wallet,
-          existingNFT,
-          csNewOwner,
-          chainId,
-        )
+        const updatedNFT: entity.NFT = await updateNFTWithWallet(wallet, existingNFT, csNewOwner, chainId)
         logger.info(`Ownership transfer for user-owned NFT ${updatedNFT.id} completed.`)
       }
     } else {
-      // TODO: hande new NFT
+      const startNewNFT = performance.now()
+      const metadata = await nftService.getNFTMetaData(csContract, hexTokenId, chainId)
+      const { type, name, description, image, traits } = metadata
+      const savedNFT = await repositories.nft.save({
+        chainId: chainId,
+        walletId: wallet?.id,
+        userId: wallet?.userId,
+        owner: csNewOwner,
+        contract: csContract,
+        tokenId: hexTokenId,
+        type,
+        metadata: {
+          name,
+          description,
+          imageURL: image,
+          traits: traits,
+        },
+      })
+      await seService.indexNFTs([savedNFT])
+      await nftService.updateCollectionForNFTs([savedNFT])
+      logger.info(
+        { duration: `${performance.now() - startNewNFT}ms` },
+        `Ownership tranfer for new NFT saved in db ${savedNFT.id} completed`,
+      )
     }
   } catch (err) {
-    logger.error(err, `Ownership transfer error for
+    logger.error(
+      err,
+      `Ownership transfer error for
       contract: ${csContract},
       tokenId: ${hexTokenId},
       previous owner: ${csPrevOwner},
-      new owner: ${csNewOwner}`)
+      new owner: ${csNewOwner}`,
+    )
   }
 }
