@@ -57,6 +57,7 @@ runs:
       run: |
         echo "Starting at $(date +"%Y-%m-%d %H:%M:%S")"
         export DOCKER_BUILDKIT=1
+        echo ${{env.REPO}}
         docker pull ${{ env.REPO }}:deps || true
         docker pull ${{ env.REPO }}:build || true
         docker build . -f stream/stream.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target deps --no-cache=true -t ${{ env.REPO }}:deps
