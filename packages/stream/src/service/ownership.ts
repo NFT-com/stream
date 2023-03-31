@@ -1,5 +1,7 @@
 import { BigNumber, ethers } from 'ethers'
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore:next-line
 import {  nftService } from '@nftcom/gql/service'
 import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
@@ -23,7 +25,7 @@ export const checksumAddress = (address: string): string | undefined => {
  * @param existingNFT - The existing NFT entity in the database.
  * @param chainId - The chain ID of the blockchain network.
  */
-const processProfileNFT = (existingNFT: entity.NFT): Promise<void> => {
+const processProfileNFT = async (existingNFT: entity.NFT): Promise<void> => {
   logger.info(`Profile is being processed as a Profile NFT - contract ${existingNFT.contract}, tokenId: ${existingNFT.tokenId}`)
   const previousWallet = await repositories.wallet.findById(existingNFT.walletId)
   if (previousWallet) {
@@ -112,19 +114,18 @@ const handleNewOwnerProfile = async (
 }
 
 // Add these utility functions at the top of the file or in a separate utility file
-const removePreviousProfileEdge = async (
-  previousOwnerWalletId: string, nftId: string): Promise<void> => {
+const removePreviousProfileEdge = async (nftId: string): Promise<void> => {
   try {
     await repositories.edge.hardDelete({
       thatEntityId: nftId,
       edgeType: defs.EdgeType.Displays,
     })
   } catch (err) {
-    logger.error(err, `Error in removing previous profile edge for walletId: ${previousOwnerWalletId}, nftId: ${nftId}`)
+    logger.error(err, `Error in removing previous profile edge for walletId: nftId: ${nftId}`)
   }
 }
 
-const deleteCacheKeys = async (chainId: string, profileUrl: string): Promise<void> => {
+const deleteCacheKeys = async (existingNFT: entity.NFT, chainId: string): Promise<void> => {
   try {
     const oldOwnerProfileQuery = {
       ownerWalletId: existingNFT.walletId,
@@ -148,6 +149,7 @@ const deleteCacheKeys = async (chainId: string, profileUrl: string): Promise<voi
       })
     
       logger.info(`Old owner profiles length: ${oldOwnerProfiles.length}, batch: ${i}`)
+      let cachePromise = []
       for (const profile of oldOwnerProfiles) {
         const key1 = `${CacheKeys.PROFILE_SORTED_VISIBLE_NFTS}_${chainId}_${profile.id}`,
           key2 = `${CacheKeys.PROFILE_SORTED_NFTS}_${chainId}_${profile.id}`
@@ -176,7 +178,7 @@ const deleteCacheKeys = async (chainId: string, profileUrl: string): Promise<voi
       }
     }
   } catch (err) {
-    logger.error(err, `Error in deleteCacheKeys for profileUrl: ${profileUrl}`)
+    logger.error({ err, existingNFT }, `Error in deleteCacheKeys for existingNFT: ${existingNFT.id}`)
   }
 }
 
@@ -196,7 +198,7 @@ const updateNFTWithWallet = async (
 ): Promise<entity.NFT> => {
   // Check if the ownership has changed and, if so, remove the edge of the previous profile
   if (existingNFT.userId !== wallet.userId || existingNFT.walletId !== wallet.id) {
-    await removePreviousProfileEdge(existingNFT)
+    await removePreviousProfileEdge(existingNFT.id)
 
     // Delete cache keys only when the NFT userId or walletId exists
     if (existingNFT.userId || existingNFT.walletId) {
@@ -234,7 +236,7 @@ const updateNFTWithWallet = async (
  * @param csNewOwner - The new owner's checksum address.
  * @returns The updated NFT entity.
  */
-const updateNFTWithoutWallet = (
+const updateNFTWithoutWallet = async (
   existingNFT: entity.NFT,
   csNewOwner: string,
 ): Promise<entity.NFT> => {
