@@ -309,35 +309,21 @@ export const atomicOwnershipUpdate = async (
     } else {
       const metadata = await nftService.getNFTMetaData(csContract, hexTokenId, chainId)
       const { type, name, description, image, traits } = metadata
-      const savedNFT = !wallet
-        ? await repositories.nft.save({
-            chainId: chainId,
-            owner: csNewOwner,
-            contract: helper.checkSum(contract),
-            tokenId: BigNumber.from(tokenId).toHexString(),
-            type,
-            metadata: {
-              name,
-              description,
-              imageURL: image,
-              traits: traits,
-            },
-          })
-        : await repositories.nft.save({
-            chainId: chainId,
-            walletId: wallet.id,
-            userId: wallet.userId,
-            owner: csNewOwner,
-            contract: helper.checkSum(contract),
-            tokenId: BigNumber.from(tokenId).toHexString(),
-            type,
-            metadata: {
-              name,
-              description,
-              imageURL: image,
-              traits: traits,
-            },
-          })
+      const savedNFT = await repositories.nft.save({
+        chainId: chainId,
+        walletId: wallet?.id,
+        userId: wallet?.userId,
+        owner: csNewOwner,
+        contract: helper.checkSum(contract),
+        tokenId: BigNumber.from(tokenId).toHexString(),
+        type,
+        metadata: {
+          name,
+          description,
+          imageURL: image,
+          traits: traits,
+        },
+      })
       await seService.indexNFTs([savedNFT])
       await nftService.updateCollectionForNFTs([savedNFT])
     }
