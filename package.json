@@ -46,6 +46,6 @@
     "npm": ">=7"
   },
   "dependencies": {
-    "dd-trace": "^3.15.0"
+    "dd-trace": "^3.16.0"
   }
 }
