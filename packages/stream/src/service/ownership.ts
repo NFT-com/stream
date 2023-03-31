@@ -314,8 +314,8 @@ export const atomicOwnershipUpdate = async (
         walletId: wallet?.id,
         userId: wallet?.userId,
         owner: csNewOwner,
-        contract: helper.checkSum(contract),
-        tokenId: BigNumber.from(tokenId).toHexString(),
+        contract: csContract,
+        tokenId: hexTokenId,
         type,
         metadata: {
           name,
