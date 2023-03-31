@@ -3,6 +3,9 @@ import { BigNumber, ethers } from 'ethers'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore:next-line
 import { nftService } from '@nftcom/gql/service'
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import { searchEngineService } from '@nftcom/gql/service'
 import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
 import { cache, CacheKeys } from './cache'
@@ -10,6 +13,7 @@ import { cache, CacheKeys } from './cache'
 const MAX_PROCESS_BATCH_SIZE = parseInt(process.env.MAX_PROFILE_BATCH_SIZE) || 5
 const logger = _logger.Factory(_logger.Context.NFT)
 const repositories = db.newRepositories()
+const seService = searchEngineService.SearchEngineService()
 
 export const checksumAddress = (address: string): string | undefined => {
   try {
