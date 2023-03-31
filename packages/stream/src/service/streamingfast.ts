@@ -90,7 +90,7 @@ const handleNotification = async (msg: any): Promise<void> => {
         hexToAddress,
         '1', // mainnet ETH
       )
-      logger.info(`streamingFast (preChecks took ${new Date().getTime() - start}, atomicOwnershipUpdate took ${new Date().getTime() - start2} ms): [TRANSFERRED]: ${schema}/${hexContractAddress}/${hexTokenId} from ${hexFromAddress} to ${hexToAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}https://etherscan.io/tx/${hexTxHash}`)
+      logger.info(`streamingFast (preChecks took ${new Date().getTime() - start}ms, atomicOwnershipUpdate took ${new Date().getTime() - start2} ms): [TRANSFERRED]: ${schema}/${hexContractAddress}/${hexTokenId} from ${hexFromAddress} to ${hexToAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}https://etherscan.io/tx/${hexTxHash}`)
     }
   } else {
     logger.warn({ schema, blockNumber, hexTokenId, hexContractAddress, quantity, hexFromAddress, hexToAddress, txHash, timestamp }, 'Filtered Transfer')
