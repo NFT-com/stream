@@ -77,7 +77,15 @@ const handleNotification = async (msg: any): Promise<void> => {
     await handleFilter(contractAddress, hexTokenId)
   ) {
     if (hexFromAddress === '0x0000000000000000000000000000000000000000') {
-      logger.info(`streamingFast: [MINTED]: ${schema}/${hexContractAddress}/${hexTokenId} to ${hexToAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}https://etherscan.io/tx/${hexTxHash}`)
+      const start2 = new Date().getTime()
+      await atomicOwnershipUpdate(
+        hexContractAddress,
+        hexTokenId,
+        hexFromAddress,
+        hexToAddress,
+        '1', // mainnet ETH
+        )
+        logger.info(`streamingFast (took ${new Date().getTime() - start2}ms): [MINTED]: ${schema}/${hexContractAddress}/${hexTokenId} to ${hexToAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}https://etherscan.io/tx/${hexTxHash}`)
     } else if (hexToAddress === '0x0000000000000000000000000000000000000000') {
       logger.info(`streamingFast: [BURNED]: ${schema}/${hexContractAddress}/${hexTokenId} from ${hexFromAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}https://etherscan.io/tx/${hexTxHash}`)
     } else {
