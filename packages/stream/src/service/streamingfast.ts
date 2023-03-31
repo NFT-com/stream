@@ -59,9 +59,11 @@ const ensureHexPrefix = (value: string): string => {
 }
 
 const handleNotification = async (msg: any): Promise<void> => {
+  const start = new Date().getTime()
   // if latestBlockNumber is not set, call getLatestBlockNumber and store the result in latestBlockNumber
   if (latestBlockNumber === null) {
     latestBlockNumber = await getLatestBlockNumber()
+    logger.info(`[handleNotification] - the latest block number is ${latestBlockNumber}`)
   }
 
   const [schema, blockNumber, tokenId, contractAddress, quantity, fromAddress, toAddress, txHash, timestamp] = msg.payload.split('|')
@@ -80,7 +82,7 @@ const handleNotification = async (msg: any): Promise<void> => {
     } else if (hexToAddress === '0x0000000000000000000000000000000000000000') {
       logger.info(`streamingFast: [BURNED]: ${schema}/${hexContractAddress}/${hexTokenId} from ${hexFromAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}, https://etherscan.io/tx/${hexTxHash}`)
     } else {
-      const start = new Date().getTime()
+      const start2 = new Date().getTime()
       await atomicOwnershipUpdate(
         hexContractAddress,
         hexTokenId,
@@ -88,7 +90,7 @@ const handleNotification = async (msg: any): Promise<void> => {
         hexToAddress,
         '1', // mainnet ETH
       )
-      logger.info(`streamingFast (took ${new Date().getTime() - start} ms): [TRANSFERRED]: ${schema}/${hexContractAddress}/${hexTokenId} from ${hexFromAddress} to ${hexToAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}, https://etherscan.io/tx/${hexTxHash}`)
+      logger.info(`streamingFast (preChecks took ${new Date().getTime() - start}, atomicOwnershipUpdate took ${new Date().getTime() - start2} ms): [TRANSFERRED]: ${schema}/${hexContractAddress}/${hexTokenId} from ${hexFromAddress} to ${hexToAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}, https://etherscan.io/tx/${hexTxHash}`)
     }
   } else {
     logger.warn({ schema, blockNumber, hexTokenId, hexContractAddress, quantity, hexFromAddress, hexToAddress, txHash, timestamp }, 'Filtered Transfer')
@@ -109,7 +111,7 @@ export function startStreamingFast(): void {
   // Call getLatestBlockNumber every 5 minutes and store the result in latestBlockNumber
   interval = setInterval(async () => {
     latestBlockNumber = await getLatestBlockNumber()
-  }, 5 * 60 * 1000)
+  }, 1 * 60 * 1000)
 
   logger.info(`the latest block number is ${latestBlockNumber}`)
 
