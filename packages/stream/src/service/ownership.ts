@@ -307,6 +307,7 @@ export const atomicOwnershipUpdate = async (
         logger.info(`Ownership transfer for user-owned NFT ${updatedNFT.id} completed.`)
       }
     } else {
+      const startNewNFT = performance.now()
       const metadata = await nftService.getNFTMetaData(csContract, hexTokenId, chainId)
       const { type, name, description, image, traits } = metadata
       const savedNFT = await repositories.nft.save({
@@ -326,6 +327,10 @@ export const atomicOwnershipUpdate = async (
       })
       await seService.indexNFTs([savedNFT])
       await nftService.updateCollectionForNFTs([savedNFT])
+      logger.info(
+        { duration: `${performance.now() - startNewNFT}ms` },
+        `Ownership tranfer for new NFT saved in db ${savedNFT.id} completed`,
+      )
     }
   } catch (err) {
     logger.error(
