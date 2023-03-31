@@ -253,7 +253,7 @@ const updateNFTWithoutWallet = async (existingNFT: entity.NFT, csNewOwner: strin
 }
 
 /**
- * Updates the ownership of an NFT atomically.
+ * Updates the ownership of an NFT atomically
  * @param contract - The contract address of the NFT.
  * @param tokenId - The token ID of the NFT.
  * @param prevOwner - The previous owner's address.
