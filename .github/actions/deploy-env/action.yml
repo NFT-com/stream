@@ -64,7 +64,7 @@ runs:
         # docker build . -f stream/stream.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target release --cache-from ${{ env.REPO }}:deps --cache-from ${{ env.REPO }}:build -t ${{ env.REPO }}:latest -t ${{ env.REPO }}:${{ github.sha }}
         # docker push ${{ env.REPO }}:deps
         # docker push ${{ env.REPO }}:build
-        docker build . -f stream/stream.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target deps --cache-from ${{ env.REPO }}:deps --no-cache=true -t ${{ env.REPO }}:deps --target build --cache-from ${{ env.REPO }}:build --t ${{ env.REPO }}:build --target release --cache-from ${{ env.REPO }}:release --t ${{ env.REPO }}:release
+        docker build . -f stream/stream.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target deps --cache-from ${{ env.REPO }}:deps --no-cache=true -t ${{ env.REPO }}:deps --target build --cache-from ${{ env.REPO }}:build --t ${{ env.REPO }}:build --target release --cache-from ${{ env.REPO }}:release -t ${{ env.REPO }}:release
         docker push ${{ env.REPO }}:latest
         docker push ${{ env.REPO }}:${{ github.sha }}
 
