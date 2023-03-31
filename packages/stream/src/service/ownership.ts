@@ -329,7 +329,7 @@ export const atomicOwnershipUpdate = async (
       await nftService.updateCollectionForNFTs([savedNFT])
       logger.info(
         { duration: `${performance.now() - startNewNFT}ms` },
-        `Ownership tranfer for new NFT saved in db ${savedNFT.id} completed`,
+        `streamingFast: new NFT saved in db ${savedNFT.id} completed in ${performance.now() - startNewNFT}ms`,
       )
     }
   } catch (err) {

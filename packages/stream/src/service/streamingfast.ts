@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { BigNumber } from 'ethers'
 import { Client } from 'pg'
 import { EventEmitter } from 'stream'
 
@@ -17,7 +16,7 @@ const nftDoesNotExist = new EventEmitter()
 const blockRange = 200                    // 200 blocks padding for internal of latest block numbers
 const REMOVE_SPAM_FILTER = true           // filter out spam transfers
 const ONLY_OFFICIAL_FILTER = false        // only listen to official contracts
-const ONLY_EXISTING_NFT_FILTER = true     // only listen to existing NFTs
+const ONLY_EXISTING_NFT_FILTER = false    // only listen to existing NFTs
 
 let latestBlockNumber: number = null
 let interval: NodeJS.Timeout = null
