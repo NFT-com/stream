@@ -55,6 +55,7 @@ runs:
       env:
         REPO: ${{ steps.login_ecr.outputs.registry }}/${{ inputs.stage }}-st
       run: |
+        echo "Starting at $(date +"%Y-%m-%d %H:%M:%S")"
         export DOCKER_BUILDKIT=1
         docker pull ${{ env.REPO }}:deps || true
         docker pull ${{ env.REPO }}:build || true
@@ -65,6 +66,7 @@ runs:
         docker push ${{ env.REPO }}:build
         docker push ${{ env.REPO }}:latest
         docker push ${{ env.REPO }}:${{ github.sha }}
+        echo "Ending at $(date +"%Y-%m-%d %H:%M:%S")"
     - name: Deploy Stream Infra
       shell: bash
       working-directory: stream/infra
