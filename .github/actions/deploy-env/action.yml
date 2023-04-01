@@ -56,7 +56,7 @@ runs:
         REPO: ${{ steps.login_ecr.outputs.registry }}/${{ inputs.stage }}-st
       run: |
         export DOCKER_BUILDKIT=1
-        docker build . -f stream/stream.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --target deps --cache-from ${{ env.REPO }}:deps --no-cache=true -t ${{ env.REPO }}:deps --target build --cache-from ${{ env.REPO }}:build -t ${{ env.REPO }}:build --target release --cache-from ${{ env.REPO }}:release -t ${{ env.REPO }}:release
+        docker build . -f stream/stream.Dockerfile --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from ${{ env.REPO }}:latest -t ${{ env.REPO }}:latest -t ${{ env.REPO }}:${{ github.sha }}
         docker push ${{ env.REPO }}:latest
         docker push ${{ env.REPO }}:${{ github.sha }}
     - name: Deploy Stream Infra
