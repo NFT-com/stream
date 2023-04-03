@@ -62,9 +62,12 @@ const processProfileNFT = async (existingNFT: entity.NFT): Promise<void> => {
  * @returns A Promise that resolves to void.
  */
 const handleNewOwnerProfile = async (wallet: entity.Wallet, updatedNFT: entity.NFT, chainId: string): Promise<void> => {
+  // wallet must be defined
+  if (!wallet?.id || !wallet?.userId) return
+
   const profileQuery = {
-    ownerWalletId: wallet.id,
-    ownerUserId: wallet.userId,
+    ownerWalletId: wallet?.id,
+    ownerUserId: wallet?.userId,
   }
   const newOwnerProfileCount: number = await repositories.profile.count(profileQuery)
 
