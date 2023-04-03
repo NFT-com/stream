@@ -352,7 +352,7 @@ export const atomicOwnershipUpdate = async (
         description,
         imageURL: image,
         traits: traits,
-      })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`,)
+      })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
     }
   } catch (err) {
     logger.error(
