@@ -308,10 +308,10 @@ export const atomicOwnershipUpdate = async (
     if (existingNFT) {
       if (!wallet) {
         const updatedNFT: entity.NFT = await updateNFTWithoutWallet(existingNFT, csNewOwner)
-        logger.info(`Ownership transfer for non-user-owned NFT ${updatedNFT.id} completed.`)
+        logger.debug(`Ownership transfer for non-user-owned NFT ${updatedNFT.id} completed.`)
       } else {
         const updatedNFT: entity.NFT = await updateNFTWithWallet(wallet, existingNFT, csNewOwner, chainId)
-        logger.info(`Ownership transfer for user-owned NFT ${updatedNFT.id} completed.`)
+        logger.debug(`Ownership transfer for user-owned NFT ${updatedNFT.id} completed.`)
       }
     } else {
       const startNewNFT = new Date().getTime()
