@@ -317,9 +317,13 @@ export const atomicOwnershipUpdate = async (
     } else {
       const startNewNFT = new Date().getTime()
       let tokenUris: string[] = []
+      let parsedMetadata = undefined
       if (schema) {
         const tokenUriBatch = [{ contractAddress: csContract, tokenId: hexTokenId, schema }]
         tokenUris = await nftService.batchCallTokenURI(tokenUriBatch, chainId)
+        if (tokenUris[0]) {
+          parsedMetadata = await nftService.parseNFTUriString(tokenUris[0], hexTokenId)
+        }
       }
 
       const metadata = await nftService.getNFTMetaData(csContract, hexTokenId, chainId, true, false, true)
@@ -343,7 +347,12 @@ export const atomicOwnershipUpdate = async (
       await seService.indexNFTs([savedNFT])
       await nftService.updateCollectionForNFTs([savedNFT])
       await handleNewOwnerProfile(wallet, savedNFT, chainId)
-      logger.info(`streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`,)
+      logger.info(`streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, savedMetadata=${JSON.stringify({
+        name,
+        description,
+        imageURL: image,
+        traits: traits,
+      })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`,)
     }
   } catch (err) {
     logger.error(
