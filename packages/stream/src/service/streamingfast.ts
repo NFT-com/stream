@@ -88,6 +88,7 @@ const handleNotification = async (msg: any): Promise<void> => {
         hexFromAddress,
         hexToAddress,
         '1', // mainnet ETH
+        schema
       )
       logInfoBatch.push(`streamingFast (took ${new Date().getTime() - start2}ms): [MINTED]: ${schema}/${hexContractAddress}/${hexTokenId} to ${hexToAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}https://etherscan.io/tx/${hexTxHash}`)
     } else if (hexToAddress === '0x0000000000000000000000000000000000000000') {
