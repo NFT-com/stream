@@ -315,7 +315,7 @@ export const atomicOwnershipUpdate = async (
       }
     } else {
       const startNewNFT = new Date().getTime()
-      const metadata = await nftService.getNFTMetaData(csContract, hexTokenId, chainId, true, false, true),
+      const metadata = await nftService.getNFTMetaData(csContract, hexTokenId, chainId, true, false, true)
       const { type, name, description, image, traits } = metadata
       const savedNFT = await repositories.nft.save({
         chainId: chainId,
