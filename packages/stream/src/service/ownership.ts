@@ -318,7 +318,7 @@ export const atomicOwnershipUpdate = async (
       const startNewNFT = new Date().getTime()
       let tokenUris: string[] = []
       if (schema) {
-        const tokenUriBatch = [{ contract: csContract, tokenId: hexTokenId, schema }]
+        const tokenUriBatch = [{ contractAddress: csContract, tokenId: hexTokenId, schema }]
         tokenUris = await nftService.batchCallTokenURI(tokenUriBatch, chainId)
       }
 
