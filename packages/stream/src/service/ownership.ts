@@ -326,7 +326,7 @@ export const atomicOwnershipUpdate = async (
         }
       }
 
-      const metadata = await nftService.getNFTMetaData(csContract, hexTokenId, chainId, true, false, true)
+      const metadata = parsedMetadata ?? await nftService.getNFTMetaData(csContract, hexTokenId, chainId, true, false, true)
       const { type, name, description, image, traits } = metadata
       const savedNFT = await repositories.nft.save({
         chainId: chainId,
@@ -335,7 +335,7 @@ export const atomicOwnershipUpdate = async (
         owner: csNewOwner,
         contract: csContract,
         tokenId: hexTokenId,
-        type,
+        type: type ?? schema?.toUpperCase(),
         uriString: tokenUris[0],
         metadata: {
           name,
