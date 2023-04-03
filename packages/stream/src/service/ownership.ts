@@ -270,6 +270,7 @@ export const atomicOwnershipUpdate = async (
   prevOwner: string,
   newOwner: string,
   chainId: string,
+  schema?: string
 ): Promise<void> => {
   const csContract = checksumAddress(contract),
     csPrevOwner = checksumAddress(prevOwner),
@@ -315,6 +316,12 @@ export const atomicOwnershipUpdate = async (
       }
     } else {
       const startNewNFT = new Date().getTime()
+      let tokenUris: string[] = []
+      if (schema) {
+        const tokenUriBatch = [{ contract: csContract, tokenId: hexTokenId, schema }]
+        tokenUris = await nftService.batchCallTokenURI(tokenUriBatch, chainId)
+      }
+
       const metadata = await nftService.getNFTMetaData(csContract, hexTokenId, chainId, true, false, true)
       const { type, name, description, image, traits } = metadata
       const savedNFT = await repositories.nft.save({
@@ -325,6 +332,7 @@ export const atomicOwnershipUpdate = async (
         contract: csContract,
         tokenId: hexTokenId,
         type,
+        uriString: tokenUris[0],
         metadata: {
           name,
           description,
@@ -335,7 +343,7 @@ export const atomicOwnershipUpdate = async (
       await seService.indexNFTs([savedNFT])
       await nftService.updateCollectionForNFTs([savedNFT])
       await handleNewOwnerProfile(wallet, savedNFT, chainId)
-      logger.info(`streamingFast: new NFT ${csContract}/${hexTokenId} (owner=${csNewOwner}) saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`,)
+      logger.info(`streamingFast: new NFT ${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`,)
     }
   } catch (err) {
     logger.error(
