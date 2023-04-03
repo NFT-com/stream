@@ -58,8 +58,8 @@ const ensureHexPrefix = (value: string): string => {
 }
 
 const BATCH_LOG_SIZE = 20
-const logInfoBatch = []
-const logWarningBatch = []
+let logInfoBatch = []
+let logWarningBatch = []
 
 const handleNotification = async (msg: any): Promise<void> => {
   const start = new Date().getTime()
@@ -109,12 +109,12 @@ const handleNotification = async (msg: any): Promise<void> => {
 
   if (logInfoBatch.length >= BATCH_LOG_SIZE) {
     logger.info(logInfoBatch.join('\n'))
-    logInfoBatch.length = 0
+    logInfoBatch = []
   }
 
   if (logWarningBatch.length >= BATCH_LOG_SIZE) {
     logger.warn(logWarningBatch.join('\n'))
-    logWarningBatch.length = 0
+    logWarningBatch = []
   }
 }
 
