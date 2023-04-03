@@ -57,12 +57,16 @@ const ensureHexPrefix = (value: string): string => {
   return value.startsWith('0x') ? value : `0x${value}`
 }
 
+const BATCH_LOG_SIZE = 20
+let logInfoBatch = []
+let logWarningBatch = []
+
 const handleNotification = async (msg: any): Promise<void> => {
   const start = new Date().getTime()
   // if latestBlockNumber is not set, call getLatestBlockNumber and store the result in latestBlockNumber
   if (latestBlockNumber === null) {
     latestBlockNumber = await getLatestBlockNumber()
-    logger.info(`[handleNotification] - the latest block number is ${latestBlockNumber}`)
+    logInfoBatch.push(`[handleNotification] - the latest block number is ${latestBlockNumber}`)
   }
 
   const [schema, blockNumber, tokenId, contractAddress, quantity, fromAddress, toAddress, txHash, timestamp] = msg.payload.split('|')
@@ -85,9 +89,9 @@ const handleNotification = async (msg: any): Promise<void> => {
         hexToAddress,
         '1', // mainnet ETH
       )
-      logger.info(`streamingFast (took ${new Date().getTime() - start2}ms): [MINTED]: ${schema}/${hexContractAddress}/${hexTokenId} to ${hexToAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}https://etherscan.io/tx/${hexTxHash}`)
+      logInfoBatch.push(`streamingFast (took ${new Date().getTime() - start2}ms): [MINTED]: ${schema}/${hexContractAddress}/${hexTokenId} to ${hexToAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}https://etherscan.io/tx/${hexTxHash}`)
     } else if (hexToAddress === '0x0000000000000000000000000000000000000000') {
-      logger.info(`streamingFast: [BURNED]: ${schema}/${hexContractAddress}/${hexTokenId} from ${hexFromAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}https://etherscan.io/tx/${hexTxHash}`)
+      logInfoBatch.push(`streamingFast: [BURNED]: ${schema}/${hexContractAddress}/${hexTokenId} from ${hexFromAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}https://etherscan.io/tx/${hexTxHash}`)
     } else {
       const start2 = new Date().getTime()
       await atomicOwnershipUpdate(
@@ -97,10 +101,20 @@ const handleNotification = async (msg: any): Promise<void> => {
         hexToAddress,
         '1', // mainnet ETH
       )
-      logger.info(`streamingFast (preChecks took ${new Date().getTime() - start}ms, atomicOwnershipUpdate took ${new Date().getTime() - start2} ms): [TRANSFERRED]: ${schema}/${hexContractAddress}/${hexTokenId} from ${hexFromAddress} to ${hexToAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}https://etherscan.io/tx/${hexTxHash}`)
+      logInfoBatch.push(`streamingFast (preChecks took ${new Date().getTime() - start}ms, atomicOwnershipUpdate took ${new Date().getTime() - start2} ms): [TRANSFERRED]: ${schema}/${hexContractAddress}/${hexTokenId} from ${hexFromAddress} to ${hexToAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}https://etherscan.io/tx/${hexTxHash}`)
     }
   } else {
-    logger.warn({ schema, blockNumber, hexTokenId, hexContractAddress, quantity, hexFromAddress, hexToAddress, txHash, timestamp }, 'Filtered Transfer')
+    logWarningBatch.push(`Filtered Transfer for ${schema}/${hexContractAddress}/${hexTokenId} from ${hexFromAddress} to ${hexToAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}https://etherscan.io/tx/${hexTxHash}`)
+  }
+
+  if (logInfoBatch.length >= BATCH_LOG_SIZE) {
+    logger.info(logInfoBatch.join('\n'))
+    logInfoBatch = []
+  }
+
+  if (logWarningBatch.length >= BATCH_LOG_SIZE) {
+    logger.warn(logWarningBatch.join('\n'))
+    logWarningBatch = []
   }
 }
 

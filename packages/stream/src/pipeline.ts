@@ -118,7 +118,7 @@ const initializeStreamsForAllSlugs = (): void => {
                                                                   
                       if (!order) {
                         try {
-                          logger.info(`[seaport-streams] order with orderHash: ${orderHash} for ${nftId}: eventPayload: ${JSON.stringify(eventPayload)}`)
+                          logger.debug(`[seaport-streams] order with orderHash: ${orderHash} for ${nftId}: eventPayload: ${JSON.stringify(eventPayload)}`)
                           const newOrder: Partial<entity.TxOrder> = await streamOrderEntityBuilder(
                             eventType,
                             eventPayload,
@@ -126,7 +126,7 @@ const initializeStreamsForAllSlugs = (): void => {
                           )
 
                           await repositories.txOrder.save(newOrder)
-                          logger.info(`order with orderHash: ${orderHash} for ${nftId} is saved successfully on ${network} network, newOrder: ${JSON.stringify(newOrder)}`)
+                          logger.debug(`order with orderHash: ${orderHash} for ${nftId} is saved successfully on ${network} network, newOrder: ${JSON.stringify(newOrder)}`)
                         } catch (err) {
                           // error handling
                         }

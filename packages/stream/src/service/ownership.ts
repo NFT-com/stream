@@ -62,9 +62,12 @@ const processProfileNFT = async (existingNFT: entity.NFT): Promise<void> => {
  * @returns A Promise that resolves to void.
  */
 const handleNewOwnerProfile = async (wallet: entity.Wallet, updatedNFT: entity.NFT, chainId: string): Promise<void> => {
+  // wallet must be defined
+  if (!wallet?.id || !wallet?.userId) return
+
   const profileQuery = {
-    ownerWalletId: wallet.id,
-    ownerUserId: wallet.userId,
+    ownerWalletId: wallet?.id,
+    ownerUserId: wallet?.userId,
   }
   const newOwnerProfileCount: number = await repositories.profile.count(profileQuery)
 
@@ -312,7 +315,7 @@ export const atomicOwnershipUpdate = async (
       }
     } else {
       const startNewNFT = new Date().getTime()
-      const metadata = await nftService.getNFTMetaData(csContract, hexTokenId, chainId)
+      const metadata = await nftService.getNFTMetaData(csContract, hexTokenId, chainId, true, false, true)
       const { type, name, description, image, traits } = metadata
       const savedNFT = await repositories.nft.save({
         chainId: chainId,
@@ -332,7 +335,7 @@ export const atomicOwnershipUpdate = async (
       await seService.indexNFTs([savedNFT])
       await nftService.updateCollectionForNFTs([savedNFT])
       await handleNewOwnerProfile(wallet, savedNFT, chainId)
-      logger.info(`streamingFast: new NFT ${csContract}/${hexTokenId} (owner=${csNewOwner}) saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms.`,)
+      logger.info(`streamingFast: new NFT ${csContract}/${hexTokenId} (owner=${csNewOwner}) saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`,)
     }
   } catch (err) {
     logger.error(
