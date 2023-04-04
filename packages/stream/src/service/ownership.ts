@@ -331,7 +331,7 @@ export const atomicOwnershipUpdate = async (
           where: {
             contract: csContract,
           },
-        }))?.name
+        }))?.name + ' #' + Number(tokenId).toString()
 
         logger.info(`[atomicOwnershipUpdate]: Fetched name from collection table: ${parsedMetadata.name}`)
       }
