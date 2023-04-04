@@ -14,6 +14,16 @@ const MAX_PROCESS_BATCH_SIZE = parseInt(process.env.MAX_PROFILE_BATCH_SIZE) || 5
 const logger = _logger.Factory(_logger.Context.NFT)
 const repositories = db.newRepositories()
 const seService = searchEngineService.SearchEngineService()
+const BATCH_THRESHOLD = 10; // Define the threshold for batch processing
+
+// Define the type for an NFT item
+type NFTItem = {
+  contract: string
+  tokenId: string
+  schema: string | null
+}
+
+let batchQueue: NFTItem[] = []; // Initialize an empty queue for batch processing
 
 export const checksumAddress = (address: string): string | undefined => {
   try {
@@ -255,6 +265,94 @@ const updateNFTWithoutWallet = async (existingNFT: entity.NFT, csNewOwner: strin
   return updatedNFT
 }
 
+// Function to process a batch of NFT items
+const batchProcessNFTs = (nftItems: NFTItem[]): Promise<void> => {
+  const startNewNFT = new Date().getTime()
+
+  // Build the batch request for token URIs
+  const tokenUriBatch = nftItems.map((item) => {
+    return { contractAddress: item.contract, tokenId: item.tokenId, schema: item.schema }
+  })
+
+  // Batch call to get token URIs
+  const tokenUris = await nftService.batchCallTokenURI(tokenUriBatch, chainId)
+
+  // Process each item in the batch
+  for (let i = 0; i < nftItems.length; i++) {
+    const item = nftItems[i]
+    const { contract: csContract, tokenId: hexTokenId, schema } = item
+
+    let parsedMetadata = undefined
+    if (schema && tokenUris[i]) {
+      parsedMetadata = await nftService.parseNFTUriString(tokenUris[i], hexTokenId)
+    }
+
+    // If the parsed name isn't found, fetch the name from collection table
+    if (parsedMetadata && !parsedMetadata.name) {
+      parsedMetadata.name = (await repositories.collection.findOne({
+        where: { contract: csContract }
+      }))?.name + ' #' + Number(hexTokenId).toString()
+    }
+
+    // If the parsed description isn't found, fetch the description from collection table
+    if (parsedMetadata && !parsedMetadata.description) {
+      parsedMetadata.description = (await repositories.collection.findOne({
+        where: { contract: csContract }
+      }))?.description
+    }
+
+    // Determine if the parsed metadata is valid (has both image and name)
+    const validParsedMetadata = parsedMetadata?.image && parsedMetadata?.name
+
+    // Get metadata, either from parsed data or from nftService.getNFTMetaData
+    const metadata = validParsedMetadata
+      ? parsedMetadata
+      : await nftService.getNFTMetaData(csContract, hexTokenId, chainId, true, false, true)
+    const { type, name, description, image, traits } = metadata
+
+    // Save the NFT data to the database
+    const savedNFT = await repositories.nft.save({
+      chainId: chainId,
+      walletId: wallet?.id,
+      userId: wallet?.userId,
+      owner: csNewOwner,
+      contract: csContract,
+      tokenId: hexTokenId,
+      type: type ?? schema?.toUpperCase(),
+      uriString: tokenUris[i],
+      metadata: { name, description, imageURL: image, traits }
+    })
+
+    // Index, update collection, and handle new owner profile for the saved NFT
+    await seService.indexNFTs([savedNFT])
+    await nftService.updateCollectionForNFTs([savedNFT])
+    await handleNewOwnerProfile(wallet, savedNFT, chainId)
+
+    logger.info(`${validParsedMetadata ? '[Internal Metadata]' : '[Alchemy Metadata]'} streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
+      name,
+      description,
+      imageURL: image,
+      traits: traits,
+    })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+  }
+}
+
+// Function to handle a new NFT item
+const handleNewNFTItem = async (newItem: NFTItem): Promise<void> => {
+  // Add the new item to the queue
+  batchQueue.push(newItem);
+
+  // Check if the queue size has reached the threshold
+  if (batchQueue.length >= BATCH_THRESHOLD) {
+    logger.info({ nfts: batchQueue, threshold: BATCH_THRESHOLD }, `[streamingFast]: Batch threshold reached. Processing ${batchQueue.length} NFTs...`)
+    // Trigger the batch process for the items in the queue
+    await batchProcessNFTs(batchQueue);
+
+    // Clear the queue
+    batchQueue = [];
+  }
+}
+
 /**
  * Updates the ownership of an NFT atomically
  * @param contract - The contract address of the NFT.
@@ -316,69 +414,44 @@ export const atomicOwnershipUpdate = async (
       }
     } else {
       const startNewNFT = new Date().getTime()
-      let tokenUris: string[] = []
-      let parsedMetadata = undefined
+      
+      // if schema exists, batch calls as it is request from streaming fast
       if (schema) {
-        const tokenUriBatch = [{ contractAddress: csContract, tokenId: hexTokenId, schema }]
-        tokenUris = await nftService.batchCallTokenURI(tokenUriBatch, chainId)
-        if (tokenUris[0]) {
-          parsedMetadata = await nftService.parseNFTUriString(tokenUris[0], hexTokenId)
-        }
-      }
+        // batch up calls for tokenURI / URI to decrease the number of infura calls
+        await handleNewNFTItem({ contract: csContract, tokenId: hexTokenId, schema })
+      } else {
+        // Get metadata from nftService.getNFTMetaData
+        const metadata = await nftService.getNFTMetaData(csContract, hexTokenId, chainId, true, false, true)
+        const { type, name, description, image, traits } = metadata
 
-      if (parsedMetadata && !parsedMetadata?.name) {
-        parsedMetadata.name = (await repositories.collection.findOne({
-          where: {
-            contract: csContract,
+        // Save the NFT data to the database
+        const savedNFT = await repositories.nft.save({
+          chainId: chainId,
+          walletId: wallet?.id,
+          userId: wallet?.userId,
+          owner: csNewOwner,
+          contract: csContract,
+          tokenId: hexTokenId,
+          type: type,
+          uriString: '', // Use appropriate value for uriString in this scenario
+          metadata: {
+            name,
+            description,
+            imageURL: image,
+            traits: traits,
           },
-        }))?.name + ' #' + Number(tokenId).toString()
+        })
 
-        logger.info(`[atomicOwnershipUpdate]: Fetched name from collection table: ${parsedMetadata.name}`)
-      }
-
-      // If the parsed description isn't found, we will fetch the description from collection table
-      // Otherwise, proceed with Alchemy's description
-      if (parsedMetadata && !parsedMetadata?.description) {
-        parsedMetadata.description = (await repositories.collection.findOne({
-          where: {
-            contract: csContract,
-          },
-        }))?.description
-
-        logger.info(`[atomicOwnershipUpdate]: Fetched description from collection table: ${parsedMetadata.description}`)
-      }
-
-      const validParsedMetadata = parsedMetadata?.image && parsedMetadata?.name
-
-      const metadata = validParsedMetadata ?
-        parsedMetadata :
-        await nftService.getNFTMetaData(csContract, hexTokenId, chainId, true, false, true)
-      const { type, name, description, image, traits } = metadata
-      const savedNFT = await repositories.nft.save({
-        chainId: chainId,
-        walletId: wallet?.id,
-        userId: wallet?.userId,
-        owner: csNewOwner,
-        contract: csContract,
-        tokenId: hexTokenId,
-        type: type ?? schema?.toUpperCase(),
-        uriString: tokenUris[0],
-        metadata: {
+        await seService.indexNFTs([savedNFT])
+        await nftService.updateCollectionForNFTs([savedNFT])
+        await handleNewOwnerProfile(wallet, savedNFT, chainId)
+        logger.info(`[Non-Schema Alchemy Metadata] streamingFast: new NFT ${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
           name,
           description,
           imageURL: image,
           traits: traits,
-        },
-      })
-      await seService.indexNFTs([savedNFT])
-      await nftService.updateCollectionForNFTs([savedNFT])
-      await handleNewOwnerProfile(wallet, savedNFT, chainId)
-      logger.info(`${validParsedMetadata ? '[Internal Metadata]' : '[Alchemy Metadata]'} streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
-        name,
-        description,
-        imageURL: image,
-        traits: traits,
-      })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+        })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+      }
     }
   } catch (err) {
     logger.error(
