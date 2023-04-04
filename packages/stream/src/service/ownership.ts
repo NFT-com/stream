@@ -262,7 +262,7 @@ const updateNFTWithoutWallet = async (existingNFT: entity.NFT, csNewOwner: strin
  * @param prevOwner - The previous owner's address.
  * @param newOwner - The new owner's address.
  * @param chainId - The chain ID of the blockchain network.
- * @returns A Promise that resolves to void.
+ * @returns A Promise that resolves to void
  */
 export const atomicOwnershipUpdate = async (
   contract: string,
