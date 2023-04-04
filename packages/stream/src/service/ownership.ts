@@ -326,7 +326,7 @@ export const atomicOwnershipUpdate = async (
         }
       }
 
-      if (!parsedMetadata?.name) {
+      if (parsedMetadata && !parsedMetadata?.name) {
         parsedMetadata.name = (await repositories.collection.findOne({
           where: {
             contract: csContract,
@@ -338,7 +338,7 @@ export const atomicOwnershipUpdate = async (
 
       // If the parsed description isn't found, we will fetch the description from collection table
       // Otherwise, proceed with Alchemy's description
-      if (!parsedMetadata?.description) {
+      if (parsedMetadata && !parsedMetadata?.description) {
         parsedMetadata.description = (await repositories.collection.findOne({
           where: {
             contract: csContract,
