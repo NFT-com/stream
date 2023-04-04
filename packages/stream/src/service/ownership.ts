@@ -326,7 +326,21 @@ export const atomicOwnershipUpdate = async (
         }
       }
 
-      const validParsedMetadata = parsedMetadata?.image && parsedMetadata?.name && parsedMetadata?.traits && parsedMetadata?.description
+      const validParsedMetadata = parsedMetadata?.image && parsedMetadata?.name
+
+      // If the parsed description isn't found, we will fetch the description from collection table
+      // Otherwise, proceed with Alchemy's description
+      if (!parsedMetadata?.description) {
+        parsedMetadata.description = (await repositories.collection.findOne({
+          where: {
+            contract: csContract,
+          },
+        }))?.description
+
+        logger.info(`[atomicOwnershipUpdate]: Fetched description from collection table: ${parsedMetadata.description}`)
+        if (!parsedMetadata.description) validParsedMetadata = false
+      }
+
       const metadata = validParsedMetadata ?
         parsedMetadata :
         await nftService.getNFTMetaData(csContract, hexTokenId, chainId, true, false, true)
