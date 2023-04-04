@@ -350,7 +350,7 @@ const handleNewNFTItem = async (newItem: NFTItem): Promise<void> => {
   if (batchQueue.length >= BATCH_THRESHOLD) {
     logger.info({ nfts: batchQueue, threshold: BATCH_THRESHOLD }, `[streamingFast]: Batch threshold reached. Processing ${batchQueue.length} NFTs...`)
     // Trigger the batch process for the items in the queue
-    await batchProcessNFTs(batchQueue);
+    batchProcessNFTs(batchQueue);
 
     // Clear the queue
     batchQueue = [];
