@@ -326,10 +326,14 @@ export const atomicOwnershipUpdate = async (
         }
       }
 
-      let validParsedMetadata = parsedMetadata?.image
-
       if (!parsedMetadata?.name) {
-        parsedMetadata.name = Number(hexTokenId).toString()
+        parsedMetadata.name = (await repositories.collection.findOne({
+          where: {
+            contract: csContract,
+          },
+        }))?.name
+
+        logger.info(`[atomicOwnershipUpdate]: Fetched name from collection table: ${parsedMetadata.name}`)
       }
 
       // If the parsed description isn't found, we will fetch the description from collection table
@@ -342,8 +346,9 @@ export const atomicOwnershipUpdate = async (
         }))?.description
 
         logger.info(`[atomicOwnershipUpdate]: Fetched description from collection table: ${parsedMetadata.description}`)
-        if (!parsedMetadata.description) validParsedMetadata = false
       }
+
+      const validParsedMetadata = parsedMetadata?.image && parsedMetadata?.name && parsedMetadata?.description
 
       const metadata = validParsedMetadata ?
         parsedMetadata :
