@@ -445,12 +445,14 @@ export const atomicOwnershipUpdate = async (
         await seService.indexNFTs([savedNFT])
         await nftService.updateCollectionForNFTs([savedNFT])
         await handleNewOwnerProfile(wallet, savedNFT, chainId)
-        logger.info(`[Non-Schema Alchemy Metadata] streamingFast: new NFT ${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
-          name,
-          description,
-          imageURL: image,
-          traits: traits,
-        })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+        logger.info(
+          `[Non-Schema Alchemy Metadata] streamingFast: new NFT ${csContract}/${hexTokenId} (owner=${csNewOwner}) savedMetadata=${JSON.stringify({
+            name,
+            description,
+            imageURL: image,
+            traits: traits,
+          })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`
+        )
       }
     }
   } catch (err) {
