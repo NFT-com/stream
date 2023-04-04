@@ -329,7 +329,7 @@ export const atomicOwnershipUpdate = async (
       let validParsedMetadata = parsedMetadata?.image && parsedMetadata?.name
 
       // If the parsed description isn't found, we will fetch the description from collection table
-      // otherwise, proceed with Alchemy's description
+      // Otherwise, proceed with Alchemy's description
       if (!parsedMetadata?.description) {
         parsedMetadata.description = (await repositories.collection.findOne({
           where: {
