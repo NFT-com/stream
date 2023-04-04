@@ -348,7 +348,7 @@ export const atomicOwnershipUpdate = async (
         logger.info(`[atomicOwnershipUpdate]: Fetched description from collection table: ${parsedMetadata.description}`)
       }
 
-      const validParsedMetadata = parsedMetadata?.image && parsedMetadata?.name && parsedMetadata?.description
+      const validParsedMetadata = parsedMetadata?.image && parsedMetadata?.name
 
       const metadata = validParsedMetadata ?
         parsedMetadata :
