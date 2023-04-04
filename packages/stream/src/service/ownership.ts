@@ -75,7 +75,7 @@ const processProfileNFT = async (existingNFT: entity.NFT): Promise<void> => {
  * @param chainId - The chain ID of the blockchain network.
  * @returns A Promise that resolves to void.
  */
-const handleNewOwnerProfile = async (wallet: entity.Wallet, updatedNFT: entity.NFT, chainId: string): Promise<void> => {
+const handleNewOwnerProfile = async (wallet: Partial<entity.Wallet>, updatedNFT: entity.NFT, chainId: string): Promise<void> => {
   // wallet must be defined
   if (!wallet?.id || !wallet?.userId) return
 
@@ -330,7 +330,7 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
     // Index, update collection, and handle new owner profile for the saved NFT
     await seService.indexNFTs([savedNFT])
     await nftService.updateCollectionForNFTs([savedNFT])
-    await handleNewOwnerProfile(wallet, savedNFT, chainId)
+    await handleNewOwnerProfile({ id: walletId, userId: userId }, savedNFT, chainId)
 
     logger.info(`${validParsedMetadata ? '[Internal Metadata]' : '[Alchemy Metadata]'} streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
       name,
