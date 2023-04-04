@@ -22,6 +22,9 @@ type NFTItem = {
   tokenId: string
   schema: string | null
   chainId: string
+  csNewOwner: string
+  walletId: string
+  userId: string
 }
 
 let batchQueue: NFTItem[] = []; // Initialize an empty queue for batch processing
@@ -281,7 +284,7 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
   // Process each item in the batch
   for (let i = 0; i < nftItems.length; i++) {
     const item = nftItems[i]
-    const { contract: csContract, tokenId: hexTokenId, schema } = item
+    const { contract: csContract, tokenId: hexTokenId, schema, chainId, csNewOwner, walletId, userId } = item
 
     let parsedMetadata = undefined
     if (schema && tokenUris[i]) {
@@ -314,8 +317,8 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
     // Save the NFT data to the database
     const savedNFT = await repositories.nft.save({
       chainId: chainId,
-      walletId: wallet?.id,
-      userId: wallet?.userId,
+      walletId: walletId,
+      userId: userId,
       owner: csNewOwner,
       contract: csContract,
       tokenId: hexTokenId,
@@ -419,7 +422,7 @@ export const atomicOwnershipUpdate = async (
       // if schema exists, batch calls as it is request from streaming fast
       if (schema) {
         // batch up calls for tokenURI / URI to decrease the number of infura calls
-        await handleNewNFTItem({ contract: csContract, tokenId: hexTokenId, schema, chainId })
+        await handleNewNFTItem({ contract: csContract, tokenId: hexTokenId, schema, chainId, csNewOwner, walletId: wallet?.id, userId: wallet?.userId })
       } else {
         // Get metadata from nftService.getNFTMetaData
         const metadata = await nftService.getNFTMetaData(csContract, hexTokenId, chainId, true, false, true)
