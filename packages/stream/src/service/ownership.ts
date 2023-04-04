@@ -21,6 +21,7 @@ type NFTItem = {
   contract: string
   tokenId: string
   schema: string | null
+  chainId: string
 }
 
 let batchQueue: NFTItem[] = []; // Initialize an empty queue for batch processing
@@ -275,7 +276,7 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
   })
 
   // Batch call to get token URIs
-  const tokenUris = await nftService.batchCallTokenURI(tokenUriBatch, chainId)
+  const tokenUris = await nftService.batchCallTokenURI(tokenUriBatch, nftItems[0].chainId)
 
   // Process each item in the batch
   for (let i = 0; i < nftItems.length; i++) {
@@ -418,7 +419,7 @@ export const atomicOwnershipUpdate = async (
       // if schema exists, batch calls as it is request from streaming fast
       if (schema) {
         // batch up calls for tokenURI / URI to decrease the number of infura calls
-        await handleNewNFTItem({ contract: csContract, tokenId: hexTokenId, schema })
+        await handleNewNFTItem({ contract: csContract, tokenId: hexTokenId, schema, chainId })
       } else {
         // Get metadata from nftService.getNFTMetaData
         const metadata = await nftService.getNFTMetaData(csContract, hexTokenId, chainId, true, false, true)
