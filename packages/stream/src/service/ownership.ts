@@ -326,7 +326,7 @@ export const atomicOwnershipUpdate = async (
         }
       }
 
-      const validParsedMetadata = parsedMetadata?.image && parsedMetadata?.name
+      let validParsedMetadata = parsedMetadata?.image && parsedMetadata?.name
 
       // If the parsed description isn't found, we will fetch the description from collection table
       // Otherwise, proceed with Alchemy's description
