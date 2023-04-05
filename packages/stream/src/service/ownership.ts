@@ -377,23 +377,23 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
 }
 
 const handleNewNFTItem = async (newItem: NFTItem): Promise<void> => {
-  // Add the new item to the Redis list
-  await cache.rpush(CacheKeys.STREAMING_FAST_QUEUE, JSON.stringify(newItem));
+  // Use SADD to add the newItem to the Redis set (duplicates are automatically ignored)
+  await cache.sadd(CacheKeys.STREAMING_FAST_QUEUE, JSON.stringify(newItem))
 
   // If the interval is not already set, set it up
   if (!batchIntervalId) {
     batchIntervalId = setInterval(async () => {
-      // Get the current length of the Redis list
-      const queueLength = await cache.llen(CacheKeys.STREAMING_FAST_QUEUE)
+      // Get the current size of the Redis set
+      const setSize = await cache.scard(CacheKeys.STREAMING_FAST_QUEUE)
 
-      // If the queue is not empty, process the items in the queue
-      if (queueLength > 0) {
-        // Retrieve the current items from the Redis list
-        const currentBatch = await cache.lrange(CacheKeys.STREAMING_FAST_QUEUE, 0, queueLength - 1);
-        const parsedBatch = currentBatch.map(item => JSON.parse(item));
+      // If the set is not empty, process the items in the set
+      if (setSize > 0) {
+        // Retrieve all items from the Redis set
+        const currentBatch = await cache.smembers(CacheKeys.STREAMING_FAST_QUEUE)
+        const parsedBatch = currentBatch.map(item => JSON.parse(item))
 
-        // Remove the processed items from the Redis list
-        await cache.ltrim(CacheKeys.STREAMING_FAST_QUEUE, queueLength, -1);
+        // Remove the processed items from the Redis set
+        await cache.del(CacheKeys.STREAMING_FAST_QUEUE)
 
         logger.info(
           { nfts: parsedBatch, threshold: BATCH_THRESHOLD_MAX },
@@ -405,22 +405,23 @@ const handleNewNFTItem = async (newItem: NFTItem): Promise<void> => {
     }, BATCH_PROCESSING_SEC)
   }
 
+  // Check if the set size has reached the threshold
+  const setSize = await cache.scard(CacheKeys.STREAMING_FAST_QUEUE)
+
   // Check if the queue size has reached the threshold
-  const queueLength = await cache.llen(CacheKeys.STREAMING_FAST_QUEUE);
-  // Check if the queue size has reached the threshold
-  if (queueLength >= BATCH_THRESHOLD_MAX) {
+  if (setSize >= BATCH_THRESHOLD_MAX) {
     // If the interval is active, clear it
     if (batchIntervalId) {
       clearInterval(batchIntervalId)
       batchIntervalId = null
     }
 
-    // Retrieve the current items from the Redis list
-    const currentBatch = await cache.lrange(CacheKeys.STREAMING_FAST_QUEUE, 0, queueLength - 1);
-    const parsedBatch = currentBatch.map(item => JSON.parse(item));
+    // Retrieve all items from the Redis set
+    const currentBatch = await cache.smembers(CacheKeys.STREAMING_FAST_QUEUE)
+    const parsedBatch = currentBatch.map(item => JSON.parse(item))
     
-    // Remove the processed items from the Redis list
-    await cache.ltrim(CacheKeys.STREAMING_FAST_QUEUE, queueLength, -1);
+    // Remove the processed items from the Redis set
+    await cache.del(CacheKeys.STREAMING_FAST_QUEUE)
 
     logger.info(
       { nfts: parsedBatch, threshold: BATCH_THRESHOLD_MAX },
