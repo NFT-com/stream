@@ -397,7 +397,7 @@ const handleNewNFTItem = async (newItem: NFTItem): Promise<void> => {
 
         logger.info(
           { nfts: parsedBatch, threshold: BATCH_THRESHOLD_MAX },
-          `[streamingFast | Cron ${BATCH_PROCESSING_SEC / 1000}s]: Processing ${parsedBatch.length} NFTs...`
+          `[streamingFast | Cron ${BATCH_PROCESSING_SEC / 1000}s]: processing ${parsedBatch.length} NFTs...`
         )
         // Trigger the batch process for the items in the parsedBatch
         await batchProcessNFTs(parsedBatch)
