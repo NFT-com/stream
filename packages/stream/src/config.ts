@@ -10,6 +10,7 @@ export const dbConfig = {
   database: process.env.DB_DATABASE || 'app',
   logging: helper.parseBoolean(process.env.DB_LOGGING) || false,
   useSSL: helper.parseBoolean(process.env.DB_USE_SSL),
+  subscribers: ['../../../NFT-backend/packages/shared/src/db/subscriber/*.subscriber.ts'],
 }
 
 export const redisConfig = {
@@ -18,4 +19,3 @@ export const redisConfig = {
 }
 
 export const OPENSEA_API_KEY = process.env.OPENSEA_ORDERS_API_KEY || ''
-  
