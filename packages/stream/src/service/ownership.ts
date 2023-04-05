@@ -279,7 +279,7 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
   })
 
   // Batch call to get token URIs
-  const tokenUris = await nftService.batchCallTokenURI(tokenUriBatch, nftItems[0].chainId)
+  const tokenUris = await nftService.batchCallTokenURI(tokenUriBatch, nftItems[0]?.chainId || '1')
 
   // Process each item in the batch
   for (let i = 0; i < nftItems.length; i++) {
