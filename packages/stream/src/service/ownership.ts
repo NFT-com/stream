@@ -14,7 +14,9 @@ const MAX_PROCESS_BATCH_SIZE = parseInt(process.env.MAX_PROFILE_BATCH_SIZE) || 5
 const logger = _logger.Factory(_logger.Context.NFT)
 const repositories = db.newRepositories()
 const seService = searchEngineService.SearchEngineService()
-const BATCH_THRESHOLD = 10; // Define the threshold for batch processing
+const BATCH_THRESHOLD_MAX = 500 // Define the threshold for batch processing
+const BATCH_PROCESSING_SEC = 5000 // 5 seconds
+let batchIntervalId: NodeJS.Timeout | null = null;
 
 // Define the type for an NFT item
 type NFTItem = {
@@ -341,19 +343,51 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
   }
 }
 
-// Function to handle a new NFT item
 const handleNewNFTItem = async (newItem: NFTItem): Promise<void> => {
   // Add the new item to the queue
-  batchQueue.push(newItem);
+  batchQueue.push(newItem)
+
+  // If the interval is not already set, set it up
+  if (!batchIntervalId) {
+    batchIntervalId = setInterval(async () => {
+      // If the queue is not empty, process the items in the queue
+      if (batchQueue.length > 0) {
+        // Create a temporary variable to hold the current items in the queue
+        const currentBatch = batchQueue
+
+        // Clear the batchQueue immediately to avoid duplicates
+        batchQueue = []
+
+        logger.info(
+          { nfts: currentBatch, threshold: BATCH_THRESHOLD_MAX },
+          `[streamingFast | Cron ${BATCH_PROCESSING_SEC / 1000}s]: Processing ${currentBatch.length} NFTs...`
+        )
+        // Trigger the batch process for the items in the currentBatch
+        await batchProcessNFTs(currentBatch)
+      }
+    }, BATCH_PROCESSING_SEC)
+  }
 
   // Check if the queue size has reached the threshold
-  if (batchQueue.length >= BATCH_THRESHOLD) {
-    logger.info({ nfts: batchQueue, threshold: BATCH_THRESHOLD }, `[streamingFast]: Batch threshold reached. Processing ${batchQueue.length} NFTs...`)
-    // Trigger the batch process for the items in the queue
-    batchProcessNFTs(batchQueue);
+  if (batchQueue.length >= BATCH_THRESHOLD_MAX) {
+    // If the interval is active, clear it
+    if (batchIntervalId) {
+      clearInterval(batchIntervalId)
+      batchIntervalId = null
+    }
 
-    // Clear the queue
-    batchQueue = [];
+    // Create a temporary variable to hold the current items in the queue
+    const currentBatch = batchQueue
+
+    // Clear the batchQueue immediately to avoid duplicates
+    batchQueue = []
+
+    logger.info(
+      { nfts: currentBatch, threshold: BATCH_THRESHOLD_MAX },
+      `[streamingFast]: Batch threshold reached. Processing ${currentBatch.length} NFTs...`
+    )
+    // Trigger the batch process for the items in the currentBatch
+    await batchProcessNFTs(currentBatch)
   }
 }
 
