@@ -25,7 +25,7 @@ import { initiateStreaming } from './pipeline'
 import { cache, CacheKeys, removeExpiredTimestampedZsetMembers } from './service/cache'
 import { startProvider, stopProvider } from './service/on-chain'
 import { client } from './service/opensea'
-// import { startStreamingFast, stopStreamingFast } from './service/streamingfast'
+import { startStreamingFast, stopStreamingFast } from './service/streamingfast'
 import { ALLOWED_NETWORKS, chainFromId } from './utils'
 
 const logger = _logger.Factory(_logger.Context.General, _logger.Context.Misc)
@@ -651,7 +651,7 @@ const bootstrap = (): Promise<void> => {
     .then(client.connect)
     .then(initiateStreaming)
     .then(() => startProvider(chainId))
-    // .then(() => startStreamingFast())
+    .then(() => startStreamingFast())
     .then(fp.pause(500))
 }
 
@@ -672,7 +672,7 @@ const gracefulShutdown = (): Promise<void> => {
     .then(stopAndDisconnect)
     .then(client.disconnect)
     .then(stopProvider)
-    // .then(stopStreamingFast)
+    .then(stopStreamingFast)
     .then(fp.pause(500))
     .then(db.disconnect)
     .then(db.endPg)
