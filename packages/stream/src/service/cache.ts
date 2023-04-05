@@ -27,6 +27,7 @@ export enum CacheKeys {
   DEREGISTER = 'deregister-slug',
   SYNCED_OS = 'synced_os',
   SYNCED_LR = 'synced_lr',
+  STREAMING_FAST_QUEUE = 'streaming_fast_queue',
   SYNC_COLLECTION = 'sync_collection',
   SPAM_COLLECTIONS = 'spam_collections',
   SYNC_IN_PROGRESS = 'sync_in_progress',

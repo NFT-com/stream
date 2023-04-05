@@ -29,8 +29,6 @@ type NFTItem = {
   userId: string
 }
 
-let batchQueue: NFTItem[] = []; // Initialize an empty queue for batch processing
-
 export const checksumAddress = (address: string): string | undefined => {
   try {
     return helper.checkSum(address)
@@ -379,50 +377,57 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
 }
 
 const handleNewNFTItem = async (newItem: NFTItem): Promise<void> => {
-  // Add the new item to the queue
-  batchQueue.push(newItem)
+  // Add the new item to the Redis list
+  await cache.rpush(CacheKeys.STREAMING_FAST_QUEUE, JSON.stringify(newItem));
 
   // If the interval is not already set, set it up
   if (!batchIntervalId) {
     batchIntervalId = setInterval(async () => {
-      // If the queue is not empty, process the items in the queue
-      if (batchQueue.length > 0) {
-        // Create a temporary variable to hold the current items in the queue
-        const currentBatch = batchQueue
+      // Get the current length of the Redis list
+      const queueLength = await cache.llen(CacheKeys.STREAMING_FAST_QUEUE)
 
-        // Clear the batchQueue immediately to avoid duplicates
-        batchQueue = []
+      // If the queue is not empty, process the items in the queue
+      if (queueLength > 0) {
+        // Retrieve the current items from the Redis list
+        const currentBatch = await cache.lrange(CacheKeys.STREAMING_FAST_QUEUE, 0, queueLength - 1);
+        const parsedBatch = currentBatch.map(item => JSON.parse(item));
+
+        // Remove the processed items from the Redis list
+        await cache.ltrim(CacheKeys.STREAMING_FAST_QUEUE, queueLength, -1);
 
         logger.info(
-          { nfts: currentBatch, threshold: BATCH_THRESHOLD_MAX },
-          `[streamingFast | Cron ${BATCH_PROCESSING_SEC / 1000}s]: Processing ${currentBatch.length} NFTs...`
+          { nfts: parsedBatch, threshold: BATCH_THRESHOLD_MAX },
+          `[streamingFast | Cron ${BATCH_PROCESSING_SEC / 1000}s]: Processing ${parsedBatch.length} NFTs...`
         )
-        // Trigger the batch process for the items in the currentBatch
-        await batchProcessNFTs(currentBatch)
+        // Trigger the batch process for the items in the parsedBatch
+        await batchProcessNFTs(parsedBatch)
       }
     }, BATCH_PROCESSING_SEC)
   }
 
   // Check if the queue size has reached the threshold
-  if (batchQueue.length >= BATCH_THRESHOLD_MAX) {
+  const queueLength = await cache.llen(CacheKeys.STREAMING_FAST_QUEUE);
+  // Check if the queue size has reached the threshold
+  if (queueLength >= BATCH_THRESHOLD_MAX) {
     // If the interval is active, clear it
     if (batchIntervalId) {
       clearInterval(batchIntervalId)
       batchIntervalId = null
     }
 
-    // Create a temporary variable to hold the current items in the queue
-    const currentBatch = batchQueue
-
-    // Clear the batchQueue immediately to avoid duplicates
-    batchQueue = []
+    // Retrieve the current items from the Redis list
+    const currentBatch = await cache.lrange(CacheKeys.STREAMING_FAST_QUEUE, 0, queueLength - 1);
+    const parsedBatch = currentBatch.map(item => JSON.parse(item));
+    
+    // Remove the processed items from the Redis list
+    await cache.ltrim(CacheKeys.STREAMING_FAST_QUEUE, queueLength, -1);
 
     logger.info(
-      { nfts: currentBatch, threshold: BATCH_THRESHOLD_MAX },
-      `[streamingFast]: Batch threshold reached. Processing ${currentBatch.length} NFTs...`
+      { nfts: parsedBatch, threshold: BATCH_THRESHOLD_MAX },
+      `[streamingFast]: Batch threshold reached. Processing ${parsedBatch.length} NFTs...`
     )
-    // Trigger the batch process for the items in the currentBatch
-    await batchProcessNFTs(currentBatch)
+    // Trigger the batch process for the items in the parsedBatch
+    await batchProcessNFTs(parsedBatch)
   }
 }
 
