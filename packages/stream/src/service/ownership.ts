@@ -5,7 +5,9 @@ import { BigNumber, ethers } from 'ethers'
 import { nftService } from '@nftcom/gql/service'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import { searchEngineService } from '@nftcom/gql/service'
+import { core, searchEngineService } from '@nftcom/gql/service'
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
 import { cache, CacheKeys } from './cache'
@@ -120,6 +122,7 @@ const handleNewOwnerProfile = async (wallet: Partial<entity.Wallet>, updatedNFT:
             thisEntityId: profile.id,
             thatEntityId: updatedNFT.id,
             edgeType: defs.EdgeType.Displays,
+            weight: (await core.getLastWeight(repositories, profile.id)) || 'aaaa',
             hide: true,
           })
           logger.info(`updated edges for profile in ownership for profileId: ${profile.id}, url: ${profile.url}.`)
