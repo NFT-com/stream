@@ -85,7 +85,7 @@ const handleNewOwnerProfile = async (wallet: Partial<entity.Wallet>, updatedNFT:
   }
   const newOwnerProfileCount: number = await repositories.profile.count(profileQuery)
 
-  logger.info(`New owner profiles count: ${newOwnerProfileCount}`)
+  logger.info({ updatedNFT }, `New owner profiles count: ${newOwnerProfileCount}, walletId: ${wallet.id}, userId: ${wallet.userId}`)
 
   for (let i = 0; i < newOwnerProfileCount; i += MAX_PROCESS_BATCH_SIZE) {
     const newOwnerProfiles: entity.Profile[] = await repositories.profile.find({
@@ -98,25 +98,40 @@ const handleNewOwnerProfile = async (wallet: Partial<entity.Wallet>, updatedNFT:
       },
     })
 
-    logger.info(`New owner profiles length: ${newOwnerProfiles.length}, batch: ${i}`)
+    logger.info({ newOwnerProfiles }, `New owner profiles length: ${newOwnerProfiles.length}, batch: ${i}, walletId: ${wallet.id}, userId: ${wallet.userId}`)
 
     for (const profile of newOwnerProfiles) {
       try {
-        await repositories.edge.save({
-          thisEntityType: defs.EntityType.Profile,
-          thatEntityType: defs.EntityType.NFT,
-          thisEntityId: profile.id,
-          thatEntityId: updatedNFT.id,
-          edgeType: defs.EdgeType.Displays,
-          hide: true,
+        // check for duplicates
+        const existingEdge = await repositories.edge.findOne({
+          where: {
+            thisEntityType: defs.EntityType.Profile,
+            thatEntityType: defs.EntityType.NFT,
+            thisEntityId: profile.id,
+            thatEntityId: updatedNFT.id,
+            edgeType: defs.EdgeType.Displays,
+          },
         })
-        logger.info(`updated edges for profile in ownership for profileId: ${profile.id}, url: ${profile.url}.`)
+
+        if (!existingEdge) {
+          await repositories.edge.save({
+            thisEntityType: defs.EntityType.Profile,
+            thatEntityType: defs.EntityType.NFT,
+            thisEntityId: profile.id,
+            thatEntityId: updatedNFT.id,
+            edgeType: defs.EdgeType.Displays,
+            hide: true,
+          })
+          logger.info(`updated edges for profile in ownership for profileId: ${profile.id}, url: ${profile.url}.`)
+        }
       } catch (err) {
         logger.error(
           err,
           `Error in updateEdgesWeightForProfile in ownership for profileId:${profile.id}, url: ${profile.url}`,
         )
       }
+
+      await nftService.clearDataloaderCache([updatedNFT.id])
 
       try {
         await nftService.syncEdgesWithNFTs(profile.id)
