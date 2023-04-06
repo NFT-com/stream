@@ -87,8 +87,8 @@ const handleNewOwnerProfile = async (wallet: Partial<entity.Wallet>, updatedNFT:
   // wallet must be defined
   if (!wallet?.id || !wallet?.userId) return
 
-  if (isBurnAddress(csNewOwner) || isBurnAddress(csPrevOwner)) {
-    logger.debug(`Ownership transfer for NFT ${csContract}/${hexTokenId} is a burn address. Ignoring.`)
+  if (isBurnAddress(updatedNFT?.owner)) {
+    logger.debug(`Ownership transfer for NFT ${updatedNFT?.type}/${updatedNFT?.contract}/${updatedNFT?.tokenId} is a burn address: ${updatedNFT?.owner}. Ignoring.`)
     return
   }
 
