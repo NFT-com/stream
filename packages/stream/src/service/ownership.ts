@@ -298,7 +298,7 @@ const updateNFTWithoutWallet = async (existingNFT: entity.NFT, csNewOwner: strin
   return updatedNFT
 }
 
-// Function to process a batch of NFT items
+// Function to process a batch of NFT items.
 const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
   const startNewNFT = new Date().getTime()
 
