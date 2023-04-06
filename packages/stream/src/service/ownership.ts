@@ -305,20 +305,25 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
       const item = nftItems[i]
       const { contract: csContract, tokenId: hexTokenId, schema, chainId, csNewOwner, walletId, userId } = item
 
-      let parsedMetadata = undefined
+      let parsedMetadata = {}
       if (schema && tokenUris[i]) {
         parsedMetadata = await nftService.parseNFTUriString(tokenUris[i], hexTokenId)
       }
 
+      // if badly formatted NFT (without proper metadata), use a default image
+      if (!tokenUris[i]) {
+        parsedMetadata.image = 'https://cdn.nft.com/optimizedLoader2.webp'
+      }
+
       // If the parsed name isn't found, fetch the name from collection table
-      if (parsedMetadata && !parsedMetadata.name) {
+      if (!parsedMetadata?.name) {
         parsedMetadata.name = (await repositories.collection.findOne({
           where: { contract: csContract }
         }))?.name + ' #' + Number(hexTokenId).toString()
       }
 
       // If the parsed description isn't found, fetch the description from collection table
-      if (parsedMetadata && !parsedMetadata.description) {
+      if (!parsedMetadata?.description) {
         parsedMetadata.description = (await repositories.collection.findOne({
           where: { contract: csContract }
         }))?.description
@@ -327,13 +332,12 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
       // Determine if the parsed metadata is valid (has both image and name)
       const validParsedMetadata = parsedMetadata?.image && parsedMetadata?.name
 
-      // Get metadata, either from parsed data or from nftService.getNFTMetaData
+      // Optimistically fetch the metadata internally, fallback to alchemy worst case scenario
       const metadata = validParsedMetadata
         ? parsedMetadata
         : await nftService.getNFTMetaData(csContract, hexTokenId, chainId, true, false, true)
       const { type, name, description, image, traits } = metadata
 
-      // check if nft exists in db
       const existingNFT = await repositories.nft.findOne({
         where: { contract: csContract, tokenId: hexTokenId, chainId: chainId }
       })
