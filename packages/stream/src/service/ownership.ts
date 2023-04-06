@@ -454,6 +454,12 @@ const handleNewNFTItem = async (newItem: NFTItem): Promise<void> => {
   }
 }
 
+const isBurnAddress = (address: string): boolean => {
+  // Regular expression to match Ethereum burn addresses with at least 30 zeros in a row
+  const burnAddressRegex = /^0x0{30,}[a-fA-F0-9]*$/i
+  return burnAddressRegex.test(address)
+}
+
 /**
  * Updates the ownership of an NFT atomically
  * @param contract - The contract address of the NFT.
@@ -492,6 +498,11 @@ export const atomicOwnershipUpdate = async (
       previous owner: ${csPrevOwner},
       new owner: ${csNewOwner}`,
     )
+    return
+  }
+
+  if (isBurnAddress(csNewOwner) || isBurnAddress(csPrevOwner)) {
+    logger.debug(`Ownership transfer for NFT ${csContract}/${hexTokenId} is a burn address. Ignoring.`)
     return
   }
 
