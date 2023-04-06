@@ -305,7 +305,7 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
       const item = nftItems[i]
       const { contract: csContract, tokenId: hexTokenId, schema, chainId, csNewOwner, walletId, userId } = item
 
-      let parsedMetadata = {}
+      let parsedMetadata = undefined
       if (schema && tokenUris[i]) {
         parsedMetadata = await nftService.parseNFTUriString(tokenUris[i], hexTokenId)
       }
