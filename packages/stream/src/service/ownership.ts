@@ -18,8 +18,11 @@ const repositories = db.newRepositories()
 const seService = searchEngineService.SearchEngineService()
 const BATCH_THRESHOLD_MAX = 500 // Define the threshold for batch processing
 const BATCH_PROCESSING_SEC = 5000 // 5 seconds
-const BATCH_LOG_SIZE = 100
-let logInfoBatch = []
+const BATCH_LOG_SIZE = 25
+let logInfoBatch1: string[] = []
+let logInfoBatch2: string[] = []
+let logInfoBatch3: string[] = []
+let logInfoBatch4: string[] = []
 let batchIntervalId: NodeJS.Timeout | null = null;
 
 // Define the type for an NFT item
@@ -31,6 +34,18 @@ type NFTItem = {
   csNewOwner: string
   walletId: string
   userId: string
+}
+
+// Helper function to check and log each batch.
+const checkAndLogAllBatches = (batches: string[][]): string[][] => {
+  for (let i = 0; i < batches.length; i++) {
+    const batch = batches[i]
+    if (batch.length >= BATCH_LOG_SIZE) {
+      logger.info(batch.join('\n'))
+      batches[i] = [] // Clear the batch
+    }
+  }
+  return batches
 }
 
 export const checksumAddress = (address: string): string | undefined => {
@@ -381,12 +396,21 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
         await nftService.updateCollectionForNFTs([savedNFT])
         await handleNewOwnerProfile({ id: walletId, userId: userId }, savedNFT, chainId)
 
-        logInfoBatch.push(`${validParsedMetadata ? '[Internal Metadata]' : '[Alchemy Metadata]'} streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
-          name,
-          description,
-          imageURL: image,
-          traits: traits,
-        })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+        if (validParsedMetadata) {
+          logInfoBatch1.push(`[Internal Metadata] streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
+            name,
+            description,
+            imageURL: image,
+            traits: traits,
+          })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+        } else {
+          logInfoBatch2.push(`[Alchemy Metadata] streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
+            name,
+            description,
+            imageURL: image,
+            traits: traits,
+          })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+        }
       } else {
         // If the NFT already exists, update it if the new owner is different
         if (existingNFT.owner !== csNewOwner || existingNFT.uriString !== tokenUris[i] ||
@@ -403,14 +427,25 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
             await nftService.updateCollectionForNFTs([updatedNFT])
             await handleNewOwnerProfile({ id: walletId, userId: userId }, updatedNFT, chainId)
 
-            logInfoBatch.push(`${validParsedMetadata ? '[Internal Metadata]' : '[Alchemy Metadata]'} streamingFast: updated NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
-              name,
-              description,
-              imageURL: image,
-              traits: traits,
-            })} updated in db ${updatedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+            if (validParsedMetadata) {
+              logInfoBatch1.push(`[Internal Metadata] streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
+                name,
+                description,
+                imageURL: image,
+                traits: traits,
+              })} saved in db ${updatedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+            } else {
+              logInfoBatch2.push(`[Alchemy Metadata] streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
+                name,
+                description,
+                imageURL: image,
+                traits: traits,
+              })} saved in db ${updatedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+            }
         }
       }
+
+      [logInfoBatch1, logInfoBatch2] = checkAndLogAllBatches([logInfoBatch1, logInfoBatch2])
     } catch (error) {
       // Log error message and continue processing the next item
       logger.error(`[streamingFast]: Error processing NFT item ${i}: ${error.message}`);
@@ -437,9 +472,14 @@ const handleNewNFTItem = async (newItem: NFTItem): Promise<void> => {
         // Remove the processed items from the Redis set
         await cache.del(CacheKeys.STREAMING_FAST_QUEUE)
 
-        logInfoBatch.push(
+        logInfoBatch3.push(
           `[streamingFast | Cron ${BATCH_PROCESSING_SEC / 1000}s]: processing ${parsedBatch.length} NFTs..., ${JSON.stringify({ nfts: parsedBatch, threshold: BATCH_THRESHOLD_MAX })}`
         )
+
+        // batch logs
+        checkAndLogAllBatches([logInfoBatch3])
+        logInfoBatch3 = []
+
         // Trigger the batch process for the items in the parsedBatch
         await batchProcessNFTs(parsedBatch)
       }
@@ -464,9 +504,11 @@ const handleNewNFTItem = async (newItem: NFTItem): Promise<void> => {
     // Remove the processed items from the Redis set
     await cache.del(CacheKeys.STREAMING_FAST_QUEUE)
 
-    logInfoBatch.push(
-      `[streamingFast]: Batch threshold reached. Processing ${parsedBatch.length} NFTs..., ${JSON.stringify({ nfts: parsedBatch, threshold: BATCH_THRESHOLD_MAX })}`
+    logger.info(
+      { nfts: parsedBatch, threshold: BATCH_THRESHOLD_MAX },
+      `[streamingFast]: Batch threshold reached. Processing ${parsedBatch.length} NFTs...`
     )
+
     // Trigger the batch process for the items in the parsedBatch
     await batchProcessNFTs(parsedBatch)
   }
@@ -564,7 +606,7 @@ export const atomicOwnershipUpdate = async (
         await seService.indexNFTs([savedNFT])
         await nftService.updateCollectionForNFTs([savedNFT])
         await handleNewOwnerProfile(wallet, savedNFT, chainId)
-        logInfoBatch.push(
+        logInfoBatch4.push(
           `[Non-Schema Alchemy Metadata] streamingFast: new NFT ${csContract}/${hexTokenId} (owner=${csNewOwner}) savedMetadata=${JSON.stringify({
             name,
             description,
@@ -573,11 +615,8 @@ export const atomicOwnershipUpdate = async (
           })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`
         )
 
-        // batch logs
-        if (logInfoBatch.length >= BATCH_LOG_SIZE) {
-          logger.info(logInfoBatch.join('\n'))
-          logInfoBatch = []
-        }
+        checkAndLogAllBatches([logInfoBatch4])
+        logInfoBatch4 = []
       }
     }
   } catch (err) {
