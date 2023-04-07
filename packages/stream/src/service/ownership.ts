@@ -396,12 +396,21 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
         await nftService.updateCollectionForNFTs([savedNFT])
         await handleNewOwnerProfile({ id: walletId, userId: userId }, savedNFT, chainId)
 
-        (validParsedMetadata ? logInfoBatch1 : logInfoBatch2).push(`${validParsedMetadata ? '[Internal Metadata]' : '[Alchemy Metadata]'} streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
-          name,
-          description,
-          imageURL: image,
-          traits: traits,
-        })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+        if (validParsedMetadata) {
+          logInfoBatch1.push(`[Internal Metadata] streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
+            name,
+            description,
+            imageURL: image,
+            traits: traits,
+          })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+        } else {
+          logInfoBatch2.push(`[Alchemy Metadata] streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
+            name,
+            description,
+            imageURL: image,
+            traits: traits,
+          })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+        }
       } else {
         // If the NFT already exists, update it if the new owner is different
         if (existingNFT.owner !== csNewOwner || existingNFT.uriString !== tokenUris[i] ||
@@ -418,16 +427,25 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
             await nftService.updateCollectionForNFTs([updatedNFT])
             await handleNewOwnerProfile({ id: walletId, userId: userId }, updatedNFT, chainId)
 
-            (validParsedMetadata ? logInfoBatch1 : logInfoBatch2).push(`${validParsedMetadata ? '[Internal Metadata]' : '[Alchemy Metadata]'} streamingFast: updated NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
-              name,
-              description,
-              imageURL: image,
-              traits: traits,
-            })} updated in db ${updatedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+            if (validParsedMetadata) {
+              logInfoBatch1.push(`[Internal Metadata] streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
+                name,
+                description,
+                imageURL: image,
+                traits: traits,
+              })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+            } else {
+              logInfoBatch2.push(`[Alchemy Metadata] streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
+                name,
+                description,
+                imageURL: image,
+                traits: traits,
+              })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+            }
         }
       }
 
-      ([logInfoBatch1, logInfoBatch2] = checkAndLogAllBatches([logInfoBatch1, logInfoBatch2]))
+      [logInfoBatch1, logInfoBatch2] = checkAndLogAllBatches([logInfoBatch1, logInfoBatch2])
     } catch (error) {
       // Log error message and continue processing the next item
       logger.error(`[streamingFast]: Error processing NFT item ${i}: ${error.message}`);
@@ -459,7 +477,8 @@ const handleNewNFTItem = async (newItem: NFTItem): Promise<void> => {
         )
 
         // batch logs
-        ([logInfoBatch3] = checkAndLogAllBatches([logInfoBatch3]))
+        checkAndLogAllBatches([logInfoBatch3])
+        logInfoBatch3 = []
 
         // Trigger the batch process for the items in the parsedBatch
         await batchProcessNFTs(parsedBatch)
@@ -596,7 +615,8 @@ export const atomicOwnershipUpdate = async (
           })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`
         )
 
-        ([logInfoBatch4] = checkAndLogAllBatches([logInfoBatch4]))
+        checkAndLogAllBatches([logInfoBatch4])
+        logInfoBatch4 = []
       }
     }
   } catch (err) {
