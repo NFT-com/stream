@@ -435,12 +435,12 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
 
       if (logInfoBatch1?.length >= BATCH_LOG_SIZE) {
         logger.info(logInfoBatch1.join('\n'))
-        logInfoBatch1 = [] // Clear the batch
+        logInfoBatch1 = []
       }
 
       if (logInfoBatch2?.length >= BATCH_LOG_SIZE) {
         logger.info(logInfoBatch2.join('\n'))
-        logInfoBatch2 = [] // Clear the batch
+        logInfoBatch2 = []
       }
     } catch (error) {
       // Log error message and continue processing the next item
