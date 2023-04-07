@@ -36,18 +36,6 @@ type NFTItem = {
   userId: string
 }
 
-// Helper function to check and log each batch.
-const checkAndLogAllBatches = (batches: string[][]): string[][] => {
-  for (let i = 0; i < batches.length; i++) {
-    const batch = batches[i]
-    if (batch.length >= BATCH_LOG_SIZE) {
-      logger.info(batch.join('\n'))
-      batches[i] = [] // Clear the batch
-    }
-  }
-  return batches
-}
-
 export const checksumAddress = (address: string): string | undefined => {
   try {
     return helper.checkSum(address)
@@ -445,7 +433,15 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
         }
       }
 
-      [logInfoBatch1, logInfoBatch2] = checkAndLogAllBatches([logInfoBatch1, logInfoBatch2])
+      if (logInfoBatch1.length >= BATCH_LOG_SIZE) {
+        logger.info(logInfoBatch1.join('\n'))
+        logInfoBatch1 = [] // Clear the batch
+      }
+
+      if (logInfoBatch2.length >= BATCH_LOG_SIZE) {
+        logger.info(logInfoBatch2.join('\n'))
+        logInfoBatch2 = [] // Clear the batch
+      }
     } catch (error) {
       // Log error message and continue processing the next item
       logger.error(`[streamingFast]: Error processing NFT item ${i}: ${error.message}`);
@@ -477,8 +473,10 @@ const handleNewNFTItem = async (newItem: NFTItem): Promise<void> => {
         )
 
         // batch logs
-        checkAndLogAllBatches([logInfoBatch3])
-        logInfoBatch3 = []
+        if (logInfoBatch3.length >= BATCH_LOG_SIZE) {
+          logger.info(logInfoBatch3.join('\n'))
+          logInfoBatch3 = [] // Clear the batch
+        }
 
         // Trigger the batch process for the items in the parsedBatch
         await batchProcessNFTs(parsedBatch)
@@ -615,8 +613,10 @@ export const atomicOwnershipUpdate = async (
           })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`
         )
 
-        checkAndLogAllBatches([logInfoBatch4])
-        logInfoBatch4 = []
+        if (logInfoBatch4.length >= BATCH_LOG_SIZE) {
+          logger.info(logInfoBatch4.join('\n'))
+          logInfoBatch4 = [] // Clear the batch
+        }
       }
     }
   } catch (err) {
