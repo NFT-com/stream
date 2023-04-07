@@ -255,7 +255,7 @@ const updateNFTWithWallet = async (
     if (existingNFT.userId || existingNFT.walletId) {
       await deleteCacheKeys(existingNFT, chainId)
     } else {
-      logger.info(
+      logger.debug(
         `NFT wallet id and user id are null or undefined. WalletId: ${existingNFT.walletId}, UserId: ${existingNFT.userId}`,
       )
     }
@@ -318,26 +318,26 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
       const item = nftItems[i]
       const { contract: csContract, tokenId: hexTokenId, schema, chainId, csNewOwner, walletId, userId } = item
 
-      let parsedMetadata = undefined
+      let parsedMetadata = {}
       if (schema && tokenUris[i]) {
         parsedMetadata = await nftService.parseNFTUriString(tokenUris[i], hexTokenId)
       }
 
       // if badly formatted NFT (without proper metadata), use a default image
       if (!tokenUris[i]) {
-        parsedMetadata.image = 'https://cdn.nft.com/optimizedLoader2.webp'
+        parsedMetadata['image'] = 'https://cdn.nft.com/optimizedLoader2.webp'
       }
 
       // If the parsed name isn't found, fetch the name from collection table
       if (!parsedMetadata?.name) {
-        parsedMetadata.name = (await repositories.collection.findOne({
+        parsedMetadata['name'] = (await repositories.collection.findOne({
           where: { contract: csContract }
         }))?.name + ' #' + Number(hexTokenId).toString()
       }
 
       // If the parsed description isn't found, fetch the description from collection table
       if (!parsedMetadata?.description) {
-        parsedMetadata.description = (await repositories.collection.findOne({
+        parsedMetadata['description'] = (await repositories.collection.findOne({
           where: { contract: csContract }
         }))?.description
       }
