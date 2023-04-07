@@ -433,14 +433,14 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
                 description,
                 imageURL: image,
                 traits: traits,
-              })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+              })} saved in db ${updatedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
             } else {
               logInfoBatch2.push(`[Alchemy Metadata] streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
                 name,
                 description,
                 imageURL: image,
                 traits: traits,
-              })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+              })} saved in db ${updatedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
             }
         }
       }
