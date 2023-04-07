@@ -444,7 +444,7 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
       }
     } catch (error) {
       // Log error message and continue processing the next item
-      logger.error(`[streamingFast]: Error processing NFT item ${i}: ${error.message}`);
+      logger.error(error, `[streamingFast]: Error processing NFT item ${i}: ${error.message}`);
     }
   }
 }

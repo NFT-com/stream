@@ -565,8 +565,8 @@ app.post('/stopSyncCollectionRarity', authMiddleWare, async (_req, res) => {
 
 // sync collection nft - authenticated
 app.post('/syncCollectionNftRarity', authMiddleWare, validate(nftRaritySyncSchema), async (_req, res) => {
-  const { contract, tokenIds } = _req.body
   try {
+    const { contract, tokenIds } = _req.body
     const jobId = 'sync_collection_nft_rarity'
     const collectionNullRarityQueue = queues.get(QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY)
     const job: Bull.Job = await collectionNullRarityQueue.getJob(jobId)
