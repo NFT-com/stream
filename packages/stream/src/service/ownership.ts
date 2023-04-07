@@ -330,7 +330,7 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
       } = {}
       
       if (schema && tokenUris[i]) {
-        parsedMetadata = await nftService.parseNFTUriString(tokenUris[i], hexTokenId)
+        parsedMetadata = (await nftService.parseNFTUriString(tokenUris[i], hexTokenId)) || {}
       }
 
       // if badly formatted NFT (without proper metadata), use a default image
@@ -416,29 +416,29 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
             await handleNewOwnerProfile({ id: walletId, userId: userId }, updatedNFT, chainId)
 
             if (validParsedMetadata) {
-              logInfoBatch1.push(`[Internal Metadata] streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
+              logInfoBatch1.push(`[Internal Metadata] streamingFast: updated NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
                 name,
                 description,
                 imageURL: image,
                 traits: traits,
-              })} saved in db ${updatedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+              })} updated in db ${updatedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
             } else {
-              logInfoBatch2.push(`[Alchemy Metadata] streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
+              logInfoBatch2.push(`[Alchemy Metadata] streamingFast: updated NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
                 name,
                 description,
                 imageURL: image,
                 traits: traits,
-              })} saved in db ${updatedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
+              })} updated in db ${updatedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`)
             }
         }
       }
 
-      if (logInfoBatch1.length >= BATCH_LOG_SIZE) {
+      if (logInfoBatch1?.length >= BATCH_LOG_SIZE) {
         logger.info(logInfoBatch1.join('\n'))
         logInfoBatch1 = [] // Clear the batch
       }
 
-      if (logInfoBatch2.length >= BATCH_LOG_SIZE) {
+      if (logInfoBatch2?.length >= BATCH_LOG_SIZE) {
         logger.info(logInfoBatch2.join('\n'))
         logInfoBatch2 = [] // Clear the batch
       }
