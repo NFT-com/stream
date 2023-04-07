@@ -18,6 +18,8 @@ const repositories = db.newRepositories()
 const seService = searchEngineService.SearchEngineService()
 const BATCH_THRESHOLD_MAX = 500 // Define the threshold for batch processing
 const BATCH_PROCESSING_SEC = 5000 // 5 seconds
+const BATCH_LOG_SIZE = 100
+let logInfoBatch = []
 let batchIntervalId: NodeJS.Timeout | null = null;
 
 // Define the type for an NFT item
@@ -98,7 +100,7 @@ const handleNewOwnerProfile = async (wallet: Partial<entity.Wallet>, updatedNFT:
   }
   const newOwnerProfileCount: number = await repositories.profile.count(profileQuery)
 
-  logger.info({ updatedNFT }, `New owner profiles count: ${newOwnerProfileCount}, walletId: ${wallet.id}, userId: ${wallet.userId}`)
+  logger.debug({ updatedNFT }, `New owner profiles count: ${newOwnerProfileCount}, walletId: ${wallet.id}, userId: ${wallet.userId}`)
 
   for (let i = 0; i < newOwnerProfileCount; i += MAX_PROCESS_BATCH_SIZE) {
     const newOwnerProfiles: entity.Profile[] = await repositories.profile.find({
@@ -111,7 +113,7 @@ const handleNewOwnerProfile = async (wallet: Partial<entity.Wallet>, updatedNFT:
       },
     })
 
-    logger.info({ newOwnerProfiles }, `New owner profiles length: ${newOwnerProfiles.length}, batch: ${i}, walletId: ${wallet.id}, userId: ${wallet.userId}`)
+    logger.debug({ newOwnerProfiles }, `New owner profiles length: ${newOwnerProfiles.length}, batch: ${i}, walletId: ${wallet.id}, userId: ${wallet.userId}`)
 
     for (const profile of newOwnerProfiles) {
       try {
@@ -372,7 +374,7 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
         await nftService.updateCollectionForNFTs([savedNFT])
         await handleNewOwnerProfile({ id: walletId, userId: userId }, savedNFT, chainId)
 
-        logger.info(`${validParsedMetadata ? '[Internal Metadata]' : '[Alchemy Metadata]'} streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
+        logInfoBatch.push(`${validParsedMetadata ? '[Internal Metadata]' : '[Alchemy Metadata]'} streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
           name,
           description,
           imageURL: image,
@@ -394,7 +396,7 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
             await nftService.updateCollectionForNFTs([updatedNFT])
             await handleNewOwnerProfile({ id: walletId, userId: userId }, updatedNFT, chainId)
 
-            logger.info(`${validParsedMetadata ? '[Internal Metadata]' : '[Alchemy Metadata]'} streamingFast: updated NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
+            logInfoBatch.push(`${validParsedMetadata ? '[Internal Metadata]' : '[Alchemy Metadata]'} streamingFast: updated NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
               name,
               description,
               imageURL: image,
@@ -428,9 +430,8 @@ const handleNewNFTItem = async (newItem: NFTItem): Promise<void> => {
         // Remove the processed items from the Redis set
         await cache.del(CacheKeys.STREAMING_FAST_QUEUE)
 
-        logger.info(
-          { nfts: parsedBatch, threshold: BATCH_THRESHOLD_MAX },
-          `[streamingFast | Cron ${BATCH_PROCESSING_SEC / 1000}s]: processing ${parsedBatch.length} NFTs...`
+        logInfoBatch.push(
+          `[streamingFast | Cron ${BATCH_PROCESSING_SEC / 1000}s]: processing ${parsedBatch.length} NFTs..., ${JSON.stringify({ nfts: parsedBatch, threshold: BATCH_THRESHOLD_MAX })}`
         )
         // Trigger the batch process for the items in the parsedBatch
         await batchProcessNFTs(parsedBatch)
@@ -456,9 +457,8 @@ const handleNewNFTItem = async (newItem: NFTItem): Promise<void> => {
     // Remove the processed items from the Redis set
     await cache.del(CacheKeys.STREAMING_FAST_QUEUE)
 
-    logger.info(
-      { nfts: parsedBatch, threshold: BATCH_THRESHOLD_MAX },
-      `[streamingFast]: Batch threshold reached. Processing ${parsedBatch.length} NFTs...`
+    logInfoBatch.push(
+      `[streamingFast]: Batch threshold reached. Processing ${parsedBatch.length} NFTs..., ${JSON.stringify({ nfts: parsedBatch, threshold: BATCH_THRESHOLD_MAX })}`
     )
     // Trigger the batch process for the items in the parsedBatch
     await batchProcessNFTs(parsedBatch)
@@ -557,7 +557,7 @@ export const atomicOwnershipUpdate = async (
         await seService.indexNFTs([savedNFT])
         await nftService.updateCollectionForNFTs([savedNFT])
         await handleNewOwnerProfile(wallet, savedNFT, chainId)
-        logger.info(
+        logInfoBatch.push(
           `[Non-Schema Alchemy Metadata] streamingFast: new NFT ${csContract}/${hexTokenId} (owner=${csNewOwner}) savedMetadata=${JSON.stringify({
             name,
             description,
@@ -565,6 +565,12 @@ export const atomicOwnershipUpdate = async (
             traits: traits,
           })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`
         )
+
+        // batch logs
+        if (logInfoBatch.length >= BATCH_LOG_SIZE) {
+          logger.info(logInfoBatch.join('\n'))
+          logInfoBatch = []
+        }
       }
     }
   } catch (err) {
