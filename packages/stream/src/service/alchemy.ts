@@ -1,14 +1,12 @@
 import axios, { AxiosError, AxiosInstance } from 'axios'
 import axiosRetry, { IAxiosRetryConfig } from 'axios-retry'
 
-const ALCHEMY_API_URL = process.env.ALCHEMY_API_URL
-const ALCHEMY_API_URL_GOERLI = process.env.ALCHEMY_API_URL_GOERLI
-
 export const getAlchemyInterceptor = (
   chainId: string,
 ): AxiosInstance => {
   const alchemyInstance = axios.create({
-    baseURL: Number(chainId) == 1 ? ALCHEMY_API_URL : ALCHEMY_API_URL_GOERLI,
+    baseURL: `https://eth-mainnet.alchemyapi.io/v2/${Number(chainId) == 1 ?
+      process.env.ALCHEMY_API_KEY : process.env.ALCHEMY_TESTNET_KEY}`,
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
