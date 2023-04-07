@@ -89,8 +89,6 @@ runs:
         ALCHEMY_API_KEY: ${{ fromJSON(inputs.secrets).ALCHEMY_API_KEY }}
         ALCHEMY_TESTNET_KEY: ${{ fromJSON(inputs.secrets).ALCHEMY_TESTNET_KEY }}
         ETHERSCAN_API_KEY: ${{ fromJSON(inputs.secrets).ETHERSCAN_API_KEY }}
-        ETHERSCAN_API_URL: ${{ fromJSON(inputs.secrets).ETHERSCAN_API_URL }}
-        ETHERSCAN_API_URL_GOERLI: ${{ fromJSON(inputs.secrets).ETHERSCAN_API_URL_GOERLI }}
         ASSET_BUCKET: ${{ fromJSON(inputs.secrets).ASSET_BUCKET }}
         ASSET_BUCKET_ROLE: ${{ fromJSON(inputs.secrets).ASSET_BUCKET_ROLE }}
         SENTRY_DSN: ${{ fromJSON(inputs.secrets).SENTRY_DSN }}

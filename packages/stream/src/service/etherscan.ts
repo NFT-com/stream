@@ -2,12 +2,10 @@
 import axios, { AxiosError, AxiosInstance } from 'axios'
 import axiosRetry, { IAxiosRetryConfig } from 'axios-retry'
 
-const ETHERSCAN_API_URL = process.env.ETHERSCAN_API_URL
-const ETHERSCAN_API_URL_GOERLI = process.env.ETHERSCAN_API_URL_GOERLI
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY
 
 export const getEtherscanInterceptor = (chainId: string): AxiosInstance => {
-  const baseURL: string = Number(chainId) == 1 ? ETHERSCAN_API_URL : ETHERSCAN_API_URL_GOERLI
+  const baseURL: string = Number(chainId) == 1 ? 'https://api.etherscan.io' : 'https://api-goerli.etherscan.io'
   const authBaseURL = `${baseURL}/api`
   const etherscanInstance = axios.create({
     baseURL: authBaseURL,
