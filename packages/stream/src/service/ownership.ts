@@ -21,8 +21,8 @@ const BATCH_PROCESSING_SEC = 5000 // 5 seconds
 const BATCH_LOG_SIZE = 25
 let logInfoBatch1: string[] = []
 let logInfoBatch2: string[] = []
-const logInfoBatch3: string[] = []
-const logInfoBatch4: string[] = []
+let logInfoBatch3: string[] = []
+let logInfoBatch4: string[] = []
 let batchIntervalId: NodeJS.Timeout | null = null;
 
 // Define the type for an NFT item
@@ -427,7 +427,7 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
         }
       }
 
-      [logInfoBatch1, logInfoBatch2] = checkAndLogAllBatches([logInfoBatch1, logInfoBatch2])
+      ([logInfoBatch1, logInfoBatch2] = checkAndLogAllBatches([logInfoBatch1, logInfoBatch2]))
     } catch (error) {
       // Log error message and continue processing the next item
       logger.error(`[streamingFast]: Error processing NFT item ${i}: ${error.message}`);
@@ -459,7 +459,7 @@ const handleNewNFTItem = async (newItem: NFTItem): Promise<void> => {
         )
 
         // batch logs
-        [logInfoBatch3] = checkAndLogAllBatches([logInfoBatch3])
+        ([logInfoBatch3] = checkAndLogAllBatches([logInfoBatch3]))
 
         // Trigger the batch process for the items in the parsedBatch
         await batchProcessNFTs(parsedBatch)
@@ -596,7 +596,7 @@ export const atomicOwnershipUpdate = async (
           })} saved in db ${savedNFT.id} completed in ${new Date().getTime() - startNewNFT}ms`
         )
 
-        [logInfoBatch4] = checkAndLogAllBatches([logInfoBatch4])
+        ([logInfoBatch4] = checkAndLogAllBatches([logInfoBatch4]))
       }
     }
   } catch (err) {
