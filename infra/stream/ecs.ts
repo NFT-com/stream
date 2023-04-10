@@ -227,16 +227,8 @@ const createEcsTaskDefinition = (
               Value: process.env.DB_HOST_RO,
             },
             {
-              Name: 'DB_USE_SSL',
-              Value: process.env.DB_USE_SSL,
-            },
-            {
               Name: 'DB_PASSWORD',
               Value: process.env.DB_PASSWORD,
-            },
-            {
-              Name: 'DB_PORT',
-              Value: process.env.DB_PORT,
             },
             {
               Name: 'CHAIN_ID',
@@ -285,10 +277,6 @@ const createEcsTaskDefinition = (
             {
               Name: 'HCS_ENABLED',
               Value: process.env.HCS_ENABLED,
-            },
-            {
-              Name: 'ZMOK_API_URL',
-              Value: process.env.ZMOK_API_URL,
             },
             {
               Name: 'INFURA_API_KEY',
@@ -383,16 +371,8 @@ const createEcsTaskDefinition = (
               Value: process.env.TEST_DB_USERNAME,
             },
             {
-              Name: 'TEST_DB_PORT',
-              Value: process.env.TEST_DB_PORT,
-            },
-            {
               Name: 'TEST_DB_PASSWORD',
               Value: process.env.TEST_DB_PASSWORD,
-            },
-            {
-              Name: 'TEST_DB_USE_SSL',
-              Value: process.env.TEST_DB_USE_SSL,
             },
             {
               Name: 'ACTIVITY_ENDPOINTS_ENABLED',
@@ -449,14 +429,6 @@ const createEcsTaskDefinition = (
             {
               Name: 'USE_INFURA',
               Value: process.env.USE_INFURA,
-            },
-            {
-              Name: 'USE_ZMOK',
-              Value: process.env.USE_ZMOK,
-            },
-            {
-              Name: 'ZMOK_API_KEY',
-              Value: process.env.ZMOK_API_KEY,
             },
             {
               Name: 'INFURA_KEY_SET',
