@@ -129,6 +129,9 @@ export const retrieveNFTDetailsNFTPort = async (
       return undefined
     }
   } catch (err) {
+    if (err.status === 404) {
+      cache.set(`NFTPORT_NFT_DETAIL_${chainId}_${contract}_${tokenId}`, JSON.stringify(null), 'EX', 60 * 60 * 24)
+    }
     logger.error(err, `Error in retrieveNFTDetailsNFTPort: ${err}`)
     return undefined
   }
