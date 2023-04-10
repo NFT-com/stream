@@ -239,73 +239,6 @@ const deleteCacheKeys = async (existingNFT: entity.NFT, chainId: string): Promis
 }
 
 /**
- * Handles the NFT ownership change and related caching.
- * @param wallet - The wallet of the new owner.
- * @param existingNFT - The existing NFT entity in the database.
- * @param csNewOwner - The new owner's checksum address.
- * @param chainId - The chain ID of the blockchain network.
- * @returns The updated NFT entity.
- */
-const updateNFTWithWallet = async (
-  wallet: entity.Wallet,
-  existingNFT: entity.NFT,
-  csNewOwner: string,
-  chainId: string,
-): Promise<entity.NFT> => {
-  // Check if the ownership has changed and, if so, remove the edge of the previous profile
-  if (existingNFT.userId !== wallet.userId || existingNFT.walletId !== wallet.id) {
-    await removePreviousProfileEdge(existingNFT.id)
-
-    // Delete cache keys only when the NFT userId or walletId exists
-    if (existingNFT.userId || existingNFT.walletId) {
-      await deleteCacheKeys(existingNFT, chainId)
-    } else {
-      logger.debug(
-        `NFT wallet id and user id are null or undefined. WalletId: ${existingNFT.walletId}, UserId: ${existingNFT.userId}`,
-      )
-    }
-
-    // If this NFT is a profile NFT, process it as such
-    if (
-      ethers.utils.getAddress(existingNFT.contract) === ethers.utils.getAddress(contracts.nftProfileAddress(chainId))
-    ) {
-      await processProfileNFT(existingNFT)
-    }
-  }
-
-  const updatedNFT = await repositories.nft.updateOneById(existingNFT.id, {
-    owner: csNewOwner,
-    userId: wallet.userId,
-    walletId: wallet.id,
-  })
-
-  if (updatedNFT) {
-    await nftService.indexNFTsOnSearchEngine([updatedNFT])
-  }
-
-  // Handle new owner profile
-  await handleNewOwnerProfile(wallet, updatedNFT, chainId)
-
-  return updatedNFT
-}
-
-/**
- * Updates an NFT without an associated wallet.
- * @param existingNFT - The existing NFT entity in the database.
- * @param csNewOwner - The new owner's checksum address.
- * @returns The updated NFT entity.
- */
-const updateNFTWithoutWallet = async (existingNFT: entity.NFT, csNewOwner: string): Promise<entity.NFT> => {
-  const updatedNFT = await repositories.nft.updateOneById(existingNFT.id, {
-    owner: csNewOwner,
-    walletId: null,
-    userId: null,
-    profileId: null,
-  })
-  return updatedNFT
-}
-
-/**
  * Extract URLs from a given text string.
  * @param text - The text string from which to extract URLs.
  * @returns An array of extracted URLs.
@@ -461,6 +394,85 @@ const checkAndMarkPhishingDomains = async (metadata: {
   }
 }
 
+/**
+ * Handles the NFT ownership change and related caching.
+ * @param wallet - The wallet of the new owner.
+ * @param existingNFT - The existing NFT entity in the database.
+ * @param csNewOwner - The new owner's checksum address.
+ * @param chainId - The chain ID of the blockchain network.
+ * @returns The updated NFT entity.
+ */
+const updateNFTWithWallet = async (
+  wallet: entity.Wallet,
+  existingNFT: entity.NFT,
+  csNewOwner: string,
+  chainId: string,
+): Promise<entity.NFT> => {
+  // Check if the ownership has changed and, if so, remove the edge of the previous profile
+  if (existingNFT.userId !== wallet.userId || existingNFT.walletId !== wallet.id) {
+    await removePreviousProfileEdge(existingNFT.id)
+
+    // Delete cache keys only when the NFT userId or walletId exists
+    if (existingNFT.userId || existingNFT.walletId) {
+      await deleteCacheKeys(existingNFT, chainId)
+    } else {
+      logger.debug(
+        `NFT wallet id and user id are null or undefined. WalletId: ${existingNFT.walletId}, UserId: ${existingNFT.userId}`,
+      )
+    }
+
+    // If this NFT is a profile NFT, process it as such
+    if (
+      ethers.utils.getAddress(existingNFT.contract) === ethers.utils.getAddress(contracts.nftProfileAddress(chainId))
+    ) {
+      await processProfileNFT(existingNFT)
+    }
+  }
+
+  const updatedNFT = await repositories.nft.updateOneById(existingNFT.id, {
+    owner: csNewOwner,
+    userId: wallet.userId,
+    walletId: wallet.id,
+  })
+
+  if (updatedNFT) {
+    await nftService.indexNFTsOnSearchEngine([updatedNFT])
+  }
+
+  // Handle new owner profile
+  await handleNewOwnerProfile(wallet, updatedNFT, chainId)
+
+  try {
+    const { name, description, imageURL, traits } = JSON.parse(updatedNFT.metadata)
+    await checkAndMarkPhishingDomains({
+      name,
+      description,
+      imageURL,
+      traits,
+    }, csContract)
+  } catch (err) {
+    logger.error(err, `[Phishing] streamingFast: error parsing metadata in  updateNFTWithWallet for ${csContract} ${err}`)
+  }
+
+  return updatedNFT
+}
+
+/**
+ * Updates an NFT without an associated wallet.
+ * @param existingNFT - The existing NFT entity in the database.
+ * @param csNewOwner - The new owner's checksum address.
+ * @returns The updated NFT entity.
+ */
+const updateNFTWithoutWallet = async (existingNFT: entity.NFT, csNewOwner: string): Promise<entity.NFT> => {
+  const updatedNFT = await repositories.nft.updateOneById(existingNFT.id, {
+    owner: csNewOwner,
+    walletId: null,
+    userId: null,
+    profileId: null,
+  })
+  return updatedNFT
+}
+
 // Function to process a batch of NFT items.
 const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
   const startNewNFT = new Date().getTime()
@@ -563,9 +575,10 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
         // If the NFT already exists, update it if the new owner is different
         if (existingNFT.owner !== csNewOwner || existingNFT.uriString !== tokenUris[i] ||
           existingNFT.walletId !== walletId || existingNFT.userId !== userId) {
+            const metadata = { name, description, imageURL: image, traits }
             const updatedNFT = await repositories.nft.updateOneById(existingNFT.id, {
               uriString: tokenUris[i],
-              metadata: { name, description, imageURL: image, traits },
+              metadata,
               owner: csNewOwner,
               walletId: walletId,
               userId: userId,
@@ -574,6 +587,7 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
             await seService.indexNFTs([updatedNFT])
             await nftService.updateCollectionForNFTs([updatedNFT])
             await handleNewOwnerProfile({ id: walletId, userId: userId }, updatedNFT, chainId)
+            await checkAndMarkPhishingDomains(metadata, csContract)
 
             if (validParsedMetadata) {
               logInfoBatch1.push(`[Internal Metadata] streamingFast: updated NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
@@ -764,6 +778,13 @@ export const atomicOwnershipUpdate = async (
         await seService.indexNFTs([savedNFT])
         await nftService.updateCollectionForNFTs([savedNFT])
         await handleNewOwnerProfile(wallet, savedNFT, chainId)
+        await checkAndMarkPhishingDomains({
+          name,
+          description,
+          imageURL: image,
+          traits: traits,
+        }, csContract)
+        
         logInfoBatch4.push(
           `[Non-Schema Alchemy Metadata] streamingFast: new NFT ${csContract}/${hexTokenId} (owner=${csNewOwner}) savedMetadata=${JSON.stringify({
             name,
