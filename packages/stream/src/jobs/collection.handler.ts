@@ -2,7 +2,7 @@
 import { AxiosInstance, AxiosResponse } from 'axios'
 import Bull, { Job } from 'bullmq'
 import { BigNumber } from 'ethers'
-import { createWriteStream } from 'fs';
+import { createWriteStream, unlink } from 'fs';
 import fetch from 'node-fetch';
 import * as tar from 'tar';
 import { FindOptionsWhere,ILike, In, IsNull, Not } from 'typeorm'
@@ -392,12 +392,28 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
 //     }
 // }`
 
+const deleteFiles = (filePaths: string[]): void => {
+  filePaths.forEach((filePath) => {
+    unlink(filePath, (err) => {
+      if (err) {
+        logger.error(err, `Failed to delete file ${filePath}`)
+      } else {
+        logger.info(`Successfully deleted file ${filePath}`)
+      }
+    })
+  })
+}
+
 /**
  * Downloads and stores a phishing domain database in Redis.
  * @param url The URL of the tar.gz file containing the phishing domain database.
  * @returns A promise that resolves when the operation is complete.
  */
 const downloadAndStorePhishingDatabase = async (url: string): Promise<void> => {
+  // Define the path to the tar.gz file.
+  const filePath = 'ALL-phishing-domains.tar.gz';
+  const filePathTxt = 'ALL-phishing-domains.txt';
+
   try {
     // Download the tar.gz file using fetch.
     const response = await fetch(url)
@@ -406,14 +422,14 @@ const downloadAndStorePhishingDatabase = async (url: string): Promise<void> => {
     }
 
     // Create a writable stream to save the downloaded file.
-    const tarGzFile = createWriteStream('ALL-phishing-domains.tar.gz')
+    const tarGzFile = createWriteStream(filePath)
     response.body.pipe(tarGzFile)
 
     // Extract the tar.gz file and store URLs in Redis.
     await new Promise<void>((resolve, reject) => {
       tarGzFile.on('finish', async () => {
         const extractor = tar.x({
-          file: 'ALL-phishing-domains.tar.gz',
+          file: filePath,
           gzip: true,
           onentry: async (entry) => {
             const chunks: Buffer[] = []
@@ -431,7 +447,11 @@ const downloadAndStorePhishingDatabase = async (url: string): Promise<void> => {
             })
           }
         })
-        extractor.on('finish', resolve)
+        extractor.on('finish', () => {
+          // Remove the files after the operation is complete.
+          deleteFiles([filePath, filePathTxt])
+          resolve()
+        })
         extractor.on('error', reject)
       })
       tarGzFile.on('error', reject)
@@ -441,6 +461,7 @@ const downloadAndStorePhishingDatabase = async (url: string): Promise<void> => {
     })
   } catch (err) {
     logger.error(err, `Failed to download and store phishing database: ${err}`)
+    deleteFiles([filePath, filePathTxt])
     throw err
   }
 }
@@ -475,6 +496,15 @@ export const spamCollectionSyncHandler = async (job: Job): Promise<void> => {
   } catch (err) {
     logger.log(err, `Error in spam collection and phishing database url sync: ${err}`)
   }
+}
+
+try {
+   // URL of the tar.gz file in the Phishing.Database repository.
+   const phishingDatabaseURL = 'https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/ALL-phishing-domains.tar.gz';
+   // Download, extract, and store the phishing database in Redis.
+   downloadAndStorePhishingDatabase(phishingDatabaseURL);
+} catch (err) {
+    logger.log(err, `Error in phishing database url sync: ${err}`)
 }
 
 export const collectionIssuanceDateSync = async (job: Job): Promise<void> => { 
