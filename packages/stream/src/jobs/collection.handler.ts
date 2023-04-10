@@ -402,6 +402,8 @@ const deleteFiles = (filePaths: string[]): void => {
       }
     })
   })
+
+  logger.info(`[Phishing]: Successfully deleted all files ${filePaths.join(', ')}`)
 }
 
 /**
