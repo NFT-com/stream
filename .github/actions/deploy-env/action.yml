@@ -109,7 +109,6 @@ runs:
         TEST_DB_HOST: ${{ fromJSON(inputs.secrets).TEST_DB_HOST }}
         TEST_DB_DATABASE: ${{ fromJSON(inputs.secrets).TEST_DB_DATABASE }}
         TEST_DB_USERNAME: ${{ fromJSON(inputs.secrets).TEST_DB_USERNAME }}
-        TEST_DB_PORT: ${{ fromJSON(inputs.secrets).TEST_DB_PORT }}
         TEST_DB_PASSWORD: ${{ fromJSON(inputs.secrets).TEST_DB_PASSWORD }}
         TEST_DB_USE_SSL: ${{ fromJSON(inputs.secrets).TEST_DB_USE_SSL }}
         ACTIVITY_ENDPOINTS_ENABLED: ${{ fromJSON(inputs.secrets).ACTIVITY_ENDPOINTS_ENABLED}}
@@ -123,7 +122,6 @@ runs:
         REDIS_HOST: ${{ fromJSON(inputs.secrets).REDIS_HOST }}
         REDIS_PORT: ${{ fromJSON(inputs.secrets).REDIS_PORT }}
         PORT: ${{ fromJSON(inputs.secrets).PORT }}
-        DB_PORT: ${{ fromJSON(inputs.secrets).DB_PORT }}
         DB_USE_SSL: ${{ fromJSON(inputs.secrets).DB_USE_SSL }}
         MULTICALL_CONTRACT: ${{ fromJSON(inputs.secrets).MULTICALL_CONTRACT }}
         ORDER_RECONCILIATION_PERIOD: ${{ fromJSON(inputs.secrets).ORDER_RECONCILIATION_PERIOD }}
