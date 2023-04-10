@@ -221,7 +221,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
         1, contract,
       )
     }
-    // process subqueues in series; hence concurrency is explicitly set to one for rate limits
+    // process subqueues in series, hence concurrency is explicitly set to one for rate limits
     // nftSyncSubqueue.process(1, nftBatchPersistenceHandler)
     logger.log(`nft sync handler process completed for: ${contract}, chainId: ${chainId}`)
   } catch (err) {
@@ -387,7 +387,49 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
 //     } catch (err) {
 //         logger.error(`Error in nft persistence handler for: ${contract}, chainId: ${chainId} --- err: ${err}`)
 //     }
-// }
+// }`
+
+// Download, extract, and parse the phishing database file, and store URLs in Redis.
+const downloadAndStorePhishingDatabase = async (url: string): Promise<void> => {
+  // Download the tar.gz file using fetch.
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Failed to download ${url}`)
+  }
+
+  // Create a writable stream to save the downloaded file.
+  const tarGzFile = createWriteStream('ALL-phishing-domains.tar.gz')
+  response.body.pipe(tarGzFile)
+
+  // Extract the tar.gz file and store URLs in Redis.
+  return new Promise((resolve, reject) => {
+    tarGzFile.on('finish', () => {
+      tar.extract({
+        file: 'ALL-phishing-domains.tar.gz',
+        gzip: true,
+        onentry: (entry) => {
+          const chunks: Buffer[] = []
+          entry.on('data', (chunk) => chunks.push(chunk))
+          entry.on('end', async () => {
+            const data = Buffer.concat(chunks).toString()
+            // Split the data by newline to get individual URLs.
+            const urls = data.split('\n')
+            // Add each URL to the Redis set.
+            await cache.sadd(CacheKeys.PHILSING_URLS, ...urls)
+          })
+        }
+      })
+      .on('end', resolve)
+      .on('error', reject)
+    })
+  })
+}
+
+// Helper function to check if a URL exists in the Redis set.
+export const isPhishingURL = async (url: string): Promise<boolean> => {
+  const isMember = await cache.sismember(CacheKeys.PHILSING_URLS, url);
+  return isMember === 1;
+}
 
 export const spamCollectionSyncHandler = async (job: Job): Promise<void> => {
   logger.log('initiated spam collection sync')
@@ -400,9 +442,18 @@ export const spamCollectionSyncHandler = async (job: Job): Promise<void> => {
       const spamCollections: string[] = spamCollectionsResponse?.data
       await cache.sadd(CacheKeys.SPAM_COLLECTIONS, ...spamCollections)
     }
-    logger.log('completed spam collection sync')
+
+    // URL of the tar.gz file in the Phishing.Database repository.
+    const phishingDatabaseURL = 'https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/ALL-phishing-domains.tar.gz';
+    // Download, extract, and store the phishing database in Redis.
+    await downloadAndStorePhishingDatabase(phishingDatabaseURL);
+
+    // Test the helper function.
+    logger.info(await isPhishingURL('00000000000000000000000000000000000000000.xyz'));  // Output: true or false
+
+    logger.log('completed spam collection and phishing database url sync')
   } catch (err) {
-    logger.log(`Error in spam collection sync: ${err}`)
+    logger.log(err, `Error in spam collection and phishing database url sync: ${err}`)
   }
 }
 

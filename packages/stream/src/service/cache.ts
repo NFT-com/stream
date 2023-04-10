@@ -30,6 +30,7 @@ export enum CacheKeys {
   STREAMING_FAST_QUEUE = 'streaming_fast_queue',
   SYNC_COLLECTION = 'sync_collection',
   SPAM_COLLECTIONS = 'spam_collections',
+  PHISHING_URLS = 'phishing_urls',
   SYNC_IN_PROGRESS = 'sync_in_progress',
   RECENTLY_SYNCED = 'recently_synced',
   COLLECTION_ISSUANCE_DATE = 'collection_issuance_date',
