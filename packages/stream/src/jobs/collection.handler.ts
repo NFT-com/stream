@@ -402,6 +402,8 @@ const deleteFiles = (filePaths: string[]): void => {
       }
     })
   })
+
+  logger.info(`[Phishing]: Successfully deleted all files ${filePaths.join(', ')}`)
 }
 
 /**
@@ -428,31 +430,32 @@ const downloadAndStorePhishingDatabase = async (url: string): Promise<void> => {
     // Extract the tar.gz file and store URLs in Redis.
     await new Promise<void>((resolve, reject) => {
       tarGzFile.on('finish', async () => {
-        const extractor = tar.x({
-          file: filePath,
-          gzip: true,
-          onentry: async (entry) => {
-            const chunks: Buffer[] = []
-            entry.on('data', (chunk) => chunks.push(chunk))
-            entry.on('end', async () => {
-              const data = Buffer.concat(chunks).toString()
-              // Split the data by newline to get individual URLs.
-              const urls = data.split('\n').filter(url => url.trim() !== '')
-              // Add each URL to the Redis set in smaller batches to avoid exceeding the call stack size.
-              const batchSize = 1000
-              for (let i = 0; i < urls.length; i += batchSize) {
-                const batch = urls.slice(i, i + batchSize)
-                await cache.sadd(CacheKeys.PHISHING_URLS, ...batch)
-              }
-            })
-          }
-        })
-        extractor.on('finish', () => {
-          // Remove the files after the operation is complete.
+        try {
+          await tar.x({
+            file: filePath,
+            gzip: true,
+            onentry: async (entry) => {
+              const chunks: Buffer[] = []
+              entry.on('data', (chunk) => chunks.push(chunk))
+              entry.on('end', async () => {
+                const data = Buffer.concat(chunks).toString()
+                // Split the data by newline to get individual URLs.
+                const urls = data.split('\n').filter(url => url.trim() !== '')
+                // Add each URL to the Redis set in smaller batches to avoid exceeding the call stack size.
+                const batchSize = 1000
+                for (let i = 0; i < urls.length; i += batchSize) {
+                  const batch = urls.slice(i, i + batchSize)
+                  await cache.sadd(CacheKeys.PHISHING_URLS, ...batch)
+                }
+              })
+            }
+          })
+
           deleteFiles([filePath, filePathTxt])
           resolve()
-        })
-        extractor.on('error', reject)
+        } catch (err) {
+          reject(err)
+        }
       })
       tarGzFile.on('error', reject)
     }).catch((error) => {
@@ -499,6 +502,7 @@ export const spamCollectionSyncHandler = async (job: Job): Promise<void> => {
 }
 
 try {
+  logger.info(`Starting phishing url sync`)
    // URL of the tar.gz file in the Phishing.Database repository.
    const phishingDatabaseURL = 'https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/ALL-phishing-domains.tar.gz';
    // Download, extract, and store the phishing database in Redis.
