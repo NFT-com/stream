@@ -362,13 +362,13 @@ const checkAndMarkPhishingDomains = async (metadata: {
           )
 
           logInfoBatch5.push(
-            `[Phishing] streamingFast: collection marked as spam ${csContract} is phishing (domain = ${domain}) metadata=${JSON.stringify(metadata)})}, db_id = ${found.id}`
+            `[Phishing] streamingFast: collection marked as spam ${csContract} is phishing (domain = ${domain}) metadata=${JSON.stringify(metadata)})}, db_id = ${found?.id}`
           )
 
           break;
         } else {
           logInfoBatch5.push(
-            `[Phishing] streamingFast: collection doesn't exist yet ${csContract} (domain = ${domain}) metadata=${JSON.stringify(metadata)}, db_id = ${found.id}, passing...`
+            `[Phishing] streamingFast: collection doesn't exist yet ${csContract} (domain = ${domain}) metadata=${JSON.stringify(metadata)}, db_id = ${found?.id}, passing...`
           )
 
           break;
