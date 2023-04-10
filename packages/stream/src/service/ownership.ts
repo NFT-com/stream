@@ -356,30 +356,19 @@ const checkAndMarkPhishingDomains = async (metadata: {
       const isPhishing = await isPhishingURL(domain)
       if (isPhishing) {
         if (found) {
-          // Update the 'isSpam' property of the 'found' object.
-          found.isSpam = true;
-          // Save the updated 'found' object.
-          await found.save();
-          // Stop checking further domains as the collection is marked as spam.
+          await repositories.collection.update(
+            { contract: csContract },
+            { isSpam: true }
+          )
 
           logInfoBatch5.push(
-            `[Phishing] streamingFast: collection marked as spam ${csContract} is phishing (domain = ${domain}) metadata=${JSON.stringify({
-              name,
-              description,
-              imageURL,
-              traits,
-            })}, db_id = ${found.id}`
+            `[Phishing] streamingFast: collection marked as spam ${csContract} is phishing (domain = ${domain}) metadata=${JSON.stringify(metadata)})}, db_id = ${found.id}`
           )
 
           break;
         } else {
           logInfoBatch5.push(
-            `[Phishing] streamingFast: collection doesn't exist yet ${csContract} (domain = ${domain}) metadata=${JSON.stringify({
-              name,
-              description,
-              imageURL,
-              traits,
-            })}, db_id = ${found.id}, passing...`
+            `[Phishing] streamingFast: collection doesn't exist yet ${csContract} (domain = ${domain}) metadata=${JSON.stringify(metadata)}, db_id = ${found.id}, passing...`
           )
 
           break;
@@ -443,15 +432,15 @@ const updateNFTWithWallet = async (
   await handleNewOwnerProfile(wallet, updatedNFT, chainId)
 
   try {
-    const { name, description, imageURL, traits } = JSON.parse(updatedNFT.metadata)
+    const { name, description, imageURL, traits } = updatedNFT.metadata
     await checkAndMarkPhishingDomains({
       name,
       description,
       imageURL,
       traits,
-    }, csContract)
+    }, updatedNFT.contract)
   } catch (err) {
-    logger.error(err, `[Phishing] streamingFast: error parsing metadata in  updateNFTWithWallet for ${csContract} ${err}`)
+    logger.error(err, `[Phishing] streamingFast: error parsing metadata in  updateNFTWithWallet for ${updatedNFT.contract} ${err}`)
   }
 
   return updatedNFT

@@ -64,6 +64,7 @@ runs:
       working-directory: stream/infra
       env:
         STAGE: ${{ inputs.stage }}
+        NODE_OPTIONS: "--max_old_space_size=7150"
         PULUMI_CONFIG_PASSPHRASE: ""
         AWS_ACCOUNT_ID: ${{ fromJSON(inputs.secrets).AWS_ACCOUNT_ID }}
         ECR_REGISTRY: ${{ steps.login_ecr.outputs.registry }}

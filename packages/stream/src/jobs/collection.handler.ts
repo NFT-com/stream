@@ -2,6 +2,9 @@
 import { AxiosInstance, AxiosResponse } from 'axios'
 import Bull, { Job } from 'bullmq'
 import { BigNumber } from 'ethers'
+import { createWriteStream } from 'fs';
+import fetch from 'node-fetch';
+import * as tar from 'tar';
 import { FindOptionsWhere,ILike, In, IsNull, Not } from 'typeorm'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -389,7 +392,11 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
 //     }
 // }`
 
-// Download, extract, and parse the phishing database file, and store URLs in Redis.
+/**
+ * Downloads and stores a phishing domain database in Redis.
+ * @param url The URL of the tar.gz file containing the phishing domain database.
+ * @returns A promise that resolves when the operation is complete.
+ */
 const downloadAndStorePhishingDatabase = async (url: string): Promise<void> => {
   // Download the tar.gz file using fetch.
   const response = await fetch(url)
@@ -402,32 +409,40 @@ const downloadAndStorePhishingDatabase = async (url: string): Promise<void> => {
   response.body.pipe(tarGzFile)
 
   // Extract the tar.gz file and store URLs in Redis.
-  return new Promise((resolve, reject) => {
-    tarGzFile.on('finish', () => {
-      tar.extract({
+  await new Promise<void>((resolve, reject) => {
+    tarGzFile.on('finish', async () => {
+      const extractor = tar.x({
         file: 'ALL-phishing-domains.tar.gz',
         gzip: true,
-        onentry: (entry) => {
+        onentry: async (entry) => {
           const chunks: Buffer[] = []
           entry.on('data', (chunk) => chunks.push(chunk))
           entry.on('end', async () => {
             const data = Buffer.concat(chunks).toString()
             // Split the data by newline to get individual URLs.
-            const urls = data.split('\n')
-            // Add each URL to the Redis set.
-            await cache.sadd(CacheKeys.PHILSING_URLS, ...urls)
+            const urls = data.split('\n').filter(url => url.trim() !== '')
+            // Add each URL to the Redis set in smaller batches to avoid exceeding the call stack size.
+            const batchSize = 1000
+            for (let i = 0; i < urls.length; i += batchSize) {
+              const batch = urls.slice(i, i + batchSize)
+              await cache.sadd(CacheKeys.PHISHING_URLS, ...batch)
+            }
           })
         }
       })
-      .on('end', resolve)
-      .on('error', reject)
+      extractor.on('finish', resolve)
+      extractor.on('error', reject)
     })
+    tarGzFile.on('error', reject)
+  }).catch((error) => {
+    logger.error(error, `Failed to download and store phishing database: ${error}`)
+    throw error
   })
 }
 
 // Helper function to check if a URL exists in the Redis set.
 export const isPhishingURL = async (url: string): Promise<boolean> => {
-  const isMember = await cache.sismember(CacheKeys.PHILSING_URLS, url);
+  const isMember = await cache.sismember(CacheKeys.PHISHING_URLS, url);
   return isMember === 1;
 }
 
@@ -457,7 +472,7 @@ export const spamCollectionSyncHandler = async (job: Job): Promise<void> => {
   }
 }
 
-export const collectionIssuanceDateSync = async (job: Job): Promise<void> => {
+export const collectionIssuanceDateSync = async (job: Job): Promise<void> => { 
   logger.log('initiating collection issuance sync')
   const chainId: string = job?.data?.chainId || process.env.CHAIN_ID || '5'
 
