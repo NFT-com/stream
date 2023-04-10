@@ -10,6 +10,7 @@ import { core, searchEngineService } from '@nftcom/gql/service'
 // @ts-ignore
 import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
+import { isPhishingURL } from '../jobs/collection.handler'
 import { cache, CacheKeys } from './cache'
 
 const MAX_PROCESS_BATCH_SIZE = parseInt(process.env.MAX_PROFILE_BATCH_SIZE) || 5
@@ -23,6 +24,7 @@ let logInfoBatch1: string[] = []
 let logInfoBatch2: string[] = []
 let logInfoBatch3: string[] = []
 let logInfoBatch4: string[] = []
+let logInfoBatch5: string[] = []
 let batchIntervalId: NodeJS.Timeout | null = null;
 
 // Define the type for an NFT item
@@ -237,6 +239,151 @@ const deleteCacheKeys = async (existingNFT: entity.NFT, chainId: string): Promis
 }
 
 /**
+ * Extract URLs from a given text string.
+ * @param text - The text string from which to extract URLs.
+ * @returns An array of extracted URLs.
+ */
+const extractURLsFromText = (text: string): string[] => {
+  // Regular expression to match URLs with or without the http:// or https:// prefix.
+  const urlRegex = /(?:https?:\/\/)?[\w.-]+\.\w+(?:[/?#]\S*)?/gi
+  return Array.from(text.matchAll(urlRegex)).map(match => match[0])
+}
+
+/**
+ * Extract URLs from metadata.
+ * @param metadata - The metadata object from which to extract URLs.
+ * @returns An array of extracted URLs.
+ */
+const extractURLsFromMetadata = (metadata: {
+  name?: string
+  description?: string
+  imageURL?: string
+  traits?: any[]
+}): string[] => {
+  const urls: string[] = []
+  const { description, imageURL, traits } = metadata
+
+  // Extract URLs from description.
+  if (description) {
+    urls.push(...extractURLsFromText(description))
+  }
+
+  // Add imageURL if it exists.
+  if (imageURL) {
+    urls.push(imageURL)
+  }
+
+  // Extract URLs from traits.
+  if (traits) {
+    for (const trait of traits) {
+      if (trait.value) {
+        urls.push(...extractURLsFromText(String(trait.value)))
+      }
+    }
+  }
+
+  // Filter out duplicate URLs.
+  return Array.from(new Set(urls))
+}
+
+/**
+ * Extract full domain (including subdomains) and root domain from a URL or domain.
+ * @param urlOrDomain - The URL or domain from which to extract domains.
+ * @returns An array containing the full domain and root domain, or the full domain if it is the root domain.
+ */
+const extractDomains = (urlOrDomain: string): string[] | string => {
+  let hostname
+  // Check if the input is a URL or a domain name.
+  if (urlOrDomain.startsWith('http://') || urlOrDomain.startsWith('https://')) {
+    // If it is a URL, extract the hostname using the URL class.
+    hostname = new URL(urlOrDomain).hostname
+  } else {
+    // If it is a domain name, use it directly.
+    hostname = urlOrDomain
+  }
+  // Extract the root domain using a regular expression.
+  const match = hostname.match(/[\w-]+\.\w+$/)
+  const rootDomain = match ? match[0] : null
+  // Return both the full domain and the root domain.
+  return hostname === rootDomain ? hostname : [hostname, rootDomain]
+}
+
+/**
+ * Extract root domains from metadata JSON string.
+ * @param metadataJson - The metadata JSON string.
+ * @returns An array of extracted root domains.
+ */
+const extractRootDomainsFromMetadata = (metadata: {
+  name?: string
+  description?: string
+  imageURL?: string
+  traits?: any[]
+}): string[] => {
+  // Extract URLs from metadata.
+  const inputList = extractURLsFromMetadata(metadata)
+
+  // Extract full domain (including subdomains) and root domains, and flatten the results.
+  const domains = inputList.flatMap(extractDomains)
+
+  // Remove duplicate domains and return the result.
+  return Array.from(new Set(domains))
+}
+
+/**
+ * Check and mark phishing domains in a collection.
+ * @param metadata - The metadata JSON object.
+ * @param repositories - The repositories object with collection data access methods.
+ * @param csContract - The contract address of the collection.
+ */
+const checkAndMarkPhishingDomains = async (metadata: {
+  name?: string
+  description?: string
+  imageURL?: string
+  traits?: any[]
+}, csContract: string): Promise<void> => {
+  // Check if the collection address is already marked as spam.
+  const found = await repositories.collection.findOne({ where: { contract: csContract } })
+  if (found && found.isSpam) {
+    return // Collection is already marked as spam, no further action needed.
+  }
+
+  // Extract root domains from metadata.
+  const rootDomains = extractRootDomainsFromMetadata(metadata)
+
+  // Check each domain for phishing.
+  for (const domain of rootDomains) {
+    if (domain) {
+      const isPhishing = await isPhishingURL(domain)
+      if (isPhishing) {
+        if (found) {
+          await repositories.collection.update(
+            { contract: csContract },
+            { isSpam: true }
+          )
+
+          logInfoBatch5.push(
+            `[Phishing] streamingFast: collection marked as spam ${csContract} is phishing (domain = ${domain}) metadata=${JSON.stringify(metadata)})}, db_id = ${found.id}`
+          )
+
+          break;
+        } else {
+          logInfoBatch5.push(
+            `[Phishing] streamingFast: collection doesn't exist yet ${csContract} (domain = ${domain}) metadata=${JSON.stringify(metadata)}, db_id = ${found.id}, passing...`
+          )
+
+          break;
+        }
+
+        if (logInfoBatch5.length >= BATCH_LOG_SIZE) {
+          logger.info(logInfoBatch5.join('\n'))
+          logInfoBatch5 = [] // Clear the batch
+        }
+      }
+    }
+  }
+}
+
+/**
  * Handles the NFT ownership change and related caching.
  * @param wallet - The wallet of the new owner.
  * @param existingNFT - The existing NFT entity in the database.
@@ -283,6 +430,18 @@ const updateNFTWithWallet = async (
 
   // Handle new owner profile
   await handleNewOwnerProfile(wallet, updatedNFT, chainId)
+
+  try {
+    const { name, description, imageURL, traits } = updatedNFT.metadata
+    await checkAndMarkPhishingDomains({
+      name,
+      description,
+      imageURL,
+      traits,
+    }, updatedNFT.contract)
+  } catch (err) {
+    logger.error(err, `[Phishing] streamingFast: error parsing metadata in  updateNFTWithWallet for ${updatedNFT.contract} ${err}`)
+  }
 
   return updatedNFT
 }
@@ -367,6 +526,7 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
 
       // If the NFT doesn't exist, create it
       if (!existingNFT) {
+        const metadata = { name, description, imageURL: image, traits }
         const savedNFT = await repositories.nft.save({
           chainId: chainId,
           walletId: walletId,
@@ -376,13 +536,14 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
           tokenId: hexTokenId,
           type: type ?? schema?.toUpperCase(),
           uriString: tokenUris[i],
-          metadata: { name, description, imageURL: image, traits }
+          metadata,
         })
 
         // Index, update collection, and handle new owner profile for the saved NFT
         await seService.indexNFTs([savedNFT])
         await nftService.updateCollectionForNFTs([savedNFT])
         await handleNewOwnerProfile({ id: walletId, userId: userId }, savedNFT, chainId)
+        await checkAndMarkPhishingDomains(metadata, csContract)
 
         if (validParsedMetadata) {
           logInfoBatch1.push(`[Internal Metadata] streamingFast: new NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
@@ -403,9 +564,10 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
         // If the NFT already exists, update it if the new owner is different
         if (existingNFT.owner !== csNewOwner || existingNFT.uriString !== tokenUris[i] ||
           existingNFT.walletId !== walletId || existingNFT.userId !== userId) {
+            const metadata = { name, description, imageURL: image, traits }
             const updatedNFT = await repositories.nft.updateOneById(existingNFT.id, {
               uriString: tokenUris[i],
-              metadata: { name, description, imageURL: image, traits },
+              metadata,
               owner: csNewOwner,
               walletId: walletId,
               userId: userId,
@@ -414,6 +576,7 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
             await seService.indexNFTs([updatedNFT])
             await nftService.updateCollectionForNFTs([updatedNFT])
             await handleNewOwnerProfile({ id: walletId, userId: userId }, updatedNFT, chainId)
+            await checkAndMarkPhishingDomains(metadata, csContract)
 
             if (validParsedMetadata) {
               logInfoBatch1.push(`[Internal Metadata] streamingFast: updated NFT ${schema ? `${schema}/` : ''}${csContract}/${hexTokenId} (owner=${csNewOwner}) uri=${tokenUris[0]}, ${tokenUris[0] !== undefined ? `parsedUri=${JSON.stringify(parsedMetadata, null, 2)}, ` : ',\n'}savedMetadata=${JSON.stringify({
@@ -604,6 +767,13 @@ export const atomicOwnershipUpdate = async (
         await seService.indexNFTs([savedNFT])
         await nftService.updateCollectionForNFTs([savedNFT])
         await handleNewOwnerProfile(wallet, savedNFT, chainId)
+        await checkAndMarkPhishingDomains({
+          name,
+          description,
+          imageURL: image,
+          traits: traits,
+        }, csContract)
+        
         logInfoBatch4.push(
           `[Non-Schema Alchemy Metadata] streamingFast: new NFT ${csContract}/${hexTokenId} (owner=${csNewOwner}) savedMetadata=${JSON.stringify({
             name,
