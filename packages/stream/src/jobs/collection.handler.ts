@@ -398,46 +398,51 @@ export const collectionSyncHandler = async (job: Job): Promise<void> => {
  * @returns A promise that resolves when the operation is complete.
  */
 const downloadAndStorePhishingDatabase = async (url: string): Promise<void> => {
-  // Download the tar.gz file using fetch.
-  const response = await fetch(url)
-  if (!response.ok) {
-    throw new Error(`Failed to download ${url}`)
-  }
+  try {
+    // Download the tar.gz file using fetch.
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(`Failed to download ${url}`)
+    }
 
-  // Create a writable stream to save the downloaded file.
-  const tarGzFile = createWriteStream('ALL-phishing-domains.tar.gz')
-  response.body.pipe(tarGzFile)
+    // Create a writable stream to save the downloaded file.
+    const tarGzFile = createWriteStream('ALL-phishing-domains.tar.gz')
+    response.body.pipe(tarGzFile)
 
-  // Extract the tar.gz file and store URLs in Redis.
-  await new Promise<void>((resolve, reject) => {
-    tarGzFile.on('finish', async () => {
-      const extractor = tar.x({
-        file: 'ALL-phishing-domains.tar.gz',
-        gzip: true,
-        onentry: async (entry) => {
-          const chunks: Buffer[] = []
-          entry.on('data', (chunk) => chunks.push(chunk))
-          entry.on('end', async () => {
-            const data = Buffer.concat(chunks).toString()
-            // Split the data by newline to get individual URLs.
-            const urls = data.split('\n').filter(url => url.trim() !== '')
-            // Add each URL to the Redis set in smaller batches to avoid exceeding the call stack size.
-            const batchSize = 1000
-            for (let i = 0; i < urls.length; i += batchSize) {
-              const batch = urls.slice(i, i + batchSize)
-              await cache.sadd(CacheKeys.PHISHING_URLS, ...batch)
-            }
-          })
-        }
+    // Extract the tar.gz file and store URLs in Redis.
+    await new Promise<void>((resolve, reject) => {
+      tarGzFile.on('finish', async () => {
+        const extractor = tar.x({
+          file: 'ALL-phishing-domains.tar.gz',
+          gzip: true,
+          onentry: async (entry) => {
+            const chunks: Buffer[] = []
+            entry.on('data', (chunk) => chunks.push(chunk))
+            entry.on('end', async () => {
+              const data = Buffer.concat(chunks).toString()
+              // Split the data by newline to get individual URLs.
+              const urls = data.split('\n').filter(url => url.trim() !== '')
+              // Add each URL to the Redis set in smaller batches to avoid exceeding the call stack size.
+              const batchSize = 1000
+              for (let i = 0; i < urls.length; i += batchSize) {
+                const batch = urls.slice(i, i + batchSize)
+                await cache.sadd(CacheKeys.PHISHING_URLS, ...batch)
+              }
+            })
+          }
+        })
+        extractor.on('finish', resolve)
+        extractor.on('error', reject)
       })
-      extractor.on('finish', resolve)
-      extractor.on('error', reject)
+      tarGzFile.on('error', reject)
+    }).catch((error) => {
+      logger.error(error, `Failed to download and store phishing database: ${error}`)
+      throw error
     })
-    tarGzFile.on('error', reject)
-  }).catch((error) => {
-    logger.error(error, `Failed to download and store phishing database: ${error}`)
-    throw error
-  })
+  } catch (err) {
+    logger.error(err, `Failed to download and store phishing database: ${err}`)
+    throw err
+  }
 }
 
 // Helper function to check if a URL exists in the Redis set.
