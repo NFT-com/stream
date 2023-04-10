@@ -287,10 +287,6 @@ const createEcsTaskDefinition = (
               Value: process.env.HCS_ENABLED,
             },
             {
-              Name: 'ZMOK_API_URL',
-              Value: process.env.ZMOK_API_URL,
-            },
-            {
               Name: 'INFURA_API_KEY',
               Value: process.env.INFURA_API_KEY,
             },
@@ -449,14 +445,6 @@ const createEcsTaskDefinition = (
             {
               Name: 'USE_INFURA',
               Value: process.env.USE_INFURA,
-            },
-            {
-              Name: 'USE_ZMOK',
-              Value: process.env.USE_ZMOK,
-            },
-            {
-              Name: 'ZMOK_API_KEY',
-              Value: process.env.ZMOK_API_KEY,
             },
             {
               Name: 'INFURA_KEY_SET',

@@ -84,7 +84,6 @@ runs:
         HCS_ENABLED: ${{ fromJSON(inputs.secrets).HCS_ENABLED }}
         HCS_ACCOUNT_ID: ${{ fromJSON(inputs.secrets).HCS_ACCOUNT_ID }}
         HCS_PRIVATE_KEY: ${{ fromJSON(inputs.secrets).HCS_PRIVATE_KEY }}
-        ZMOK_API_URL: ${{ fromJSON(inputs.secrets).ZMOK_API_URL }}
         INFURA_API_KEY: ${{ fromJSON(inputs.secrets).INFURA_API_KEY }}
         ALCHEMY_API_KEY: ${{ fromJSON(inputs.secrets).ALCHEMY_API_KEY }}
         ALCHEMY_TESTNET_KEY: ${{ fromJSON(inputs.secrets).ALCHEMY_TESTNET_KEY }}
@@ -129,8 +128,6 @@ runs:
         MULTICALL_CONTRACT: ${{ fromJSON(inputs.secrets).MULTICALL_CONTRACT }}
         ORDER_RECONCILIATION_PERIOD: ${{ fromJSON(inputs.secrets).ORDER_RECONCILIATION_PERIOD }}
         USE_INFURA: ${{ fromJSON(inputs.secrets).USE_INFURA }}
-        USE_ZMOK: ${{ fromJSON(inputs.secrets).USE_ZMOK }}
-        ZMOK_API_KEY: ${{ fromJSON(inputs.secrets).ZMOK_API_KEY }}
         INFURA_KEY_SET: ${{ fromJSON(inputs.secrets).INFURA_KEY_SET }}
         NODE_ENV: ${{ fromJSON(inputs.secrets).NODE_ENV }}
         DATADOG_API_KEY: ${{ fromJSON(inputs.secrets).DATADOG_API_KEY }}
