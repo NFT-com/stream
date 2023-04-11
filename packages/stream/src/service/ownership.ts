@@ -716,7 +716,7 @@ export const atomicOwnershipUpdate = async (
     } else {
       const startNewNFT = new Date().getTime()
       
-      // if schema exists, batch calls as it is request from streaming fast
+      // if schema exists, batch calls from streaming fast
       if (schema) {
         // batch up calls for tokenURI / URI to decrease the number of infura calls
         await handleNewNFTItem({ contract: csContract, tokenId: hexTokenId, schema, chainId, csNewOwner, walletId: wallet?.id, userId: wallet?.userId })
