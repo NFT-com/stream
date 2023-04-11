@@ -102,9 +102,16 @@ export const retrieveNFTDetailsNFTPort = async (
   refreshMetadata = false,
   include?: NFTPortDetailIncludes[],
 ): Promise<NFTPortNFT | undefined> => {
+  logger.debug(`starting retrieveNFTDetailsNFTPort: ${contract} ${tokenId} ${chainId}`)
+  const key = `NFTPORT_NFT_DETAIL_${chainId}_${contract}_${tokenId}`
+  const contractKey = `NFTPORT_NFT_DETAIL_${chainId}_${contract}_${tokenId}`
+
   try {
-    logger.debug(`starting retrieveNFTDetailsNFTPort: ${contract} ${tokenId} ${chainId}`)
-    const key = `NFTPORT_NFT_DETAIL_${chainId}_${contract}_${tokenId}`
+    const cachedContractData = await cache.get(contractKey)
+    if (cachedContractData) {
+      return JSON.parse(cachedContractData)
+    }
+
     const cachedData = await cache.get(key)
     if (cachedData)
       return JSON.parse(cachedData)
@@ -130,9 +137,12 @@ export const retrieveNFTDetailsNFTPort = async (
     }
   } catch (err) {
     if (err.status === 404) {
-      cache.set(`NFTPORT_NFT_DETAIL_${chainId}_${contract}_${tokenId}`, JSON.stringify(null), 'EX', 60 * 60 * 24)
+      cache.set(key, JSON.stringify(null), 'EX', 60 * 60 * 24)
+      cache.set(contractKey, JSON.stringify(null), 'EX', 60 * 60 * 24)
+      logger.error(err, `Error in retrieveNFTDetailsNFTPort 404: ${err}`)
+    } else {
+      logger.error(err, `Error in retrieveNFTDetailsNFTPort: ${err}`)
     }
-    logger.error(err, `Error in retrieveNFTDetailsNFTPort: ${err}`)
     return undefined
   }
 }
