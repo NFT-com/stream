@@ -411,10 +411,10 @@ const deleteFiles = (filePaths: string[]): void => {
  * @param url The URL of the tar.gz file containing the phishing domain database.
  * @returns A promise that resolves when the operation is complete.
  */
-const downloadAndStorePhishingDatabase = async (url: string): Promise<void> => {
+const downloadAndStorePhishingDatabase = async (url: string, base: string): Promise<void> => {
   // Define the path to the tar.gz file.
-  const filePath = 'ALL-phishing-domains.tar.gz';
-  const filePathTxt = 'ALL-phishing-domains.txt';
+  const filePath = `${base}.tar.gz`
+  const filePathTxt = `${base}.txt`
 
   try {
     // Download the tar.gz file using fetch.
@@ -488,9 +488,9 @@ export const spamCollectionSyncHandler = async (job: Job): Promise<void> => {
     }
 
     // URL of the tar.gz file in the Phishing.Database repository.
-    const phishingDatabaseURL = 'https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/ALL-phishing-domains.tar.gz';
+    const phishingDatabaseURL = 'https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/ALL-phishing-links.tar.gz';
     // Download, extract, and store the phishing database in Redis.
-    await downloadAndStorePhishingDatabase(phishingDatabaseURL);
+    await downloadAndStorePhishingDatabase(phishingDatabaseURL, 'ALL-phishing-links');
 
     // Test the helper function.
     logger.info(await isPhishingURL('00000000000000000000000000000000000000000.xyz'));  // Output: true or false
@@ -504,9 +504,9 @@ export const spamCollectionSyncHandler = async (job: Job): Promise<void> => {
 try {
   logger.info(`Starting phishing url sync`)
    // URL of the tar.gz file in the Phishing.Database repository.
-   const phishingDatabaseURL = 'https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/ALL-phishing-domains.tar.gz';
+   const phishingDatabaseURL = 'https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/ALL-phishing-links.tar.gz';
    // Download, extract, and store the phishing database in Redis.
-   downloadAndStorePhishingDatabase(phishingDatabaseURL);
+   downloadAndStorePhishingDatabase(phishingDatabaseURL, 'ALL-phishing-links');
 } catch (err) {
     logger.log(err, `Error in phishing database url sync: ${err}`)
 }

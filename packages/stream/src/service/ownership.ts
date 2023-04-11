@@ -247,7 +247,7 @@ const extractURLsFromText = (text: string): string[] => {
   if (!text) return []
 
   // Regular expression to match URLs with or without the http:// or https:// prefix.
-  const urlRegex = /(?:https?:\/\/)?[\w.-]+\.\w+(?:[/?#]\S*)?/gi
+  const urlRegex = /(?:https?:\/\/)?(?:[-\w]+\.)+[a-zA-Z]{2,9}(?:[-\w./?#&+=]*)/gi
   return Array.from(text.matchAll(urlRegex)).map(match => match[0])
 }
 
@@ -263,7 +263,11 @@ const extractURLsFromMetadata = (metadata: {
   traits?: any[]
 }): string[] => {
   const urls: string[] = []
-  const { description, imageURL, traits } = metadata
+  const { name, description, imageURL, traits } = metadata
+
+  if (name) {
+    urls.push(...extractURLsFromText(name))
+  }
 
   // Extract URLs from description.
   if (description) {
@@ -289,33 +293,11 @@ const extractURLsFromMetadata = (metadata: {
 }
 
 /**
- * Extract full domain (including subdomains) and root domain from a URL or domain.
- * @param urlOrDomain - The URL or domain from which to extract domains.
- * @returns An array containing the full domain and root domain, or the full domain if it is the root domain.
- */
-const extractDomains = (urlOrDomain: string): string[] | string => {
-  let hostname
-  // Check if the input is a URL or a domain name.
-  if (urlOrDomain.startsWith('http://') || urlOrDomain.startsWith('https://')) {
-    // If it is a URL, extract the hostname using the URL class.
-    hostname = new URL(urlOrDomain).hostname
-  } else {
-    // If it is a domain name, use it directly.
-    hostname = urlOrDomain
-  }
-  // Extract the root domain using a regular expression.
-  const match = hostname.match(/[\w-]+\.\w+$/)
-  const rootDomain = match ? match[0] : null
-  // Return both the full domain and the root domain.
-  return hostname === rootDomain ? hostname : [hostname, rootDomain]
-}
-
-/**
  * Extract root domains from metadata JSON string.
  * @param metadataJson - The metadata JSON string.
  * @returns An array of extracted root domains.
  */
-const extractRootDomainsFromMetadata = (metadata: {
+const extractUrlsFromMetadata = (metadata: {
   name?: string
   description?: string
   imageURL?: string
@@ -324,11 +306,8 @@ const extractRootDomainsFromMetadata = (metadata: {
   // Extract URLs from metadata.
   const inputList = extractURLsFromMetadata(metadata)
 
-  // Extract full domain (including subdomains) and root domains, and flatten the results.
-  const domains = inputList.flatMap(extractDomains)
-
   // Remove duplicate domains and return the result.
-  return Array.from(new Set(domains))
+  return inputList
 }
 
 /**
@@ -349,13 +328,13 @@ const checkAndMarkPhishingDomains = async (metadata: {
     return // Collection is already marked as spam, no further action needed.
   }
 
-  // Extract root domains from metadata.
-  const rootDomains = extractRootDomainsFromMetadata(metadata)
+  // Extract urls from metadata.
+  const allUrls = extractUrlsFromMetadata(metadata)
 
-  // Check each domain for phishing.
-  for (const domain of rootDomains) {
-    if (domain) {
-      const isPhishing = await isPhishingURL(domain)
+  // Check each url for phishing.
+  for (const url of allUrls) {
+    if (url) {
+      const isPhishing = await isPhishingURL(url)
       if (isPhishing) {
         if (found) {
           await repositories.collection.update(
@@ -364,15 +343,15 @@ const checkAndMarkPhishingDomains = async (metadata: {
           )
 
           logInfoBatch5.push(
-            `[Phishing] streamingFast: collection marked as spam ${csContract} is phishing (domain = ${domain}) metadata=${JSON.stringify(metadata)})}, db_id = ${found?.id}`
+            `[Phishing] streamingFast: collection marked as spam ${csContract} is phishing (url = ${url}) metadata=${JSON.stringify(metadata)})}, db_id = ${found?.id}`
           )
         } else {
           logInfoBatch5.push(
-            `[Phishing] streamingFast: collection doesn't exist yet ${csContract} (domain = ${domain}) metadata=${JSON.stringify(metadata)}, db_id = ${found?.id}, passing...`
+            `[Phishing] streamingFast: collection doesn't exist yet ${csContract} (url = ${url}) metadata=${JSON.stringify(metadata)}, db_id = ${found?.id}, passing...`
           )
         }
 
-        if (logInfoBatch5.length >= BATCH_LOG_SIZE) {
+        if (logInfoBatch5.length >= 3) {
           logger.info(logInfoBatch5.join('\n'))
           logInfoBatch5 = [] // Clear the batch
         }
