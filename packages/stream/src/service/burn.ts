@@ -1,4 +1,4 @@
-import { db, defs } from '@nftcom/shared'
+import { db, defs, helper } from '@nftcom/shared'
 
 interface BurnService {
   handleBurn({ contract, tokenId }: { contract: string; tokenId: string }): Promise<void>
@@ -6,9 +6,10 @@ interface BurnService {
 
 export function getBurnService(repos: db.Repository = db.newRepositories()): BurnService {
   async function handleBurn({ contract, tokenId }): Promise<void> {
+    const csContract = helper.checkSum(contract)
     const nft = await repos.nft.findOne({
       where: {
-        contract,
+        contract: csContract,
         tokenId,
       },
     })
