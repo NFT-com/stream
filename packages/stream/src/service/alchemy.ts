@@ -3,9 +3,10 @@ import axiosRetry, { IAxiosRetryConfig } from 'axios-retry'
 
 export const getAlchemyInterceptor = (
   chainId: string,
+  nft?: boolean,
 ): AxiosInstance => {
   const alchemyInstance = axios.create({
-    baseURL: `https://eth-mainnet.alchemyapi.io/v2/${Number(chainId) == 1 ?
+    baseURL: `https://eth-mainnet.alchemyapi.io/${nft? 'nft/' : ''}v2/${Number(chainId) == 1 ?
       process.env.ALCHEMY_API_KEY : process.env.ALCHEMY_TESTNET_KEY}`,
     headers: {
       'Accept': 'application/json',

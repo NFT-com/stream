@@ -57,7 +57,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
   const { contract, chainId, startTokenParam } = job.data
   logger.log(`nft sync handler process started for: ${contract}, chainId: ${chainId}`)
   try {
-    const alchemyInstance: AxiosInstance = await getAlchemyInterceptor(chainId)
+    const alchemyInstance: AxiosInstance = await getAlchemyInterceptor(chainId, true)
     const nftPortInstance: AxiosInstance = await getNFTPortInterceptor('https://api.nftport.xyz/v0')
   
     // nft port specific sync
@@ -478,7 +478,7 @@ export const isPhishingURL = async (url: string): Promise<boolean> => {
 export const spamCollectionSyncHandler = async (job: Job): Promise<void> => {
   logger.log('initiated spam collection sync')
   const chainId: string = job.data.chainId || process.env.chainId || '5'
-  const alchemyInstance: AxiosInstance = await getAlchemyInterceptor(chainId)
+  const alchemyInstance: AxiosInstance = await getAlchemyInterceptor(chainId, true)
     
   try {
     const spamCollectionsResponse: AxiosResponse = await alchemyInstance.get('/getSpamContracts')
