@@ -157,7 +157,7 @@ export const retrieveContractNFTsNFTPort = async (
 ): Promise<any> => {
   try {
     const checkSumContract = ethers.utils.getAddress(contract)
-    logger.debug(`starting retrieveContractNFTs: ${checkSumContract} ${chainId} - page: ${page}`)
+    logger.debug(`starting retrieveContractNFTsNFTPort: ${checkSumContract} ${chainId} - page: ${page}`)
     const key = `NFTPORT_CONTRACT_NFTS_${chainId}_${checkSumContract}_page_${page}`
     const cachedData = await cache.get(key)
     if (cachedData)
@@ -197,7 +197,7 @@ export const retrieveContractTxsNFTPort = async (
 ): Promise<any> => {
   try {
     const checkSumContract = ethers.utils.getAddress(contract)
-    logger.debug(`starting retrieveContractTxs: ${checkSumContract} ${chainId} - continuation: ${continuation}`)
+    logger.debug(`starting retrieveContractTxsNFTPort: ${checkSumContract} ${chainId} - continuation: ${continuation}`)
     const key = `NFTPORT_CONTRACT_TXS_${chainId}_${checkSumContract}_continuation_${continuation}`
     const cachedData = await cache.get(key)
     if (cachedData)
@@ -239,7 +239,7 @@ export const retrieveContractTxsNFTPort = async (
       return undefined
     }
   } catch (err) {
-    logger.error(`Error in retrieveContractNFTsNFTPort: ${err}`)
+    logger.error(`Error in retrieveContractTxsNFTPort: ${err}`)
     return undefined
   }
 }
