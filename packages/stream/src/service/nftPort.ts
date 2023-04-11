@@ -102,9 +102,10 @@ export const retrieveNFTDetailsNFTPort = async (
   refreshMetadata = false,
   include?: NFTPortDetailIncludes[],
 ): Promise<NFTPortNFT | undefined> => {
-  logger.debug(`starting retrieveNFTDetailsNFTPort: ${contract} ${tokenId} ${chainId}`)
-  const key = `NFTPORT_NFT_DETAIL_${chainId}_${contract}_${tokenId}`
-  const contractKey = `NFTPORT_NFT_DETAIL_${chainId}_${contract}_${tokenId}`
+  const checkSumContract = ethers.utils.getAddress(contract)
+  logger.debug(`starting retrieveNFTDetailsNFTPort: ${checkSumContract} ${tokenId} ${chainId}`)
+  const key = `NFTPORT_NFT_DETAIL_${chainId}_${checkSumContract}_${tokenId}`
+  const contractKey = `NFTPORT_NFT_DETAIL_${chainId}_${checkSumContract}_${tokenId}`
 
   try {
     const cachedContractData = await cache.get(contractKey)
@@ -119,7 +120,7 @@ export const retrieveNFTDetailsNFTPort = async (
     if (!chain) return
     const nftInterceptor = getNFTPortInterceptor(NFTPORT_API_BASE_URL)
     const tokenIdInteger = ethers.BigNumber.from(tokenId).toString()
-    const url = `/nfts/${contract}/${tokenIdInteger}`
+    const url = `/nfts/${checkSumContract}/${tokenIdInteger}`
 
     const res = await nftInterceptor.get(url, {
       params: {
@@ -155,15 +156,16 @@ export const retrieveContractNFTsNFTPort = async (
   include?: NFTPortContractNFTIncludes[],
 ): Promise<any> => {
   try {
-    logger.debug(`starting retrieveContractNFTs: ${contract} ${chainId} - page: ${page}`)
-    const key = `NFTPORT_CONTRACT_NFTS_${chainId}_${contract}_page_${page}`
+    const checkSumContract = ethers.utils.getAddress(contract)
+    logger.debug(`starting retrieveContractNFTs: ${checkSumContract} ${chainId} - page: ${page}`)
+    const key = `NFTPORT_CONTRACT_NFTS_${chainId}_${checkSumContract}_page_${page}`
     const cachedData = await cache.get(key)
     if (cachedData)
       return JSON.parse(cachedData)
     const chain = chainFromId(chainId)
     if (!chain) return
     const nftInterceptor = getNFTPortInterceptor(NFTPORT_API_BASE_URL)
-    const url = `/nfts/${contract}`
+    const url = `/nfts/${checkSumContract}`
     const res = await nftInterceptor.get(url, {
       params: {
         chain: chain,
@@ -194,15 +196,16 @@ export const retrieveContractTxsNFTPort = async (
   type?: NFTPortContractTxType[],
 ): Promise<any> => {
   try {
-    logger.debug(`starting retrieveContractTxs: ${contract} ${chainId} - continuation: ${continuation}`)
-    const key = `NFTPORT_CONTRACT_TXS_${chainId}_${contract}_continuation_${continuation}`
+    const checkSumContract = ethers.utils.getAddress(contract)
+    logger.debug(`starting retrieveContractTxs: ${checkSumContract} ${chainId} - continuation: ${continuation}`)
+    const key = `NFTPORT_CONTRACT_TXS_${chainId}_${checkSumContract}_continuation_${continuation}`
     const cachedData = await cache.get(key)
     if (cachedData)
       return JSON.parse(cachedData)
     const chain = chainFromId(chainId)
     if (!chain) return
     const nftInterceptor = getNFTPortInterceptor(NFTPORT_API_BASE_URL)
-    let url = `/transactions/nfts/${contract}`
+    let url = `/transactions/nfts/${checkSumContract}`
 
     if (tokenId) {
       url += `/${tokenId}`
