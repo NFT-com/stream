@@ -245,7 +245,7 @@ const deleteCacheKeys = async (existingNFT: entity.NFT, chainId: string): Promis
  */
 const extractURLsFromText = (text: string): string[] => {
   if (!text) return []
-  
+
   // Regular expression to match URLs with or without the http:// or https:// prefix.
   const urlRegex = /(?:https?:\/\/)?[\w.-]+\.\w+(?:[/?#]\S*)?/gi
   return Array.from(text.matchAll(urlRegex)).map(match => match[0])
@@ -366,20 +366,18 @@ const checkAndMarkPhishingDomains = async (metadata: {
           logInfoBatch5.push(
             `[Phishing] streamingFast: collection marked as spam ${csContract} is phishing (domain = ${domain}) metadata=${JSON.stringify(metadata)})}, db_id = ${found?.id}`
           )
-
-          break;
         } else {
           logInfoBatch5.push(
             `[Phishing] streamingFast: collection doesn't exist yet ${csContract} (domain = ${domain}) metadata=${JSON.stringify(metadata)}, db_id = ${found?.id}, passing...`
           )
-
-          break;
         }
 
         if (logInfoBatch5.length >= BATCH_LOG_SIZE) {
           logger.info(logInfoBatch5.join('\n'))
           logInfoBatch5 = [] // Clear the batch
         }
+
+        return // Collection is marked as spam, no further action needed.
       }
     }
   }
