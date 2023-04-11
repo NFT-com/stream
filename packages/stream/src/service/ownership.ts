@@ -244,6 +244,8 @@ const deleteCacheKeys = async (existingNFT: entity.NFT, chainId: string): Promis
  * @returns An array of extracted URLs.
  */
 const extractURLsFromText = (text: string): string[] => {
+  if (!text) return []
+  
   // Regular expression to match URLs with or without the http:// or https:// prefix.
   const urlRegex = /(?:https?:\/\/)?[\w.-]+\.\w+(?:[/?#]\S*)?/gi
   return Array.from(text.matchAll(urlRegex)).map(match => match[0])
