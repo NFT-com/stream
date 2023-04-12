@@ -609,7 +609,7 @@ const indexNFTs = async (nfts: Partial<entity.NFT>[]): Promise<void> => {
 
 // collection image sync
 export const collectionBannerImageSync = async (job: Job): Promise<void> => {
-  logger.log('initiated collection banner image sync')
+  logger.log('[collectionBannerImageSync] initiated collection banner image sync')
   const chainId: string = job.data.chainId || process.env.chainId || '5'
   const queryFilters = exceptionBannerUrls.map((exceptionBannerUrl: string) =>
     ({ bannerUrl: ILike(exceptionBannerUrl) }))
@@ -626,6 +626,9 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
           bannerUrl: true,
           chainId: true,
         },
+        order: {
+          createdAt: "DESC" // Sort by the "createdAt" column in descending order
+        },
       })
 
     for (let i = 0; i < collections.length; i++) {
@@ -638,11 +641,11 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
       })
 
       if (!collectionFromDB.bannerUrl) {
-        logger.info(`Skipping collection: ${collection.contract} since bannerUrl is not null since cron started`)
+        logger.info(`[collectionBannerImageSync] Skipping collection: ${collection.contract} since bannerUrl is not null since cron started`)
         // skip this loop
         continue
       } else {
-        logger.info({ collections }, `Fetching banner image for collection: ${collection.contract}, currentIndex=${i + 1}, total=${collections.length}`)
+        logger.info({ collections }, `[collectionBannerImageSync] Fetching banner image for collection: ${collection.contract}, currentIndex=${i + 1}, total=${collections.length}`)
         try {
           const contractNFT: Partial<entity.NFT> = await repositories.nft.findOne({
             where: {
@@ -668,7 +671,7 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
                 [],
               )
             } catch (err) {
-              logger.error(`Error while fetching NFT details from NFT Port for contract: ${collection.contract} and tokenId: ${contractNFT.tokenId}`)
+              logger.error(`[collectionBannerImageSync] Error while fetching NFT details from NFT Port for contract: ${collection.contract} and tokenId: ${contractNFT.tokenId}`)
             }
   
             let bannerImageUrl: string = null
@@ -701,11 +704,13 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
                 uploadPath,
               )
               bannerUrl = banner ? banner : bannerUrl
+
+              logger.info(`[collectionBannerImageSync] Banner image found for collection: ${collection.contract}. setting banner image`)
               await repositories.collection.updateOneById(collection.id, {
                 bannerUrl,
               })
             } else {
-              logger.info(`No banner image found for collection: ${collection.contract}. setting default banner image`)
+              logger.info(`[collectionBannerImageSync] No banner image found for collection: ${collection.contract}. setting default banner image`)
   
               const updateObject = {
                 bannerUrl: 'https://cdn.nft.com/collectionBanner_default.png',
@@ -717,12 +722,12 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
             }
           }
         } catch (err) {
-          logger.debug(err, `Error occured while fetching contract NFT for ${collection.contract}`)
+          logger.debug(err, `[collectionBannerImageSync] Error occured while fetching contract NFT for ${collection.contract}`)
         }
       }
     }
   } catch (err) {
-    logger.error(`Error in collection banner image sync: ${err}`)
+    logger.error(`[collectionBannerImageSync] Error in collection banner image sync: ${err}`)
   }
 }
 
