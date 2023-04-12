@@ -5,7 +5,7 @@ import { BigNumber } from 'ethers'
 import { createWriteStream, unlink } from 'fs';
 import fetch from 'node-fetch';
 import * as tar from 'tar';
-import { FindOptionsWhere,ILike, In, IsNull, Not } from 'typeorm'
+import { FindOptionsWhere, In, IsNull, Not } from 'typeorm'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -27,13 +27,6 @@ import { collectionSyncSubqueue } from './jobs'
 const logger = _logger.Factory(_logger.Context.Bull)
 const repositories = db.newRepositories()
 const CRYPTOPUNK = '0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb'
-
-const exceptionBannerUrls: string[] = [
-  'https://cdn.nft.com/collections/1/%banner.png',
-  'https://cdn.nft.com/collections/1/%banner.jpg',
-  'https://cdn.nft.com/collections/1/%banner.jpeg',
-  'https://cdn.nft.com/collectionBanner_default.png',
-]
 
 const subQueueBaseOptions: Bull.JobsOptions = {
   attempts: 2,
@@ -611,21 +604,12 @@ const indexNFTs = async (nfts: Partial<entity.NFT>[]): Promise<void> => {
 export const collectionBannerImageSync = async (job: Job): Promise<void> => {
   logger.log('[collectionBannerImageSync] initiated collection banner image sync')
   const chainId: string = job.data.chainId || process.env.chainId || '5'
-  const queryFilters = exceptionBannerUrls.map((exceptionBannerUrl: string) =>
-    ({ bannerUrl: ILike(exceptionBannerUrl) }))
   try {
     const collections: Partial<entity.Collection>[] = await repositories.collection.find(
       {
         where:[
           { bannerUrl: IsNull() },
-          ...queryFilters,
         ],
-        select: {
-          id: true,
-          contract: true,
-          bannerUrl: true,
-          chainId: true,
-        },
         order: {
           createdAt: "DESC" // Sort by the "createdAt" column in descending order
         },
