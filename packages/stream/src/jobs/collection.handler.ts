@@ -633,17 +633,10 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
       const collectionFromDB: Partial<entity.Collection> = await repositories.collection.findOne({
         where: {
           id: collection.id,
-          bannerUrl: IsNull(),
-        },
-        select: {
-          id: true,
-          contract: true,
-          bannerUrl: true,
-          chainId: true,
-        },
+        }
       })
 
-      if (!collectionFromDB) {
+      if (!collectionFromDB.bannerUrl) {
         logger.info(`Skipping collection: ${collection.contract} since bannerUrl is not null since cron started`)
         // skip this loop
         continue
