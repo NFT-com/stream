@@ -615,6 +615,8 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
         },
       })
 
+    logger.info({ collections }, `[collectionBannerImageSync] Fetching banner image for ${collections.length} collections`)
+
     for (let i = 0; i < collections.length; i++) {
       const collection: Partial<entity.Collection> = collections[i]
       // find collection again and check if bannerUrl is null since cron happens every 15 seconds
