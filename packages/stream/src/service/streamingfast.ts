@@ -6,6 +6,7 @@ import { _logger, db, helper } from '@nftcom/shared'
 
 import { cache, CacheKeys } from '../service/cache'
 import { getLatestBlockNumber } from '../utils'
+import { burnService } from './burn'
 import { atomicOwnershipUpdate } from './ownership'
 
 const repositories = db.newRepositories()
@@ -61,6 +62,10 @@ const BATCH_LOG_SIZE = 20
 let logInfoBatch = []
 let logWarningBatch = []
 
+const isLikelyBurnAddress = (toAddress: string): boolean => {
+  return toAddress.startsWith('0x0000000000000000000000000')
+}
+
 const handleNotification = async (msg: any): Promise<void> => {
   const start = new Date().getTime()
   // if latestBlockNumber is not set, call getLatestBlockNumber and store the result in latestBlockNumber
@@ -91,8 +96,13 @@ const handleNotification = async (msg: any): Promise<void> => {
         schema
       )
       logInfoBatch.push(`streamingFast (took ${new Date().getTime() - start2}ms): [MINTED]: ${schema}/${hexContractAddress}/${hexTokenId} to ${hexToAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}https://etherscan.io/tx/${hexTxHash}`)
-    } else if (hexToAddress === '0x0000000000000000000000000000000000000000') {
-      logInfoBatch.push(`streamingFast: [BURNED]: ${schema}/${hexContractAddress}/${hexTokenId} from ${hexFromAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}https://etherscan.io/tx/${hexTxHash}`)
+    } else if (isLikelyBurnAddress(hexToAddress)) {
+      logInfoBatch.push(
+        `streamingFast: [BURNED]: ${schema}/${hexContractAddress}/${hexTokenId} from ${hexFromAddress}, ${
+          Number(quantity) > 1 ? `quantity=${quantity}, ` : ''
+        }https://etherscan.io/tx/${hexTxHash}`,
+      )
+      burnService.handleBurn({ contract: hexContractAddress, tokenId: hexTokenId })
     } else {
       const start2 = new Date().getTime()
       await atomicOwnershipUpdate(
@@ -101,9 +111,15 @@ const handleNotification = async (msg: any): Promise<void> => {
         hexFromAddress,
         hexToAddress,
         '1', // mainnet ETH
-        schema
+        schema,
       )
-      logInfoBatch.push(`streamingFast (preChecks took ${new Date().getTime() - start}ms, atomicOwnershipUpdate took ${new Date().getTime() - start2} ms): [TRANSFERRED]: ${schema}/${hexContractAddress}/${hexTokenId} from ${hexFromAddress} to ${hexToAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}https://etherscan.io/tx/${hexTxHash}`)
+      logInfoBatch.push(
+        `streamingFast (preChecks took ${new Date().getTime() - start}ms, atomicOwnershipUpdate took ${
+          new Date().getTime() - start2
+        } ms): [TRANSFERRED]: ${schema}/${hexContractAddress}/${hexTokenId} from ${hexFromAddress} to ${hexToAddress}, ${
+          Number(quantity) > 1 ? `quantity=${quantity}, ` : ''
+        }https://etherscan.io/tx/${hexTxHash}`,
+      )
     }
   } else {
     logWarningBatch.push(`Filtered Transfer for ${schema}/${hexContractAddress}/${hexTokenId} from ${hexFromAddress} to ${hexToAddress}, ${Number(quantity) > 1 ? `quantity=${quantity}, ` : ''}https://etherscan.io/tx/${hexTxHash}`)
