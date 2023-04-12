@@ -628,6 +628,7 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
       })
 
     for (const collection of collections) {
+      logger.info({ collections }, `Fetching banner image for collection: ${collection.contract}, total=${collections.length}`)
       try {
         const contractNFT: Partial<entity.NFT> = await repositories.nft.findOne({
           where: {
