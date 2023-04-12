@@ -628,7 +628,8 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
         },
       })
 
-    for (const collection of collections) {
+    for (let i = 0; i < collections.length; i++) {
+      const collection: Partial<entity.Collection> = collections[i]
       // find collection again and check if bannerUrl is null since cron happens every 15 seconds
       const collectionFromDB: Partial<entity.Collection> = await repositories.collection.findOne({
         where: {
@@ -641,7 +642,7 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
         // skip this loop
         continue
       } else {
-        logger.info({ collections }, `Fetching banner image for collection: ${collection.contract}, total=${collections.length}`)
+        logger.info({ collections }, `Fetching banner image for collection: ${collection.contract}, currentIndex=${i + 1}, total=${collections.length}`)
         try {
           const contractNFT: Partial<entity.NFT> = await repositories.nft.findOne({
             where: {

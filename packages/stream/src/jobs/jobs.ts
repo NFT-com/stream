@@ -68,7 +68,7 @@ const handlerMap: Record<string, { handler: any; repeat?: number; secondaryOptio
       },
     },
   },
-  [QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE]: { handler: collectionBannerImageSync, repeat: 60000 }, // 1 minute syncs
+  [QUEUE_TYPES.GENERATE_COMPOSITE_IMAGE]: { handler: collectionBannerImageSync, repeat: 15000 }, // faster syncs
   [QUEUE_TYPES.FETCH_COLLECTION_ISSUANCE_DATE]: { handler: collectionIssuanceDateSync, repeat: 12 * 60 * 60000,
     secondaryOptions: {
       attempts: 5,
