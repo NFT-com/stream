@@ -105,7 +105,7 @@ export const retrieveNFTDetailsNFTPort = async (
   const checkSumContract = ethers.utils.getAddress(contract)
   logger.debug(`1 starting retrieveNFTDetailsNFTPort: ${checkSumContract} ${tokenId} ${chainId}`)
   const key = `NFTPORT_NFT_DETAIL_${chainId}_${checkSumContract}_${tokenId}`
-  const contractKey = `NFTPORT_NFT_DETAIL_${chainId}_${checkSumContract}_${tokenId}`
+  const contractKey = `NFTPORT_NFT_DETAIL_${chainId}_${checkSumContract}`
 
   try {
     const cachedContractData = await cache.get(contractKey)
