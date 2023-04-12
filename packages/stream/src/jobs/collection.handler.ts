@@ -628,7 +628,6 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
 
       if (!collectionFromDB.bannerUrl) {
         // skip this loop
-        continue
       } else {
         logger.info({ collections }, `[collectionBannerImageSync] Fetching banner image for collection: ${collection.contract}, currentIndex=${i + 1}, total=${collections.length}`)
         try {
