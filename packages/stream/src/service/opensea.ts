@@ -246,8 +246,8 @@ export const fetchCollectionBannerImages = async (
     const response = await openseaInstance.get(url, { headers })
 
     // Extract the banner image URL and image URL.
-    const bannerImageUrl = response.data.collection?.['banner_image_url'] ?? null
-    const imageUrl = response.data.collection?.['image_url'] ?? null
+    const bannerImageUrl = response.data.collection?.['banner_image_url'].replace('?w=500&auto=format', '') ?? null
+    const imageUrl = response.data.collection?.['image_url'].replace('?w=500&auto=format', '') ?? null
 
     logger.info(`fetchCollectionBannerImages collection banner image for contract ${contractAddress}: ${bannerImageUrl}, ${imageUrl}`)
 
