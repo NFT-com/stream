@@ -607,9 +607,9 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
   try {
     const collections: Partial<entity.Collection>[] = await repositories.collection.find(
       {
-        where:[
-          { bannerUrl: IsNull() },
-        ],
+        where: {
+          bannerUrl: IsNull()
+        },
         order: {
           createdAt: "DESC" // Sort by the "createdAt" column in descending order
         },
