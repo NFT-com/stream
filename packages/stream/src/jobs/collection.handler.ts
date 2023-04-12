@@ -641,7 +641,6 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
       })
 
       if (!collectionFromDB.bannerUrl) {
-        logger.info(`[collectionBannerImageSync] Skipping collection: ${collection.contract} since bannerUrl is not null since cron started`)
         // skip this loop
         continue
       } else {
