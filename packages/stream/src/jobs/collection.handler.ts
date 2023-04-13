@@ -602,19 +602,15 @@ const indexNFTs = async (nfts: Partial<entity.NFT>[]): Promise<void> => {
 
 // collection image sync
 export const collectionBannerImageSync = async (job: Job): Promise<void> => {
-  logger.log('[collectionBannerImageSync] initiated collection banner image sync')
-  const chainId: string = job.data.chainId || process.env.chainId || '5'
+  logger.log(`[collectionBannerImageSync] initiated collection banner image sync, ${JSON.stringify(job)}`)
+  const chainId: string = job?.data?.chainId || process.env.chainId || '5'
   try {
     const collections: Partial<entity.Collection>[] = await repositories.collection.find({
       where: {
-        bannerUrl: IsNull()
+        bannerUrl: null
       },
-      order: {
-        createdAt: "DESC" // Sort by the "createdAt" column in descending order
-      }
     })
     
-
     logger.info({ collections }, `[collectionBannerImageSync] Fetching banner image for ${collections.length} collections`)
 
     for (let i = 0; i < collections.length; i++) {
