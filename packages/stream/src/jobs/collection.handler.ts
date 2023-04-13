@@ -681,15 +681,19 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
     
             if (bannerUrl) {
               const filename = bannerUrl.split('/').pop()
-              logger.info(`[collectionBannerImageSync] Uploading banner image to S3 for collection: ${collection.contract}, bannerUrl: ${bannerUrl}, filename: ${filename}`)
-              const banner = await uploadImageToS3(
-                bannerUrl,
-                filename,
-                chainId,
-                collection.contract,
-                uploadPath,
-              )
-              bannerUrl = banner ? banner : bannerUrl
+              try {
+                logger.info(`[collectionBannerImageSync] Uploading banner image to S3 for collection: ${collection.contract}, bannerUrl: ${bannerUrl}, filename: ${filename}`)
+                const banner = await uploadImageToS3(
+                  bannerUrl,
+                  filename,
+                  chainId,
+                  collection.contract,
+                  uploadPath,
+                )
+                bannerUrl = banner ? banner : bannerUrl
+              } catch (err) {
+                logger.error(`[collectionBannerImageSync] Error while uploading banner image to S3 for collection: ${collection.contract}, bannerUrl: ${bannerUrl}, filename: ${filename}`)
+              }
 
               logger.info(`[collectionBannerImageSync] Banner image found for collection: ${collection.contract}. setting banner image`)
               await repositories.collection.updateOneById(collection.id, {
