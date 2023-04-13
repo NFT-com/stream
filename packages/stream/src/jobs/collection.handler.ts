@@ -642,8 +642,8 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
 
           logger.info(`[collectionBannerImageSync] contractNFT: ${JSON.stringify(contractNFT)}`)
   
+          let result
           if (collection?.contract && contractNFT?.tokenId) {
-            let result
             try {
               logger.info(`[collectionBannerImageSync] Fetching NFT details from NFT Port for contract: ${collection.contract} and tokenId: ${contractNFT.tokenId}`)
               result = await retrieveNFTDetailsNFTPort(
@@ -657,60 +657,60 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
             } catch (err) {
               logger.error(`[collectionBannerImageSync] Error while fetching NFT details from NFT Port for contract: ${collection.contract} and tokenId: ${contractNFT.tokenId}`)
             }
+          }
   
-            let bannerImageUrl: string = null
-            let imageUrl: string = null
+          let bannerImageUrl: string = null
+          let imageUrl: string = null
+
+          if (!result) {
+            [bannerImageUrl, imageUrl] = await fetchCollectionBannerImages(collection.contract, process.env.OPENSEA_ORDERS_API_KEY)
+            logger.info(`[collectionBannerImageSync] Fetching banner image from OpenSea for contract: ${collection.contract}, bannerImageUrl: ${bannerImageUrl}, imageUrl: ${imageUrl}`)
+          }
   
-            if (!result) {
-              [bannerImageUrl, imageUrl] = await fetchCollectionBannerImages(collection.contract, process.env.OPENSEA_ORDERS_API_KEY)
-              logger.info(`[collectionBannerImageSync] Fetching banner image from OpenSea for contract: ${collection.contract}, bannerImageUrl: ${bannerImageUrl}, imageUrl: ${imageUrl}`)
-            }
-    
-            let bannerUrl: string = null
-            const uploadPath = `collections/${chainId}/`
-            //  NFT Port Collection Image
-            if (result?.contract?.metadata?.cached_banner_url) {
-              bannerUrl = result.contract.metadata.cached_banner_url
-            } else if (result?.nft?.cached_file_url) {
-              bannerUrl = result.nft.cached_file_url
-            } else if (bannerImageUrl) {
-              bannerUrl = bannerImageUrl
-            } else if (contractNFT?.metadata?.imageURL) {
-              bannerUrl = contractNFT.metadata.imageURL
+          let bannerUrl: string = null
+          const uploadPath = `collections/${chainId}/`
+          //  NFT Port Collection Image
+          if (result?.contract?.metadata?.cached_banner_url) {
+            bannerUrl = result.contract.metadata.cached_banner_url
+          } else if (result?.nft?.cached_file_url) {
+            bannerUrl = result.nft.cached_file_url
+          } else if (bannerImageUrl) {
+            bannerUrl = bannerImageUrl
+          } else if (contractNFT?.metadata?.imageURL) {
+            bannerUrl = contractNFT.metadata.imageURL
+          }
+
+          if (bannerUrl) {
+            const filename = bannerUrl.split('/').pop()
+            try {
+              logger.info(`[collectionBannerImageSync] Uploading banner image to S3 for collection: ${collection.contract}, bannerUrl: ${bannerUrl}, filename: ${filename}`)
+              const banner = await uploadImageToS3(
+                bannerUrl,
+                filename,
+                chainId,
+                collection.contract,
+                uploadPath,
+              )
+              bannerUrl = banner ? banner : bannerUrl
+            } catch (err) {
+              logger.error(`[collectionBannerImageSync] Error while uploading banner image to S3 for collection: ${collection.contract}, bannerUrl: ${bannerUrl}, filename: ${filename}`)
             }
 
-            if (bannerUrl) {
-              const filename = bannerUrl.split('/').pop()
-              try {
-                logger.info(`[collectionBannerImageSync] Uploading banner image to S3 for collection: ${collection.contract}, bannerUrl: ${bannerUrl}, filename: ${filename}`)
-                const banner = await uploadImageToS3(
-                  bannerUrl,
-                  filename,
-                  chainId,
-                  collection.contract,
-                  uploadPath,
-                )
-                bannerUrl = banner ? banner : bannerUrl
-              } catch (err) {
-                logger.error(`[collectionBannerImageSync] Error while uploading banner image to S3 for collection: ${collection.contract}, bannerUrl: ${bannerUrl}, filename: ${filename}`)
-              }
+            logger.info(`[collectionBannerImageSync] Banner image found for collection: ${collection.contract}. setting banner image`)
+            await repositories.collection.updateOneById(collection.id, {
+              bannerUrl: bannerUrl || 'https://cdn.nft.com/collectionBanner_default.png',
+              logoUrl: collection?.logoUrl || imageUrl || 'https://cdn.nft.com/profile-image-default.svg',
+            })
+          } else {
+            logger.info(`[collectionBannerImageSync] No banner image found for collection: ${collection.contract}. setting default banner image`)
 
-              logger.info(`[collectionBannerImageSync] Banner image found for collection: ${collection.contract}. setting banner image`)
-              await repositories.collection.updateOneById(collection.id, {
-                bannerUrl: bannerUrl || 'https://cdn.nft.com/collectionBanner_default.png',
-                logoUrl: collection?.logoUrl || imageUrl || 'https://cdn.nft.com/profile-image-default.svg',
-              })
-            } else {
-              logger.info(`[collectionBannerImageSync] No banner image found for collection: ${collection.contract}. setting default banner image`)
-  
-              const updateObject = {
-                bannerUrl: 'https://cdn.nft.com/collectionBanner_default.png',
-              }
-  
-              if (!collection.logoUrl) updateObject['logoUrl'] = imageUrl || 'https://cdn.nft.com/profile-image-default.svg'
-  
-              await repositories.collection.updateOneById(collection.id, updateObject)
+            const updateObject = {
+              bannerUrl: 'https://cdn.nft.com/collectionBanner_default.png',
             }
+
+            if (!collection.logoUrl) updateObject['logoUrl'] = imageUrl || 'https://cdn.nft.com/profile-image-default.svg'
+
+            await repositories.collection.updateOneById(collection.id, updateObject)
           }
         } catch (err) {
           logger.debug(err, `[collectionBannerImageSync] Error occured while fetching contract NFT for ${collection.contract}`)
