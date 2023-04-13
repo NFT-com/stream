@@ -687,7 +687,8 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
               }
 
               await repositories.collection.updateOneById(collection.id, {
-                bannerUrl,
+                bannerUrl: bannerUrl || 'https://cdn.nft.com/collectionBanner_default.png',
+                logoUrl: collection?.logoUrl || imageUrl || 'https://cdn.nft.com/profile-image-default.svg',
               })
             } else {
               const updateObject = {
