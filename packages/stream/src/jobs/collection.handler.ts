@@ -602,7 +602,7 @@ const indexNFTs = async (nfts: Partial<entity.NFT>[]): Promise<void> => {
 
 // collection image sync
 export const collectionBannerImageSync = async (job: Job): Promise<void> => {
-  logger.log(`[collectionBannerImageSync] initiated collection banner image sync, ${JSON.stringify(job)}`)
+  logger.log(`[collectionBannerImageSync] initiated collection banner image sync`)
   const chainId: string = job?.data?.chainId || process.env.chainId || '5'
   try {
     const collections: Partial<entity.Collection>[] = await repositories.collection.find({
@@ -610,8 +610,6 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
         bannerUrl: IsNull(),
       },
     })
-    
-    logger.info(`[collectionBannerImageSync] Fetching banner image for ${collections.length} collections`)
 
     for (let i = 0; i < collections.length; i++) {
       const collection: Partial<entity.Collection> = collections[i]
@@ -626,7 +624,6 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
         // skip this loop
       } else {
         try {
-          logger.info(`[collectionBannerImageSync] Fetching banner image for collection: ${collection.contract}, chainId: ${collection?.chainId || chainId} currentIndex=${i + 1}, total=${collections.length}`)
           const contractNFT: Partial<entity.NFT> = await repositories.nft.findOne({
             where: {
               contract: collection?.contract,
@@ -640,12 +637,9 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
             },
           })
 
-          logger.info(`[collectionBannerImageSync] contractNFT: ${JSON.stringify(contractNFT)}`)
-  
           if (collection?.contract && contractNFT?.tokenId) {
             let result
             try {
-              logger.info(`[collectionBannerImageSync] Fetching NFT details from NFT Port for contract: ${collection.contract} and tokenId: ${contractNFT.tokenId}`)
               result = await retrieveNFTDetailsNFTPort(
                 collection.contract,
                 contractNFT.tokenId,
@@ -653,7 +647,6 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
                 false,
                 [],
               )
-              logger.info(`[collectionBannerImageSync] NFT details from NFT Port for contract: ${collection.contract} and tokenId: ${contractNFT.tokenId} is ${JSON.stringify(result)}`)
             } catch (err) {
               logger.error(`[collectionBannerImageSync] Error while fetching NFT details from NFT Port for contract: ${collection.contract} and tokenId: ${contractNFT.tokenId}`)
             }
@@ -663,7 +656,6 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
   
             if (!result) {
               [bannerImageUrl, imageUrl] = await fetchCollectionBannerImages(collection.contract, process.env.OPENSEA_ORDERS_API_KEY)
-              logger.info(`[collectionBannerImageSync] Fetching banner image from OpenSea for contract: ${collection.contract}, bannerImageUrl: ${bannerImageUrl}, imageUrl: ${imageUrl}`)
             }
     
             let bannerUrl: string = null
@@ -682,7 +674,6 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
             if (bannerUrl) {
               const filename = bannerUrl.split('/').pop()
               try {
-                logger.info(`[collectionBannerImageSync] Uploading banner image to S3 for collection: ${collection.contract}, bannerUrl: ${bannerUrl}, filename: ${filename}`)
                 const banner = await uploadImageToS3(
                   bannerUrl,
                   filename,
@@ -692,16 +683,13 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
                 )
                 bannerUrl = banner ? banner : bannerUrl
               } catch (err) {
-                logger.error(`[collectionBannerImageSync] Error while uploading banner image to S3 for collection: ${collection.contract}, bannerUrl: ${bannerUrl}, filename: ${filename}`)
+                logger.error(err, `[collectionBannerImageSync] Error while uploading banner image to S3 for collection: ${collection.contract}, bannerUrl: ${bannerUrl}, filename: ${filename}`)
               }
 
-              logger.info(`[collectionBannerImageSync] Banner image found for collection: ${collection.contract}. setting banner image`)
               await repositories.collection.updateOneById(collection.id, {
                 bannerUrl,
               })
             } else {
-              logger.info(`[collectionBannerImageSync] No banner image found for collection: ${collection.contract}. setting default banner image`)
-  
               const updateObject = {
                 bannerUrl: 'https://cdn.nft.com/collectionBanner_default.png',
               }
