@@ -607,7 +607,7 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
   try {
     const collections: Partial<entity.Collection>[] = await repositories.collection.find({
       where: {
-        bannerUrl: null
+        bannerUrl: IsNull(),
       },
     })
     
