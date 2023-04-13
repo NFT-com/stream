@@ -43,22 +43,6 @@ export interface LooksRareOrder {
   s: string
 }
 
-export interface LooksrareExternalOrder {
-  listings: entity.TxOrder[]
-  offers: entity.TxOrder[]
-}
-
-export interface LookrareResponse {
-  collectionAddress: string
-  tokenId: string
-  isOrderAsk: boolean // if isOrderAsk is true, it's listing, or else it's offer
-  currencyAddress: string
-  price: string
-  startTime: number
-  endTime: number
-  status: string
-}
-
 export interface LooksRareOrderV2 {
   id: string
   hash: string
@@ -84,6 +68,22 @@ export interface LooksRareOrderV2 {
   }[]
   amounts: string[]
   itemIds: string[]
+  status: string
+}
+
+export interface LooksrareExternalOrder {
+  listings: entity.TxOrder[]
+  offers: entity.TxOrder[]
+}
+
+export interface LookrareResponse {
+  collectionAddress: string
+  tokenId: string
+  isOrderAsk: boolean // if isOrderAsk is true, it's listing, or else it's offer
+  currencyAddress: string
+  price: string
+  startTime: number
+  endTime: number
   status: string
 }
 
