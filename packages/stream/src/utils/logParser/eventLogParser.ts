@@ -258,26 +258,32 @@ export const fulfillOrCancelLooksrareV2 = async (e: ethers.providers.Log, chainI
   const evt = looksrareProtocolInterface.parseLog(e)
   if (evt.name === LooksrareV2EventName.NewBidAskNonces) {
     const [user, bidNonce, askNonce] = evt.args
-    let newNonce
-
-    if (BigNumber.from(bidNonce) < BigNumber.from(askNonce)) { // TODO: fix this
-      newNonce = askNonce
-    } else {
-      // if bidNonce === askNonce the nonce used doesn't matter
-      newNonce = bidNonce
-    }
 
     try {
-      const orders: entity.TxOrder[] = await repositories.txOrder.find({
-        relations: ['activity'],
-        where: {
-          makerAddress: helper.checkSum(user),
-          hexNonce: Not(newNonce),
-          activity: {
-            status: defs.ActivityStatus.Valid,
-          },
-        },
-      })
+      const orders: entity.TxOrder[] = (
+        await Promise.all([
+          repositories.txOrder.find({
+            relations: ['activity'],
+            where: {
+              makerAddress: helper.checkSum(user),
+              hexNonce: Not(askNonce),
+              activity: {
+                status: defs.ActivityStatus.Valid,
+              },
+            },
+          }),
+          repositories.txOrder.find({
+            relations: ['activity'],
+            where: {
+              takerAddress: helper.checkSum(user),
+              hexNonce: Not(bidNonce),
+              activity: {
+                status: defs.ActivityStatus.Valid,
+              },
+            },
+          }),
+        ])
+      ).flat()
 
       if (orders.length) {
         const cancelEntityPromises: Promise<Partial<entity.TxCancel>>[] = []
