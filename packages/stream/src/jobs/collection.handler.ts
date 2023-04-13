@@ -611,7 +611,7 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
       },
     })
     
-    logger.info({ collections }, `[collectionBannerImageSync] Fetching banner image for ${collections.length} collections`)
+    logger.info(`[collectionBannerImageSync] Fetching banner image for ${collections.length} collections`)
 
     for (let i = 0; i < collections.length; i++) {
       const collection: Partial<entity.Collection> = collections[i]
@@ -625,7 +625,7 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
       if (collectionFromDB.bannerUrl) {
         // skip this loop
       } else {
-        logger.info({ collections }, `[collectionBannerImageSync] Fetching banner image for collection: ${collection.contract}, currentIndex=${i + 1}, total=${collections.length}`)
+        logger.info(`[collectionBannerImageSync] Fetching banner image for collection: ${collection.contract}, currentIndex=${i + 1}, total=${collections.length}`)
         try {
           const contractNFT: Partial<entity.NFT> = await repositories.nft.findOne({
             where: {
