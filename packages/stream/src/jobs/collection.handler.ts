@@ -495,16 +495,6 @@ export const spamCollectionSyncHandler = async (job: Job): Promise<void> => {
   }
 }
 
-try {
-  logger.info(`Starting phishing url sync`)
-   // URL of the tar.gz file in the Phishing.Database repository.
-   const phishingDatabaseURL = 'https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/ALL-phishing-links.tar.gz';
-   // Download, extract, and store the phishing database in Redis.
-   downloadAndStorePhishingDatabase(phishingDatabaseURL, 'ALL-phishing-links');
-} catch (err) {
-    logger.log(err, `Error in phishing database url sync: ${err}`)
-}
-
 export const collectionIssuanceDateSync = async (job: Job): Promise<void> => { 
   logger.log('initiating collection issuance sync')
   const chainId: string = job?.data?.chainId || process.env.CHAIN_ID || '5'
