@@ -625,12 +625,12 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
       if (collectionFromDB.bannerUrl) {
         // skip this loop
       } else {
-        logger.info(`[collectionBannerImageSync] Fetching banner image for collection: ${collection.contract}, currentIndex=${i + 1}, total=${collections.length}`)
         try {
+          logger.info(`[collectionBannerImageSync] Fetching banner image for collection: ${collection.contract}, chainId: ${collection?.chainId || chainId} currentIndex=${i + 1}, total=${collections.length}`)
           const contractNFT: Partial<entity.NFT> = await repositories.nft.findOne({
             where: {
               contract: collection?.contract,
-              chainId: collection.chainId || chainId,
+              chainId: collection?.chainId || chainId,
             },
             select: {
               tokenId: true,
@@ -639,10 +639,13 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
               },
             },
           })
+
+          logger.info(`[collectionBannerImageSync] contractNFT: ${JSON.stringify(contractNFT)}`)
   
           if (collection?.contract && contractNFT?.tokenId) {
             let result
             try {
+              logger.info(`[collectionBannerImageSync] Fetching NFT details from NFT Port for contract: ${collection.contract} and tokenId: ${contractNFT.tokenId}`)
               result = await retrieveNFTDetailsNFTPort(
                 collection.contract,
                 contractNFT.tokenId,
@@ -650,6 +653,7 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
                 false,
                 [],
               )
+              logger.info(`[collectionBannerImageSync] NFT details from NFT Port for contract: ${collection.contract} and tokenId: ${contractNFT.tokenId} is ${JSON.stringify(result)}`)
             } catch (err) {
               logger.error(`[collectionBannerImageSync] Error while fetching NFT details from NFT Port for contract: ${collection.contract} and tokenId: ${contractNFT.tokenId}`)
             }
@@ -659,6 +663,7 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
   
             if (!result) {
               [bannerImageUrl, imageUrl] = await fetchCollectionBannerImages(collection.contract, process.env.OPENSEA_ORDERS_API_KEY)
+              logger.info(`[collectionBannerImageSync] Fetching banner image from OpenSea for contract: ${collection.contract}, bannerImageUrl: ${bannerImageUrl}, imageUrl: ${imageUrl}`)
             }
     
             let bannerUrl: string = null
@@ -676,6 +681,7 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
     
             if (bannerUrl) {
               const filename = bannerUrl.split('/').pop()
+              logger.info(`[collectionBannerImageSync] Uploading banner image to S3 for collection: ${collection.contract}, bannerUrl: ${bannerUrl}, filename: ${filename}`)
               const banner = await uploadImageToS3(
                 bannerUrl,
                 filename,
