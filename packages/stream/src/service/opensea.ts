@@ -219,6 +219,47 @@ export const getOpenseaInterceptor = (
 }
 
 /**
+ * Fetches the banner image URL and image URL for a given collection based on its contract address.
+ *
+ * @param contractAddress - The contract address of the collection to fetch.
+ * @param apiKey - The API key to be used for authentication with the OpenSea API.
+ * @returns A tuple containing the banner image URL and image URL. Returns [null, null] in case of errors or if URLs are not available.
+ */
+export const fetchCollectionBannerImages = async (
+  contractAddress: string,
+  apiKey: string
+): Promise<[string | null, string | null]> => {
+  // Set up the headers for the request, including the API key.
+  const headers = {
+    'X-API-KEY': apiKey,
+  }
+
+  // Set up the Axios instance with the appropriate OpenSea API base URL.
+  const apiBaseUrl = 'https://api.opensea.io/api/v1'
+  const openseaInstance = getOpenseaInterceptor(apiBaseUrl, process.env.CHAIN_ID || '1')
+
+  try {
+    // Define the OpenSea API endpoint for the collection details based on contract address.
+    const url = `/asset_contract/${contractAddress}`
+
+    // Fetch the collection data from the OpenSea API, including the headers.
+    const response = await openseaInstance.get(url, { headers })
+
+    // Extract the banner image URL and image URL.
+    const bannerImageUrl = response.data.collection?.['banner_image_url']?.replace('?w=500&auto=format', '') ?? null
+    const imageUrl = response.data.collection?.['image_url']?.replace('?w=500&auto=format', '') ?? null
+
+    logger.info(`fetchCollectionBannerImages collection banner image for contract ${contractAddress}: ${bannerImageUrl}, ${imageUrl}`)
+
+    // Return the banner image URL and image URL as a tuple.
+    return [bannerImageUrl, imageUrl]
+  } catch (error) {
+    logger.error(`Error fetchCollectionBannerImages fetching collection banner image for contract ${contractAddress}: ${error}`)
+    return [null, null]
+  }
+}
+
+/**
  * Retrieve listings in batches
  * @param slugsQueryParams
  */

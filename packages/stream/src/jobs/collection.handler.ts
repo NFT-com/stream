@@ -5,7 +5,7 @@ import { BigNumber } from 'ethers'
 import { createWriteStream, unlink } from 'fs';
 import fetch from 'node-fetch';
 import * as tar from 'tar';
-import { FindOptionsWhere,ILike, In, IsNull, Not } from 'typeorm'
+import { FindOptionsWhere, In, IsNull, Not } from 'typeorm'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -18,6 +18,7 @@ import { getAlchemyInterceptor } from '../service/alchemy'
 import { cache, CacheKeys, removeExpiredTimestampedZsetMembers, ttlForTimestampedZsetMembers } from '../service/cache'
 import { getEtherscanInterceptor } from '../service/etherscan'
 import { getNFTPortInterceptor, NFTPortNFT, retrieveContractNFTsNFTPort, retrieveNFTDetailsNFTPort } from '../service/nftPort'
+import { fetchCollectionBannerImages } from '../service/opensea'
 import { delay } from '../utils'
 import { collectionEntityBuilder, nftEntityBuilder, nftEntityBuilderCryptoPunks, nftTraitBuilder } from '../utils/builder/nftBuilder'
 import { uploadImageToS3 } from '../utils/uploader'
@@ -26,13 +27,6 @@ import { collectionSyncSubqueue } from './jobs'
 const logger = _logger.Factory(_logger.Context.Bull)
 const repositories = db.newRepositories()
 const CRYPTOPUNK = '0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb'
-
-const exceptionBannerUrls: string[] = [
-  'https://cdn.nft.com/collections/1/%banner.png',
-  'https://cdn.nft.com/collections/1/%banner.jpg',
-  'https://cdn.nft.com/collections/1/%banner.jpeg',
-  'https://cdn.nft.com/collectionBanner_default.png',
-]
 
 const subQueueBaseOptions: Bull.JobsOptions = {
   attempts: 2,
@@ -57,7 +51,7 @@ export const nftSyncHandler = async (job: Job): Promise<void> => {
   const { contract, chainId, startTokenParam } = job.data
   logger.log(`nft sync handler process started for: ${contract}, chainId: ${chainId}`)
   try {
-    const alchemyInstance: AxiosInstance = await getAlchemyInterceptor(chainId)
+    const alchemyInstance: AxiosInstance = await getAlchemyInterceptor(chainId, true)
     const nftPortInstance: AxiosInstance = await getNFTPortInterceptor('https://api.nftport.xyz/v0')
   
     // nft port specific sync
@@ -411,10 +405,10 @@ const deleteFiles = (filePaths: string[]): void => {
  * @param url The URL of the tar.gz file containing the phishing domain database.
  * @returns A promise that resolves when the operation is complete.
  */
-const downloadAndStorePhishingDatabase = async (url: string): Promise<void> => {
+const downloadAndStorePhishingDatabase = async (url: string, base: string): Promise<void> => {
   // Define the path to the tar.gz file.
-  const filePath = 'ALL-phishing-domains.tar.gz';
-  const filePathTxt = 'ALL-phishing-domains.txt';
+  const filePath = `${base}.tar.gz`
+  const filePathTxt = `${base}.txt`
 
   try {
     // Download the tar.gz file using fetch.
@@ -478,7 +472,7 @@ export const isPhishingURL = async (url: string): Promise<boolean> => {
 export const spamCollectionSyncHandler = async (job: Job): Promise<void> => {
   logger.log('initiated spam collection sync')
   const chainId: string = job.data.chainId || process.env.chainId || '5'
-  const alchemyInstance: AxiosInstance = await getAlchemyInterceptor(chainId)
+  const alchemyInstance: AxiosInstance = await getAlchemyInterceptor(chainId, true)
     
   try {
     const spamCollectionsResponse: AxiosResponse = await alchemyInstance.get('/getSpamContracts')
@@ -488,9 +482,9 @@ export const spamCollectionSyncHandler = async (job: Job): Promise<void> => {
     }
 
     // URL of the tar.gz file in the Phishing.Database repository.
-    const phishingDatabaseURL = 'https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/ALL-phishing-domains.tar.gz';
+    const phishingDatabaseURL = 'https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/ALL-phishing-links.tar.gz';
     // Download, extract, and store the phishing database in Redis.
-    await downloadAndStorePhishingDatabase(phishingDatabaseURL);
+    await downloadAndStorePhishingDatabase(phishingDatabaseURL, 'ALL-phishing-links');
 
     // Test the helper function.
     logger.info(await isPhishingURL('00000000000000000000000000000000000000000.xyz'));  // Output: true or false
@@ -499,16 +493,6 @@ export const spamCollectionSyncHandler = async (job: Job): Promise<void> => {
   } catch (err) {
     logger.log(err, `Error in spam collection and phishing database url sync: ${err}`)
   }
-}
-
-try {
-  logger.info(`Starting phishing url sync`)
-   // URL of the tar.gz file in the Phishing.Database repository.
-   const phishingDatabaseURL = 'https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/ALL-phishing-domains.tar.gz';
-   // Download, extract, and store the phishing database in Redis.
-   downloadAndStorePhishingDatabase(phishingDatabaseURL);
-} catch (err) {
-    logger.log(err, `Error in phishing database url sync: ${err}`)
 }
 
 export const collectionIssuanceDateSync = async (job: Job): Promise<void> => { 
@@ -608,53 +592,61 @@ const indexNFTs = async (nfts: Partial<entity.NFT>[]): Promise<void> => {
 
 // collection image sync
 export const collectionBannerImageSync = async (job: Job): Promise<void> => {
-  logger.log('initiated collection banner image sync')
-  const chainId: string = job.data.chainId || process.env.chainId || '5'
-  const queryFilters = exceptionBannerUrls.map((exceptionBannerUrl: string) =>
-    ({ bannerUrl: ILike(exceptionBannerUrl) }))
+  logger.log(`[collectionBannerImageSync] initiated collection banner image sync, ${JSON.stringify(job)}`)
+  const chainId: string = job?.data?.chainId || process.env.chainId || '5'
   try {
-    const collections: Partial<entity.Collection>[] = await repositories.collection.find(
-      {
-        where:[
-          { bannerUrl: IsNull() },
-          ...queryFilters,
-        ],
-        select: {
-          id: true,
-          contract: true,
-          bannerUrl: true,
-          chainId: true,
-        },
+    const collections: Partial<entity.Collection>[] = await repositories.collection.find({
+      where: {
+        bannerUrl: IsNull(),
+      },
+    })
+    
+    for (let i = 0; i < collections.length; i++) {
+      const collection: Partial<entity.Collection> = collections[i]
+      // find collection again and check if bannerUrl is null since cron happens every 15 seconds
+      const collectionFromDB: Partial<entity.Collection> = await repositories.collection.findOne({
+        where: {
+          id: collection.id,
+        }
       })
 
-    for (const collection of collections) {
-      try {
-        const contractNFT: Partial<entity.NFT> = await repositories.nft.findOne({
-          where: {
-            contract: collection?.contract,
-            chainId: collection.chainId || chainId,
-          },
-          select: {
-            tokenId: true,
-            metadata: {
-              imageURL: true,
+      if (collectionFromDB.bannerUrl) {
+        // skip this loop
+      } else {
+        try {
+          const contractNFT: Partial<entity.NFT> = await repositories.nft.findOne({
+            where: {
+              contract: collection?.contract,
+              chainId: collection?.chainId || chainId,
             },
-          },
-        })
-
-        if (collection?.contract && contractNFT?.tokenId) {
+            select: {
+              tokenId: true,
+              metadata: {
+                imageURL: true,
+              },
+            },
+          })
+  
           let result
-          try {
-            result = await retrieveNFTDetailsNFTPort(
-              collection.contract,
-              contractNFT.tokenId,
-              chainId,
-              false,
-              [],
-            )
-          } catch (err) {
-            logger.error(`Error while fetching NFT details from NFT Port for contract: 
-                  ${collection.contract} and tokenId: ${contractNFT.tokenId}`)
+          if (collection?.contract && contractNFT?.tokenId) {
+            try {
+              result = await retrieveNFTDetailsNFTPort(
+                collection.contract,
+                contractNFT.tokenId,
+                chainId,
+                false,
+                [],
+              )
+            } catch (err) {
+              logger.error(`[collectionBannerImageSync] Error while fetching NFT details from NFT Port for contract: ${collection.contract} and tokenId: ${contractNFT.tokenId}`)
+            }
+          }
+  
+          let bannerImageUrl: string = null
+          let imageUrl: string = null
+
+          if (!result) {
+            [bannerImageUrl, imageUrl] = await fetchCollectionBannerImages(collection.contract, process.env.OPENSEA_ORDERS_API_KEY)
           }
   
           let bannerUrl: string = null
@@ -664,31 +656,47 @@ export const collectionBannerImageSync = async (job: Job): Promise<void> => {
             bannerUrl = result.contract.metadata.cached_banner_url
           } else if (result?.nft?.cached_file_url) {
             bannerUrl = result.nft.cached_file_url
+          } else if (bannerImageUrl) {
+            bannerUrl = bannerImageUrl
           } else if (contractNFT?.metadata?.imageURL) {
             bannerUrl = contractNFT.metadata.imageURL
           }
-  
+
           if (bannerUrl) {
             const filename = bannerUrl.split('/').pop()
-            const banner = await uploadImageToS3(
-              bannerUrl,
-              filename,
-              chainId,
-              collection.contract,
-              uploadPath,
-            )
-            bannerUrl = banner ? banner : bannerUrl
+            try {
+              const banner = await uploadImageToS3(
+                bannerUrl,
+                filename,
+                chainId,
+                collection.contract,
+                uploadPath,
+              )
+              bannerUrl = banner ? banner : bannerUrl
+            } catch (err) {
+              logger.error(`[collectionBannerImageSync] Error while uploading banner image to S3 for collection: ${collection.contract}, bannerUrl: ${bannerUrl}, filename: ${filename}`)
+            }
+
             await repositories.collection.updateOneById(collection.id, {
-              bannerUrl,
+              bannerUrl: bannerUrl || 'https://cdn.nft.com/collectionBanner_default.png',
+              logoUrl: collection?.logoUrl || imageUrl || 'https://cdn.nft.com/profile-image-default.svg',
             })
+          } else {
+            const updateObject = {
+              bannerUrl: 'https://cdn.nft.com/collectionBanner_default.png',
+            }
+
+            if (!collection.logoUrl) updateObject['logoUrl'] = imageUrl || 'https://cdn.nft.com/profile-image-default.svg'
+
+            await repositories.collection.updateOneById(collection.id, updateObject)
           }
+        } catch (err) {
+          logger.error(err, `[collectionBannerImageSync] Error occured while fetching contract NFT for ${collection.contract}`)
         }
-      } catch (err) {
-        logger.debug(err, `Error occured while fetching contract NFT for ${collection.contract}`)
       }
     }
   } catch (err) {
-    logger.error(`Error in collection banner image sync: ${err}`)
+    logger.error(`[collectionBannerImageSync] Error in collection banner image sync: ${err}`)
   }
 }
 
