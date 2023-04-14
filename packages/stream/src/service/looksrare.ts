@@ -53,7 +53,7 @@ export interface LooksRareOrderV2 {
   collection: string
   currency: string
   signer: string
-  strategy: number
+  strategyId: number
   collectionType: number
   startTime: number
   endTime: number
@@ -156,7 +156,7 @@ const retrieveLooksRareOrdersInBatches = async (
       logger.log('looksrare order', orders)
       if(queryUrl.includes('quoteType=1')){
         const listing = await orderEntityBuilder(
-          defs.ProtocolType.LooksRare,
+          defs.ProtocolType.LooksRareV2,
           defs.ActivityType.Listing,
           orders[0],
           chainId,
@@ -178,7 +178,7 @@ const retrieveLooksRareOrdersInBatches = async (
       }
       else  {
         const offer = await orderEntityBuilder(
-          defs.ProtocolType.LooksRare,
+          defs.ProtocolType.LooksRareV2,
           defs.ActivityType.Bid,
           orders?.[0],
           chainId,

@@ -214,7 +214,7 @@ export const nftExternalOrdersOnDemand = async (job: Job): Promise<void> => {
       // settlements should not depend on each other
       const [opensea, looksrare, x2y2] = await Promise.allSettled([
         openseaService.retrieveMultipleOrdersOpensea(nftRequest, chainId, true),
-        looksrareService.retrieveMultipleOrdersLooksrare(nftRequest,chainId, true),
+        looksrareService.retrieveMultipleOrdersLooksrare(nftRequest, chainId, true),
         x2y2Service.retrieveMultipleOrdersX2Y2(nftRequest, chainId, true),
       ])
 
@@ -322,7 +322,6 @@ export const nftExternalOrdersOnDemand = async (job: Job): Promise<void> => {
 
 enum OrderStatusCallType {
   OPENSEA = 'getOrderStatus',
-  LOOKSRARE = 'isUserOrderNonceExecutedOrCancelled',
   X2Y2 = 'inventoryStatus'
 }
 
@@ -541,47 +540,6 @@ const fulfillOrCancelOpenSea = async (
   }
 }
 
-const fulfillOrCancelLooksrare = async (
-  makerAddress: string,
-  nonce: string,
-  isExecutedOrCancelled: boolean,
-): Promise<void> => {
-  if (isExecutedOrCancelled) {
-    const orders: Partial<entity.TxOrder>[] = await repositories.txOrder.find({
-      relations: ['activity'],
-      where: {
-        makerAddress: helper.checkSum(makerAddress),
-        nonce: Number(nonce),
-        exchange: defs.ExchangeType.LooksRare,
-        activity: {
-          activityType: defs.ActivityType.Listing,
-          status: defs.ActivityStatus.Valid,
-        },
-      },
-      select: {
-        orderHash: true,
-      },
-    })
-  
-    let orderIdMap: string[] = []
-    if (orders.length) {
-      orderIdMap = orders.map((order: Partial<entity.TxOrder>) => order.activity.id)
-    }
-    if (orderIdMap.length) {
-      // marking everything as executed for now - need to see if cancellations can be separated
-      // it serves the purpose for now since all the orders become invalid
-      // https://looksrare.dev/reference/orders-schema
-      const updateFilter  = {
-        id: In(orderIdMap),
-      } as any
-      await repositories.txActivity.update(updateFilter, {
-        status: defs.ActivityStatus.Executed,
-      })
-      logger.log(`Looksrare orders with order ids: ${orderIdMap.join(',')} have been executed.`)
-    }
-  }
-}
-
 const fulfillOrCancelX2Y2 = async (
   orderHash: string,
   callResponse: number,
@@ -634,7 +592,6 @@ const fetchDataUsingMulticallAndReconcile = async (
       )
 
     let openSeaPromiseArray = [],
-      looksrarePromiseArray = [],
       x2y2PromiseArray = [],
       openSeaInvalidCounterArray = []
     // 3. decode bytes array to useful data array...
@@ -663,12 +620,6 @@ const fetchDataUsingMulticallAndReconcile = async (
           ),
           )
           break
-        case OrderStatusCallType.LOOKSRARE:
-          looksrarePromiseArray.push(fulfillOrCancelLooksrare(callParams?.[0],
-            callParams?.[1],
-            resultDecoded?.[0],
-          ))
-          break
         case OrderStatusCallType.X2Y2:
           x2y2PromiseArray.push(fulfillOrCancelX2Y2(callParams?.[0],
             resultDecoded?.[0],
@@ -681,10 +632,6 @@ const fetchDataUsingMulticallAndReconcile = async (
         if (openSeaPromiseArray.length > CALL_BATCH_SIZE) {
           await Promise.all(openSeaPromiseArray)
           openSeaPromiseArray = []
-        }
-        if (looksrarePromiseArray.length > CALL_BATCH_SIZE) {
-          await Promise.all(looksrarePromiseArray)
-          looksrarePromiseArray = []
         }
         if (x2y2PromiseArray.length > CALL_BATCH_SIZE) {
           await Promise.all(x2y2PromiseArray)
@@ -702,10 +649,6 @@ const fetchDataUsingMulticallAndReconcile = async (
     if (openSeaPromiseArray.length) {
       await Promise.all(openSeaPromiseArray)
       openSeaPromiseArray = []
-    }
-    if (looksrarePromiseArray.length > CALL_BATCH_SIZE) {
-      await Promise.all(looksrarePromiseArray)
-      looksrarePromiseArray = []
     }
     if (x2y2PromiseArray.length) {
       await Promise.all(x2y2PromiseArray)
@@ -766,9 +709,8 @@ export const orderReconciliationHandler = async (job: Job): Promise<void> =>  {
       })
   
       if (unexpiredListingBatch?.length) {
-        let seaportCalls = [], looksrareCalls = [], x2y2Calls = []
+        let seaportCalls = [], x2y2Calls = []
         const seaportAbi = contracts.openseaSeaportABI()
-        const looksrareAbi = contracts.looksrareExchangeABI()
         const x2y2Abi = contracts.x2y2ABI()
     
         for (const listing of unexpiredListingBatch) {
@@ -788,16 +730,6 @@ export const orderReconciliationHandler = async (job: Job): Promise<void> =>  {
                 contract: contracts.openseaSeaportAddress1_4(chainId),
                 name: 'getOrderStatus',
                 params: [listing.orderHash],
-              })
-            }
-            break
-          case defs.ExchangeType.LooksRare:
-            if (listing?.protocolData?.nonce !== null
-                && listing?.protocolData?.nonce !== undefined) {
-              looksrareCalls.push({
-                contract: contracts.looksrareExchangeAddress(chainId),
-                name: 'isUserOrderNonceExecutedOrCancelled',
-                params: [listing.makerAddress, listing.protocolData?.nonce],
               })
             }
             break
@@ -823,11 +755,6 @@ export const orderReconciliationHandler = async (job: Job): Promise<void> =>  {
             seaportCalls = []
           }
     
-          if (looksrareCalls.length >= CALL_BATCH_SIZE) {
-            await fetchDataUsingMulticallAndReconcile(looksrareCalls, looksrareAbi, chainId)
-            looksrareCalls = []
-          }
-    
           if (x2y2Calls.length >= CALL_BATCH_SIZE) {
             await fetchDataUsingMulticallAndReconcile(x2y2Calls, x2y2Abi, chainId)
             x2y2Calls = []
@@ -837,11 +764,6 @@ export const orderReconciliationHandler = async (job: Job): Promise<void> =>  {
         if (seaportCalls.length) {
           await fetchDataUsingMulticallAndReconcile(seaportCalls, seaportAbi, chainId)
           seaportCalls = []
-        }
-    
-        if (looksrareCalls.length) {
-          await fetchDataUsingMulticallAndReconcile(looksrareCalls, looksrareAbi, chainId)
-          looksrareCalls = []
         }
     
         if (x2y2Calls.length) {

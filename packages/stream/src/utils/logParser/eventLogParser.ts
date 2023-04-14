@@ -377,7 +377,7 @@ export const fulfillOrCancelLooksrareV2 = async (e: ethers.providers.Log, chainI
           id: orderHash,
           makerAddress: helper.checkSum(bidUser),
           exchange: defs.ExchangeType.LooksRare,
-          protocol: defs.ProtocolType.LooksRare,
+          protocol: defs.ProtocolType.LooksRareV2,
           activity: {
             status: defs.ActivityStatus.Valid,
             nftContract: helper.checkSum(collection),
@@ -403,9 +403,9 @@ export const fulfillOrCancelLooksrareV2 = async (e: ethers.providers.Log, chainI
           bidUser, // maker
           askUser, // taker
           defs.ExchangeType.LooksRare,
-          order.protocolData?.price,
-          order.protocolData?.currencyAddress,
-          LooksrareEventName.TakerAsk,
+          order.protocol,
+          order.protocolData,
+          LooksrareV2EventName.TakerAsk,
         )
         await repositories.txTransaction.save(newTx)
 
@@ -456,7 +456,7 @@ export const fulfillOrCancelLooksrareV2 = async (e: ethers.providers.Log, chainI
           id: orderHash,
           makerAddress: helper.checkSum(bidUser),
           exchange: defs.ExchangeType.LooksRare,
-          protocol: defs.ProtocolType.LooksRare,
+          protocol: defs.ProtocolType.LooksRareV2,
           activity: {
             status: defs.ActivityStatus.Valid,
             nftContract: helper.checkSum(collection),
@@ -484,7 +484,7 @@ export const fulfillOrCancelLooksrareV2 = async (e: ethers.providers.Log, chainI
           defs.ExchangeType.LooksRare,
           order.protocol,
           order.protocolData,
-          LooksrareEventName.TakerBid,
+          LooksrareV2EventName.TakerBid,
         )
         await repositories.txTransaction.save(newTx)
 
@@ -512,7 +512,7 @@ export const fulfillOrCancelLooksrareV2 = async (e: ethers.providers.Log, chainI
         `)
       }
     } catch (err) {
-      logger.error(`Evt: ${LooksrareEventName.TakerBid} -- Err: ${err}`)
+      logger.error(`Evt: ${LooksrareV2EventName.TakerBid} -- Err: ${err}`)
     }
   } else {
     // not relevant in our search space

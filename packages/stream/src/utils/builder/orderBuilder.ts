@@ -2,13 +2,13 @@ import { BigNumber } from 'ethers'
 
 import { db, defs, entity, helper } from '@nftcom/shared'
 
-import { SeaportConsideration, TxLooksrareProtocolData, TxSeaportProtocolData, TxX2Y2ProtocolData } from '../../interface'
+import { SeaportConsideration, TxLooksrareV2ProtocolData, TxSeaportProtocolData, TxX2Y2ProtocolData } from '../../interface'
 import { LooksRareOrderV2 } from '../../service/looksrare'
 import { SeaportOffer, SeaportOrder } from '../../service/opensea'
 
 type Order = SeaportOrder | LooksRareOrderV2
 
-type TxProtocolData = TxSeaportProtocolData | TxLooksrareProtocolData | TxX2Y2ProtocolData
+type TxProtocolData = TxSeaportProtocolData | TxLooksrareV2ProtocolData | TxX2Y2ProtocolData
 
 const repositories = db.newRepositories()
 
@@ -90,12 +90,13 @@ const looksrareOrderBuilder = (
     exchange: defs.ExchangeType.LooksRare,
     makerAddress: helper.checkSum(order.signer),
     takerAddress: null,
-    nonce: Number(order.globalNonce),
+    nonce: Number(order.orderNonce),
+    hexNonce: order.globalNonce,
     protocolData: {
       ...order,
       signer: helper.checkSum(order.signer),
-      collectionAddress: helper.checkSum(order.collection),
-      currencyAddress: helper.checkSum(order.currency),
+      collection: helper.checkSum(order.collection),
+      currency: helper.checkSum(order.currency),
     },
   }
 }
@@ -140,7 +141,7 @@ export const orderEntityBuilder = async (
     })
     orderEntity = seaportOrderBuilder(seaportOrder)
     break
-  case defs.ProtocolType.LooksRare:
+  case defs.ProtocolType.LooksRareV2:
     looksrareOrder = order as LooksRareOrderV2
     orderHash = looksrareOrder.hash
     walletAddress = helper.checkSum(looksrareOrder.signer)
