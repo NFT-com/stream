@@ -75,6 +75,9 @@ runs:
         CHAIN_ID: ${{ fromJSON(inputs.secrets).CHAIN_ID }}
         AUTH_MESSAGE: ${{ fromJSON(inputs.secrets).AUTH_MESSAGE }}
         SG_API_KEY: ${{ fromJSON(inputs.secrets).SG_API_KEY }}
+        ALCHEMY_NFT_FREQUENCY_MS: ${{ fromJSON(inputs.secrets).ALCHEMY_NFT_FREQUENCY_MS }}
+        USE_STREAMING_FAST: ${{ fromJSON(inputs.secrets).USE_STREAMING_FAST }}
+        STREAMING_FAST_CONNECTION_STRING: ${{ fromJSON(inputs.secrets).STREAMING_FAST_CONNECTION_STRING }}
         CONFIRM_EMAIL_URL: "tbd"
         ETH_GAS_STATION_API_KEY: ${{ fromJSON(inputs.secrets).ETH_GAS_STATION_API_KEY }}
         TEAM_AUTH_TOKEN: ${{ fromJSON(inputs.secrets).TEAM_AUTH_TOKEN }}

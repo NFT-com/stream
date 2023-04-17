@@ -10,7 +10,7 @@ import { burnService } from './burn'
 import { atomicOwnershipUpdate } from './ownership'
 
 const repositories = db.newRepositories()
-const connectionString = 'postgresql://app:nftcom1234@sf-substreams-instance-1.clmsk3iud7e0.us-east-1.rds.amazonaws.com:5432/app'
+const connectionString = process.env.STREAMING_FAST_CONNECTION_STRING
 const logger = _logger.Factory('STREAMINGFAST')
 const client = new Client({ connectionString })
 const nftDoesNotExist = new EventEmitter()
@@ -137,6 +137,11 @@ const handleNotification = async (msg: any): Promise<void> => {
 }
 
 export function startStreamingFast(): void {
+  if (process.env.USE_STREAMING_FAST != 'true') {
+    logger.warn('StreamingFast is disabled')
+    return
+  }
+
   logger.info('---------> ⚡️ starting streaming fast listener, waiting for new transfers...')
   if (interval || client.listeners('notification').length) {
     logger.warn('StreamingFast is already running')
@@ -158,6 +163,11 @@ export function startStreamingFast(): void {
 }
 
 export function stopStreamingFast(): void {
+  if (process.env.USE_STREAMING_FAST != 'true') {
+    logger.warn('StreamingFast is disabled')
+    return
+  }
+
   logger.info('---------> 🛑 stopping streaming fast listener')
   if (!interval || !client.listeners('notification').length) {
     logger.warn('StreamingFast is not running')
