@@ -1,9 +1,9 @@
 import { BigNumber, ethers, providers, utils } from 'ethers'
-import { In } from 'typeorm'
+import { In, Not } from 'typeorm'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import { core } from '@nftcom/gql/service'
+import { core, nftService } from '@nftcom/gql/service'
 import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
 import { delay } from '../utils'
@@ -264,6 +264,7 @@ const keepAlive = ({
 
     const looksrareProtocolAddress = helper.checkSum(contracts.looksrareProtocolAddress(chainId.toString()))
 
+    const nonceInvalidationParametersType = '(bytes32,uint256,bool)'
     const looksrareV2TopicFilter = [
       [
         helper.id('NewBidAskNonces(address,uint256,uint256)'),

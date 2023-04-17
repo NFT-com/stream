@@ -361,7 +361,7 @@ export const fulfillOrCancelLooksrareV2 = async (e: ethers.providers.Log, chainI
       [orderHash, orderNonce, _isNonceInvalidated],
       askUser, // taker (initiates the transaction)
       bidUser, // maker (receives the NFT)
-      _strategyId,
+      strategyId,
       currency,
       collection,
       _itemIds,
@@ -429,7 +429,7 @@ export const fulfillOrCancelLooksrareV2 = async (e: ethers.providers.Log, chainI
 
         logger.debug(`
             updated ${orderHash} for collection ${collection} -- strategy:
-            ${strategy}, currency:${currency} orderNonce:${orderNonce}
+            ${strategyId}, currency:${currency} orderNonce:${orderNonce}
             `)
       }
     } catch (err) {
@@ -440,7 +440,7 @@ export const fulfillOrCancelLooksrareV2 = async (e: ethers.providers.Log, chainI
       [orderHash, orderNonce, _isNonceInvalidated],
       askUser, // taker (initiates the transaction)
       bidUser, // maker (receives the NFT)
-      _strategyId,
+      strategyId,
       currency,
       collection,
       _itemIds,
@@ -508,7 +508,7 @@ export const fulfillOrCancelLooksrareV2 = async (e: ethers.providers.Log, chainI
 
         logger.debug(`
         updated ${orderHash} for collection ${collection} -- strategy:
-        ${strategy}, currency:${currency} orderNonce:${orderNonce}
+        ${strategyId}, currency:${currency} orderNonce:${orderNonce}
         `)
       }
     } catch (err) {

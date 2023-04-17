@@ -364,12 +364,12 @@ const reconcileInvalidCounterOrdersOpenSea = async (
         orderHash: true,
         makerAddress: true,
         nonce: true,
-        osNonce: true, // included since seaport 1.4 for string type
+        hexNonce: true, // included since seaport 1.4 for string type
       },
     })
 
-    const opensea1_1 = openSeaListings.filter((listing) => !listing.osNonce)
-    const opensea1_4 = openSeaListings.filter((listing) => listing.osNonce)
+    const opensea1_1 = openSeaListings.filter(listing => !listing.hexNonce)
+    const opensea1_4 = openSeaListings.filter(listing => listing.hexNonce)
     openSeaListings = null // free memory
 
     const nonceCalls = []
@@ -437,10 +437,14 @@ const reconcileInvalidCounterOrdersOpenSea = async (
                 // is impossible to predict, therefore, it is unlikely to have pre-generated nonces
                 // from being used in the future. As such, we only care about if the current nonce
                 // is equal to the nonce in the order
-                if (currentNonceInString !== listing.osNonce) {
+                if (currentNonceInString !== listing.hexNonce) {
                   listing.activity.status = defs.ActivityStatus.Cancelled
                   listingsToBeUpdated.push(listing)
-                  logger.info(`[SEAPORT 1.4] Invalid counter order found for listing -> updating to cancelled ${JSON.stringify(listing)} - currentNonceString: ${currentNonceInString}`)
+                  logger.info(
+                    `[SEAPORT 1.4] Invalid counter order found for listing -> updating to cancelled ${JSON.stringify(
+                      listing,
+                    )} - currentNonceString: ${currentNonceInString}`,
+                  )
                 }
               }
 
@@ -715,34 +719,34 @@ export const orderReconciliationHandler = async (job: Job): Promise<void> =>  {
     
         for (const listing of unexpiredListingBatch) {
           switch (listing.exchange) {
-          case defs.ExchangeType.OpenSea:
-            if (listing?.nonce) {
-              seaportCalls.push({
-                contract: contracts.openseaSeaportAddress(chainId),
-                name: 'getOrderStatus',
-                params: [listing.orderHash],
-              })
-            }
+            case defs.ExchangeType.OpenSea:
+              if (listing?.nonce) {
+                seaportCalls.push({
+                  contract: contracts.openseaSeaportAddress(chainId),
+                  name: 'getOrderStatus',
+                  params: [listing.orderHash],
+                })
+              }
 
-            // osNonce string only used for 1.4
-            if (listing?.osNonce) {
-              seaportCalls.push({
-                contract: contracts.openseaSeaportAddress1_4(chainId),
-                name: 'getOrderStatus',
+              // hexNonce string only used for 1.4
+              if (listing?.hexNonce) {
+                seaportCalls.push({
+                  contract: contracts.openseaSeaportAddress1_4(chainId),
+                  name: 'getOrderStatus',
+                  params: [listing.orderHash],
+                })
+              }
+              break
+            case defs.ExchangeType.X2Y2:
+              // 0 -> not fulfilled, 1 -> auction, 2 -> fulfilled, 3 -> cancelled, 4 -> refunded
+              x2y2Calls.push({
+                contract: contracts.x2y2Address(chainId),
+                name: 'inventoryStatus',
                 params: [listing.orderHash],
               })
-            }
-            break
-          case defs.ExchangeType.X2Y2:
-            // 0 -> not fulfilled, 1 -> auction, 2 -> fulfilled, 3 -> cancelled, 4 -> refunded
-            x2y2Calls.push({
-              contract: contracts.x2y2Address(chainId),
-              name: 'inventoryStatus',
-              params: [listing.orderHash],
-            })
-            break
-          default:
-            break
+              break
+            default:
+              break
           }
     
           if (seaportCalls.length >= CALL_BATCH_SIZE) {
