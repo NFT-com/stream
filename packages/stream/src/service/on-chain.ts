@@ -390,7 +390,7 @@ const keepAlive = ({
           [orderHash, orderNonce, _isNonceInvalidated],
           askUser, // taker (initiates the transaction)
           bidUser, // maker (receives the NFT)
-          _strategyId,
+          strategyId,
           currency,
           collection,
           _itemIds,
@@ -458,7 +458,7 @@ const keepAlive = ({
 
             logger.debug(`
             updated ${orderHash} for collection ${collection} -- strategy:
-            ${strategy}, currency:${currency} orderNonce:${orderNonce}
+            ${strategyId}, currency:${currency} orderNonce:${orderNonce}
             `)
           }
         } catch (err) {
@@ -469,7 +469,7 @@ const keepAlive = ({
           [orderHash, orderNonce, _isNonceInvalidated],
           askUser, // taker (initiates the transaction)
           bidUser, // maker (receives the NFT)
-          _strategyId,
+          strategyId,
           currency,
           collection,
           _itemIds,
@@ -537,7 +537,7 @@ const keepAlive = ({
 
             logger.debug(`
         updated ${orderHash} for collection ${collection} -- strategy:
-        ${strategy}, currency:${currency} orderNonce:${orderNonce}
+        ${strategyId}, currency:${currency} orderNonce:${orderNonce}
         `)
           }
         } catch (err) {
