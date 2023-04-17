@@ -56,9 +56,9 @@ const handlerMap: Record<string, { handler: any; repeat?: number; secondaryOptio
   [QUEUE_TYPES.SYNC_COLLECTION_RARITY]: { handler: raritySync, repeat: 5 * 60000 },
   [QUEUE_TYPES.SYNC_COLLECTION_NFT_RARITY]: { handler: nftRaritySyncHandler },
   [QUEUE_TYPES.SYNC_SPAM_COLLECTIONS]: { handler: spamCollectionSyncHandler, repeat: 24 * 60 * 60000 },
-  [QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS]: { handler: updateNFTsOwnershipForProfilesHandler, repeat: 60000 * 10 }, // 10 minute syncs
-  [QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS]: { handler: updateNFTsForNonProfilesHandler, repeat: 60000 * 10 }, // 10 minute syncs
-  [QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS]: { handler: pullNewNFTsHandler, repeat: 60000 * 10 }, // 10 minute syncs
+  [QUEUE_TYPES.UPDATE_PROFILES_NFTS_STREAMS]: { handler: updateNFTsOwnershipForProfilesHandler, repeat: 15000 },
+  [QUEUE_TYPES.UPDATE_NON_PROFILES_NFTS_STREAMS]: { handler: updateNFTsForNonProfilesHandler, repeat: 15000 },
+  [QUEUE_TYPES.UPDATE_PROFILES_WALLET_NFTS_STREAMS]: { handler: pullNewNFTsHandler, repeat: 15000 },
   [QUEUE_TYPES.FETCH_EXTERNAL_ORDERS_ON_DEMAND]: { handler: nftExternalOrdersOnDemand, repeat: 2 * 60000,
     secondaryOptions: {
       attempts: 5,
