@@ -243,6 +243,18 @@ const createEcsTaskDefinition = (
               Value: process.env.SG_API_KEY,
             },
             {
+              Name: 'ALCHEMY_NFT_FREQUENCY_MS',
+              Value: process.env.ALCHEMY_NFT_FREQUENCY_MS,
+            },
+            {
+              Name: 'USE_STREAMING_FAST',
+              Value: process.env.USE_STREAMING_FAST,
+            },
+            {
+              Name: 'STREAMING_FAST_CONNECTION_STRING',
+              Value: process.env.STREAMING_FAST_CONNECTION_STRING,
+            },
+            {
               Name: 'ETH_GAS_STATION_API_KEY',
               Value: process.env.ETH_GAS_STATION_API_KEY,
             },
