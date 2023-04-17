@@ -149,10 +149,10 @@ export interface TxSeaportProtocolData {
   consideration: SeaportConsideration[]
 }
 
-export interface TxLooksrareProtocolData {
+export interface TxLooksrareV2ProtocolData {
   taker: string
   maker: string
-  strategy: string
+  strategyId: number
   currency: string
   collection: string
 }

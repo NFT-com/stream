@@ -8,8 +8,8 @@ import { delay } from '../utils'
 import { orderEntityBuilder } from '../utils/builder/orderBuilder'
 import { cache, CacheKeys } from './cache'
 
-const LOOKSRARE_API_BASE_URL = 'https://api.looksrare.org/api/v1'
-const LOOKSRARE_API_TESTNET_BASE_URL = 'https://api-goerli.looksrare.org/api/v1'
+const LOOKSRARE_API_BASE_URL = 'https://api.looksrare.org/api/v2'
+const LOOKSRARE_API_TESTNET_BASE_URL = 'https://api-goerli.looksrare.org/api/v2'
 const LOOKSRARE_LISTING_BATCH_SIZE = 4
 const LOOKSRARE_API_KEY = process.env.LOOKSRARE_API_KEY
 
@@ -41,6 +41,34 @@ export interface LooksRareOrder {
   v: number
   r: string
   s: string
+}
+
+export interface LooksRareOrderV2 {
+  id: string
+  hash: string
+  quoteType: number
+  globalNonce: string
+  subsetNonce: string
+  orderNonce: string
+  collection: string
+  currency: string
+  signer: string
+  strategyId: number
+  collectionType: number
+  startTime: number
+  endTime: number
+  price: string
+  additionalParameters: string
+  signature: string
+  createdAt: string
+  merkleRoot: string
+  merkleProof: {
+    position: number
+    value: string
+  }[]
+  amounts: string[]
+  itemIds: string[]
+  status: string
 }
 
 export interface LooksrareExternalOrder {
@@ -126,21 +154,21 @@ const retrieveLooksRareOrdersInBatches = async (
     {
       const orders = response?.data?.data
       logger.log('looksrare order', orders)
-      if( queryUrl.includes('isOrderAsk=true')){
+      if(queryUrl.includes('quoteType=1')){
         const listing = await orderEntityBuilder(
-          defs.ProtocolType.LooksRare,
+          defs.ProtocolType.LooksRareV2,
           defs.ActivityType.Listing,
           orders[0],
           chainId,
-          orders[0]?.collectionAddress,
+          orders[0]?.collection,
         )
         const savedListing: entity.TxOrder = await repositories.txOrder.save(listing)
-        orderHash = orders?.[0]
+        orderHash = orders?.[0].hash
         activityId = savedListing.activity.id
 
-        const contract: string =  orders[0]?.collectionAddress
+        const contract: string =  orders[0]?.collection
         const tokenId: string =  BigNumber.from(
-          orders[0]?.tokenId,
+          orders[0]?.itemIds[0],
         ).toHexString()
 
         logger.log(`Saved LR listing with hash: ${orderHash} for contract: ${contract} and tokenId: ${tokenId}`)
@@ -150,14 +178,14 @@ const retrieveLooksRareOrdersInBatches = async (
       }
       else  {
         const offer = await orderEntityBuilder(
-          defs.ProtocolType.LooksRare,
+          defs.ProtocolType.LooksRareV2,
           defs.ActivityType.Bid,
           orders?.[0],
           chainId,
-          orders[0]?.collectionAddress,
+          orders[0]?.collection,
         )
         const savedOffer: entity.TxOrder = await repositories.txOrder.save(offer)
-        orderHash = orders?.[0]
+        orderHash = orders?.[0].hash
         activityId = savedOffer.activity.id
 
         const contract: string =  orders[0]?.collectionAddress
@@ -203,9 +231,13 @@ export const retrieveMultipleOrdersLooksrare = async (
     if (looksrareMultiOrderRequest?.length) {
       const orderQueries: Array<string> = []
       for (const looksrareReq of looksrareMultiOrderRequest) {
-        orderQueries.push(`isOrderAsk=true&collection=${looksrareReq.contract}&tokenId=${looksrareReq.tokenId}&status[]=VALID&sort=PRICE_ASC`)
+        orderQueries.push(
+          `quoteType=1&collection=${looksrareReq.contract}&itemId=${looksrareReq.tokenId}&status=VALID&sort=PRICE_ASC`,
+        )
         if (includeOffers) {
-          orderQueries.push(`isOrderAsk=false&collection=${looksrareReq.contract}&tokenId=${looksrareReq.tokenId}&status[]=VALID&sort=PRICE_DESC`)
+          orderQueries.push(
+            `quoteType=0&collection=${looksrareReq.contract}&itemId=${looksrareReq.tokenId}&status=VALID&sort=PRICE_DESC`,
+          )
         }
       }
       if (orderQueries.length) {
