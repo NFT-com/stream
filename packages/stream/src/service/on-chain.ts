@@ -1,9 +1,9 @@
 import { BigNumber, ethers, providers, utils } from 'ethers'
-import { In } from 'typeorm'
+import { In, Not } from 'typeorm'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import { core } from '@nftcom/gql/service'
+import { core, nftService } from '@nftcom/gql/service'
 import { _logger, contracts, db, defs, entity, helper } from '@nftcom/shared'
 
 import { delay } from '../utils'
@@ -264,6 +264,7 @@ const keepAlive = ({
 
     const looksrareProtocolAddress = helper.checkSum(contracts.looksrareProtocolAddress(chainId.toString()))
 
+    const nonceInvalidationParametersType = '(bytes32,uint256,bool)'
     const looksrareV2TopicFilter = [
       [
         helper.id('NewBidAskNonces(address,uint256,uint256)'),
@@ -389,7 +390,7 @@ const keepAlive = ({
           [orderHash, orderNonce, _isNonceInvalidated],
           askUser, // taker (initiates the transaction)
           bidUser, // maker (receives the NFT)
-          _strategyId,
+          strategyId,
           currency,
           collection,
           _itemIds,
@@ -457,7 +458,7 @@ const keepAlive = ({
 
             logger.debug(`
             updated ${orderHash} for collection ${collection} -- strategy:
-            ${strategy}, currency:${currency} orderNonce:${orderNonce}
+            ${strategyId}, currency:${currency} orderNonce:${orderNonce}
             `)
           }
         } catch (err) {
@@ -468,7 +469,7 @@ const keepAlive = ({
           [orderHash, orderNonce, _isNonceInvalidated],
           askUser, // taker (initiates the transaction)
           bidUser, // maker (receives the NFT)
-          _strategyId,
+          strategyId,
           currency,
           collection,
           _itemIds,
@@ -536,7 +537,7 @@ const keepAlive = ({
 
             logger.debug(`
         updated ${orderHash} for collection ${collection} -- strategy:
-        ${strategy}, currency:${currency} orderNonce:${orderNonce}
+        ${strategyId}, currency:${currency} orderNonce:${orderNonce}
         `)
           }
         } catch (err) {
