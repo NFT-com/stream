@@ -15,7 +15,6 @@ import { checksumAddress } from '../service/ownership'
 
 export const repositories = db.newRepositories()
 const logger = _logger.Factory(_logger.Context.Bull)
-
 const MAX_CHUNK_SIZE = 500
 const CALL_SAMPLE_BATCH_SIZE = 10000
 const CALL_BATCH_SIZE = 1000
