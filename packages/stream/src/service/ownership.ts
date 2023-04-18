@@ -468,7 +468,7 @@ const batchProcessNFTs = async (nftItems: NFTItem[]): Promise<void> => {
       } = {}
       
       if (schema && tokenUris[i]) {
-        parsedMetadata = (await nftService.parseNFTUriString(tokenUris[i], hexTokenId)) || {}
+        parsedMetadata = (await nftService.parseNFTUriString(tokenUris[i], hexTokenId, csContract)) || {}
       }
 
       // if badly formatted NFT (without proper metadata), use a default image
