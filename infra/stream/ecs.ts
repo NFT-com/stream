@@ -255,6 +255,10 @@ const createEcsTaskDefinition = (
               Value: process.env.STREAMING_FAST_CONNECTION_STRING,
             },
             {
+              Name: 'STREAMING_FASTS_INTERNAL_USERS_ONLY',
+              Value: process.env.STREAMING_FASTS_INTERNAL_USERS_ONLY,
+            },
+            {
               Name: 'ETH_GAS_STATION_API_KEY',
               Value: process.env.ETH_GAS_STATION_API_KEY,
             },
