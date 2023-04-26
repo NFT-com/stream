@@ -544,7 +544,7 @@ export const updateNFTsForNonProfilesHandler = async (job: Job): Promise<any> =>
             logger.error(err, `[updateNFTsForNonProfilesHandler]: Error in updateWalletNFTs while processing wallet: ${walletId}`)
           }
         } else {
-          if (!wallet.userId) {
+          if (!wallet?.userId) {
             logger.log(`[ updateNFTsForNonProfilesHandler]: Wallet Id: ${walletId} does not have an associated user!`)
           }
   

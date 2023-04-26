@@ -1,5 +1,10 @@
-name: NFT.com github actions
-on: [push]
+name: Stream github actions
+on:
+  push:
+    paths:
+      - 'infra/stream/**.ts'
+      - 'infra/stream/**.yaml'
+      - 'packages/stream/**.ts'
 jobs:
   deploy-dev:
     if: ${{ startsWith(github.ref_name, 'feat') || startsWith(github.ref_name, 'fix') || github.ref_name == 'main' }}
@@ -7,15 +12,6 @@ jobs:
     environment: nftcom_stream_dev
     steps:
       - uses: actions/checkout@v3
-        with:
-          persist-credentials: false
-          token: ${{secrets.CROSSREPO_PAT}}
-          repository: NFT-com/NFT-backend
-          ref: main
-          path: NFT-backend
-      - uses: actions/checkout@v3
-        with:
-          path: stream
       - uses: ./stream/.github/actions/deploy-env
         name: Deploy env
         with:
@@ -27,15 +23,6 @@ jobs:
     environment: nftcom_stream_staging
     steps:
       - uses: actions/checkout@v3
-        with:
-          persist-credentials: false
-          token: ${{secrets.CROSSREPO_PAT}}
-          repository: NFT-com/NFT-backend
-          ref: main
-          path: NFT-backend
-      - uses: actions/checkout@v3
-        with:
-          path: stream
       - uses: ./stream/.github/actions/deploy-env
         name: Deploy Staging Env
         with:
@@ -47,15 +34,6 @@ jobs:
     environment: nftcom_stream_prod
     steps:
       - uses: actions/checkout@v3
-        with:
-          persist-credentials: false
-          token: ${{secrets.CROSSREPO_PAT}}
-          repository: NFT-com/NFT-backend
-          ref: main
-          path: NFT-backend
-      - uses: actions/checkout@v3
-        with:
-          path: stream
       - uses: ./stream/.github/actions/deploy-env
         name: Deploy Prod Env
         with:

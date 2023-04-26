@@ -63,7 +63,7 @@ const handleFilter = async (
     })
 
     // if both are null, then it's not internal
-    if (!walletFrom.userId && !walletTo.userId) return false
+    if (!walletFrom?.userId && !walletTo?.userId) return false
   }
 
   return true
