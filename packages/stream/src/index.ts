@@ -1,5 +1,3 @@
-import './tracer' // must come before importing any instrumented module.
-
 import Bull from 'bullmq'
 import { BigNumber } from 'ethers'
 import express from 'express'
