@@ -455,58 +455,7 @@ const createEcsTaskDefinition = (
               Value: process.env.MAX_PROFILE_BATCH_SIZE,
             },
           ],
-          dependsOn: [
-            {
-              containerName: getResourceName('datadog-agent'),
-              condition: 'START',
-            },
-          ],
-        },
-        {
-          name: getResourceName('datadog-agent'),
-          image: 'public.ecr.aws/datadog/agent:latest',
-          logConfiguration: {
-            logDriver: 'awslogs',
-            options: {
-              'awslogs-group': `/ecs/${getResourceName('datadog-agent')}`,
-              'awslogs-region': 'us-east-1',
-              'awslogs-stream-prefix': 'ddog/stream',
-              'awslogs-create-group': 'True',
-            },
-          },
-          cpu: 100,
-          memory: 512,
-          essential: true,
-          portMappings: [
-            {
-              hostPort: 8126,
-              protocol: 'tcp',
-              containerPort: 8126,
-            },
-          ],
-          mountPoints: [],
-          environment: [
-            {
-              name: 'ECS_FARGATE',
-              value: 'true',
-            },
-            {
-              name: 'DD_PROCESS_AGENT_ENABLED',
-              value: 'true',
-            },
-            {
-              name: 'DD_API_KEY',
-              value: process.env.DATADOG_API_KEY,
-            },
-            {
-              name: 'DD_SITE',
-              value: 'datadoghq.com',
-            },
-            {
-              name: 'DD_APM_FILTER_TAGS_REJECT',
-              value: 'http.method:OPTIONS',
-            },
-          ],
+          dependsOn: [],
         },
       ]),
       cpu: config.require('ecsTaskCpu'),
