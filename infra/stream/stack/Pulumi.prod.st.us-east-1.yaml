@@ -1,6 +1,6 @@
 encryptionsalt: v1:D8H+sXo+CX0=:v1:KzTdtuBUbxPhxvHg:s02TazW/sbxHwAnrHC0qLMsCDunFCA==
 config:
-  nftcom:ecsAutoScaleMin: 3
+  nftcom:ecsAutoScaleMin: 2
   nftcom:ecsAutoScaleMax: 6
   nftcom:ecsTaskCpu: 2048
   nftcom:ecsTaskMemory: 8192
